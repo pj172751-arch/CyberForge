@@ -3,21 +3,36 @@ import { useApp } from '../../context/AppContext';
 import Topbar from './Topbar';
 import Sidebar from './Sidebar';
 import SearchModal from './SearchModal';
+import TelemetryBar from '../ui/TelemetryBar';
 import { CheckCircle2, AlertTriangle, Info, XCircle } from 'lucide-react';
 
 export default function Layout({ children, currentTab, setCurrentTab, onSelectChallenge }) {
   const { toast } = useApp();
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isScanlinesActive, setIsScanlinesActive] = useState(false);
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-bg-main text-slate-200">
+    <div className="flex h-screen w-screen overflow-hidden bg-bg-main text-slate-200 relative">
+      {/* Optional CRT Scanlines Atmosphere Layer */}
+      {isScanlinesActive && (
+        <div className="absolute inset-0 z-50 scanlines-overlay pointer-events-none" />
+      )}
+
       {/* Fixed Left Sidebar */}
       <Sidebar currentTab={currentTab} setCurrentTab={setCurrentTab} />
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
+        {/* Global SOC Telemetry HUD Header */}
+        <TelemetryBar
+          isScanlinesActive={isScanlinesActive}
+          onToggleScanlines={() => setIsScanlinesActive(prev => !prev)}
+        />
+
+        {/* Topbar */}
         <Topbar onOpenSearch={() => setIsSearchOpen(true)} />
         
+        {/* Main View Container */}
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 bg-bg-main">
           {children}
         </main>

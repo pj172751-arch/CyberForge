@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
+import { soundEngine } from '../../utils/audio';
 import { 
   Bell, 
   Search, 
@@ -49,7 +50,10 @@ export default function Topbar({ onOpenSearch }) {
             return (
               <button
                 key={r.id}
-                onClick={() => loginAs(r.id)}
+                onClick={() => {
+                  soundEngine.playBlip();
+                  loginAs(r.id);
+                }}
                 className={`px-2.5 py-1 text-xs font-mono rounded-sharp transition-all ${
                   isActive
                     ? 'bg-cyan-accent text-bg-main font-semibold shadow-[0_0_12px_rgba(0,229,204,0.3)]'
@@ -65,7 +69,11 @@ export default function Topbar({ onOpenSearch }) {
         {/* Alerts Notification Bell */}
         <div className="relative">
           <button
-            onClick={() => setShowAlertsDropdown(prev => !prev)}
+            onClick={() => {
+              const next = !showAlertsDropdown;
+              setShowAlertsDropdown(next);
+              if (next) soundEngine.playAlarm();
+            }}
             className="relative p-2 text-zinc-400 hover:text-zinc-200 hover:bg-bg-subtle rounded-panel border border-hairline transition-colors"
             title="System Alerts"
           >

@@ -1,5 +1,6 @@
 import React from 'react';
 import { useApp } from '../../context/AppContext';
+import { soundEngine } from '../../utils/audio';
 import {
   Shield,
   Terminal,
@@ -101,7 +102,10 @@ export default function Sidebar({ currentTab, setCurrentTab }) {
             return (
               <button
                 key={item.id}
-                onClick={() => setCurrentTab(item.id)}
+                onClick={() => {
+                  soundEngine.playBlip();
+                  setCurrentTab(item.id);
+                }}
                 className={`w-full flex items-center justify-between px-3 py-2 text-xs font-mono rounded-panel transition-all ${
                   isActive
                     ? 'bg-cyan-dim text-cyan-accent font-semibold border border-cyan-accent/30'

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
+import { soundEngine } from '../utils/audio';
 import { 
   Crosshair, 
   Terminal, 
@@ -135,7 +136,10 @@ export default function AttackerDashboard({ onSelectChallenge }) {
           {['ALL', 'LOW', 'MEDIUM', 'HIGH', 'IMPOSSIBLE'].map(diff => (
             <button
               key={diff}
-              onClick={() => setFilterDifficulty(diff)}
+              onClick={() => {
+                soundEngine.playBlip();
+                setFilterDifficulty(diff);
+              }}
               className={`px-2.5 py-1 text-xs font-mono rounded-sharp transition-all ${
                 filterDifficulty === diff
                   ? 'bg-bg-main border border-cyan-accent text-cyan-accent font-semibold'
@@ -227,7 +231,10 @@ export default function AttackerDashboard({ onSelectChallenge }) {
                 {/* Action CTA Button */}
                 <div className="col-span-2 flex justify-end">
                   <button
-                    onClick={() => onSelectChallenge(ch)}
+                    onClick={() => {
+                      soundEngine.playBlip();
+                      onSelectChallenge(ch);
+                    }}
                     className="flex items-center gap-1.5 px-3 py-1.5 bg-bg-main hover:bg-cyan-accent hover:text-bg-main border border-hairline hover:border-cyan-accent text-zinc-300 font-mono text-xs rounded-sharp transition-all group-hover:border-cyan-accent/50"
                   >
                     <span>{isSolved ? 'Replay' : 'Attempt'}</span>

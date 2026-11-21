@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
+import { soundEngine } from '../utils/audio';
 import { 
   Shield, 
   Terminal, 
@@ -21,6 +22,7 @@ export default function Login() {
   const [authError, setAuthError] = useState('');
 
   const handleTabChange = (role) => {
+    soundEngine.playBlip();
     setActiveTab(role);
     setAuthError('');
     // Auto-populate sample credentials for seamless evaluator review
@@ -37,6 +39,7 @@ export default function Login() {
 
   const handleLogin = (e) => {
     e.preventDefault();
+    soundEngine.playLaunch();
     setIsSubmitting(true);
     setAuthError('');
 
@@ -52,6 +55,7 @@ export default function Login() {
         matchedUser = adminList.find(u => u.username.toLowerCase() === username.toLowerCase()) || adminList[0];
       }
 
+      soundEngine.playSuccess();
       setIsSubmitting(false);
       loginAs(activeTab, matchedUser);
     }, 400);

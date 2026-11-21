@@ -1,0 +1,60 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  background-color: #0A0A0B;
+  color: #E2E8F0;
+  font-family: 'Space Grotesk', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+/* Custom scrollbars for security console aesthetic */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0A0A0B;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #232326;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #2E2E33;
+}
+
+/* Code and mono styling */
+code, pre, .font-mono {
+  font-family: 'Commit Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+}
+
+/* Hairline dividers */
+.border-hairline {
+  border-color: #232326;
+}
+
+.bg-panel {
+  background-color: #141416;
+}
+
+.text-cyan-accent {
+  color: #00E5CC;
+}
+
+.bg-cyan-accent {
+  background-color: #00E5CC;
+}

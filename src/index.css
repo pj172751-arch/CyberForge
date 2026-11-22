@@ -11,7 +11,7 @@ html, body, #root {
   width: 100%;
   overflow-x: hidden;
   font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
-  background-color: #1c1d22;
+  background-color: #070709;
 }
 
 /* Physics item styling strictly matching user code */
@@ -36,6 +36,17 @@ html, body, #root {
   overflow: visible;
 }
 
+/* Prevent browser autofill from turning inputs light blue or white */
+input:-webkit-autofill,
+input:-webkit-autofill:hover, 
+input:-webkit-autofill:focus, 
+input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px #141622 inset !important;
+  -webkit-text-fill-color: #f4f4f5 !important;
+  caret-color: #f4f4f5 !important;
+  transition: background-color 50000s ease-in-out 0s;
+}
+
 /* Custom scrollbars */
 ::-webkit-scrollbar {
   width: 5px;
@@ -44,6 +55,6 @@ html, body, #root {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.15);
+  background: rgba(255, 255, 255, 0.1);
   border-radius: 9999px;
 }

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import FallingPhysics from './components/FallingPhysics';
 import { ChevronDown, Eye, EyeOff } from 'lucide-react';
 
@@ -11,6 +11,13 @@ export default function App() {
   const [role, setRole] = useState('attacker'); // 'attacker' | 'defender'
   const [submitted, setSubmitted] = useState(false);
 
+  // Guarantee empty inputs on initial load and mode switch
+  useEffect(() => {
+    setFullName('');
+    setEmail('');
+    setPassword('');
+  }, [isSignUp]);
+
   const handleSubmit = (e) => {
     e.preventDefault();
     setSubmitted(true);
@@ -19,6 +26,9 @@ export default function App() {
 
   const handleToggleMode = () => {
     setIsSignUp(prev => !prev);
+    setFullName('');
+    setEmail('');
+    setPassword('');
     setSubmitted(false);
   };
 
@@ -48,8 +58,12 @@ export default function App() {
               </p>
             </div>
 
-            {/* The Form */}
-            <form onSubmit={handleSubmit} className="space-y-4">
+            {/* The Form with strict browser autofill blocking */}
+            <form onSubmit={handleSubmit} autoComplete="off" className="space-y-4">
+              {/* Browser autofill traps */}
+              <input type="text" name="fakeusernameremembered" style={{ display: 'none' }} tabIndex={-1} autoComplete="off" />
+              <input type="password" name="fakepasswordremembered" style={{ display: 'none' }} tabIndex={-1} autoComplete="off" />
+
               {/* Full Name (Sign up only) */}
               {isSignUp && (
                 <div>
@@ -58,10 +72,12 @@ export default function App() {
                   </label>
                   <input
                     type="text"
+                    name="cf_full_name"
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
                     required
                     placeholder="Enter your name"
+                    autoComplete="off"
                     className="w-full h-12 px-4 text-xs sm:text-sm font-medium text-zinc-100 bg-[#141622] border border-[#232638] rounded-xl focus:outline-none focus:border-[#2ab7ff] focus:ring-1 focus:ring-[#2ab7ff] transition-all placeholder:text-zinc-600"
                   />
                 </div>
@@ -74,10 +90,12 @@ export default function App() {
                 </label>
                 <input
                   type="email"
+                  name="cf_user_email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   placeholder="name@example.com"
+                  autoComplete="new-password"
                   className="w-full h-12 px-4 text-xs sm:text-sm font-medium text-zinc-100 bg-[#141622] border border-[#232638] rounded-xl focus:outline-none focus:border-[#2ab7ff] focus:ring-1 focus:ring-[#2ab7ff] transition-all placeholder:text-zinc-600"
                 />
               </div>
@@ -90,10 +108,12 @@ export default function App() {
                 <div className="relative">
                   <input
                     type={showPassword ? 'text' : 'password'}
+                    name="cf_user_password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
                     placeholder="••••••••••••"
+                    autoComplete="new-password"
                     className="w-full h-12 px-4 pr-11 text-xs sm:text-sm font-medium text-zinc-100 bg-[#141622] border border-[#232638] rounded-xl focus:outline-none focus:border-[#2ab7ff] focus:ring-1 focus:ring-[#2ab7ff] transition-all placeholder:text-zinc-600"
                   />
                   <button

@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import FallingPhysics from './components/FallingPhysics';
 import AttackerParticles from './components/AttackerParticles';
-import { ChevronDown, Eye, EyeOff, ShieldAlert, LogOut } from 'lucide-react';
+import DefenderParticles from './components/DefenderParticles';
+import { ChevronDown, Eye, EyeOff, ShieldAlert, ShieldCheck, LogOut } from 'lucide-react';
 
 export default function App() {
-  const [currentView, setCurrentView] = useState('auth'); // 'auth' | 'particles' | 'dashboard'
+  const [currentView, setCurrentView] = useState('auth'); // 'auth' | 'attacker-particles' | 'defender-particles' | 'dashboard'
   const [isSignUp, setIsSignUp] = useState(true);
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -12,15 +13,13 @@ export default function App() {
   const [showPassword, setShowPassword] = useState(false);
   const [role, setRole] = useState('attacker'); // 'attacker' | 'defender'
 
-
-
   const handleSubmit = (e) => {
     e.preventDefault();
-    // When a user logs in or signs up as an attacker, show particles first
+    // Trigger role-specific particle intro
     if (role === 'attacker') {
-      setCurrentView('particles');
+      setCurrentView('attacker-particles');
     } else {
-      setCurrentView('dashboard');
+      setCurrentView('defender-particles');
     }
   };
 
@@ -42,35 +41,42 @@ export default function App() {
     setPassword('');
   };
 
-  // If in particle transition view
-  if (currentView === 'particles') {
+  // If in Attacker particle sequence
+  if (currentView === 'attacker-particles') {
     return <AttackerParticles onComplete={handleParticleComplete} />;
+  }
+
+  // If in Defender particle sequence
+  if (currentView === 'defender-particles') {
+    return <DefenderParticles onComplete={handleParticleComplete} />;
   }
 
   // If in dashboard view (clean placeholder as user will provide dashboard idea)
   if (currentView === 'dashboard') {
+    const isAttacker = role === 'attacker';
+
     return (
-      <div className="min-h-screen w-screen bg-[#070709] text-white flex flex-col items-center justify-center p-6 selection:bg-[#ff2a3d]/30 selection:text-[#ffdbdf]">
+      <div className={`min-h-screen w-screen bg-[#070709] text-white flex flex-col items-center justify-center p-6 ${isAttacker ? 'selection:bg-[#ff2a3d]/30 selection:text-[#ffdbdf]' : 'selection:bg-[#2ab7ff]/30 selection:text-[#dbf5ff]'}`}>
         <div className="w-full max-w-2xl bg-[#0c0d12] border border-[#1e202c] rounded-3xl p-8 sm:p-12 shadow-[0_0_80px_rgba(0,0,0,0.9)] relative overflow-hidden text-center">
-          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-[#ff2a3d] to-transparent" />
+          <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent ${isAttacker ? 'via-[#ff2a3d]' : 'via-[#2ab7ff]'} to-transparent`} />
           
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#161217] border border-[#3b1820] text-xs font-semibold text-red-300 tracking-wider mb-6">
-            <span className="w-2 h-2 rounded-full bg-[#ff2a3d] shadow-[0_0_8px_#ff2a3d]" />
+          <div className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full ${isAttacker ? 'bg-[#161217] border-[#3b1820] text-red-300' : 'bg-[#101926] border-[#1d3550] text-sky-300'} border text-xs font-semibold tracking-wider mb-6`}>
+            <span className={`w-2 h-2 rounded-full ${isAttacker ? 'bg-[#ff2a3d] shadow-[0_0_8px_#ff2a3d]' : 'bg-[#2ab7ff] shadow-[0_0_8px_#2ab7ff]'}`} />
             <span className="uppercase text-[11px] font-mono tracking-widest">{role} Session Active</span>
           </div>
 
-          <div className="w-16 h-16 mx-auto mb-6 rounded-2xl bg-red-950/40 border border-red-500/30 flex items-center justify-center text-red-400 shadow-[0_0_30px_rgba(255,42,61,0.25)]">
-            <ShieldAlert className="w-8 h-8" />
+          <div className={`w-16 h-16 mx-auto mb-6 rounded-2xl ${isAttacker ? 'bg-red-950/40 border-red-500/30 text-red-400 shadow-[0_0_30px_rgba(255,42,61,0.25)]' : 'bg-sky-950/40 border-sky-500/30 text-[#2ab7ff] shadow-[0_0_30px_rgba(42,183,255,0.25)]'} border flex items-center justify-center`}>
+            {isAttacker ? <ShieldAlert className="w-8 h-8" /> : <ShieldCheck className="w-8 h-8" />}
           </div>
 
           <h1 className="text-3xl font-bold tracking-tight mb-3">
-            {role === 'attacker' ? 'Attacker Command Center' : 'Defender Console'}
+            {isAttacker ? 'Attacker Command Center' : 'Defender Security Console'}
           </h1>
           
           <p className="text-zinc-400 text-sm max-w-md mx-auto mb-8 font-normal leading-relaxed">
-            Authenticated as <span className="text-zinc-200 font-semibold">{email || 'operator@cyberforge.local'}</span>.
+            Authenticated as <span className="text-zinc-200 font-semibold">{email || (isAttacker ? 'attacker@cyberforge.local' : 'defender@cyberforge.local')}</span>.
             <br />
-            Particle sequence completed. Standing by for dashboard layout and modules.
+            {isAttacker ? 'Attacker' : 'Defender'} particle sequence completed. Standing by for dashboard layout and modules.
           </p>
 
           <div className="flex items-center justify-center gap-4">
@@ -82,8 +88,12 @@ export default function App() {
               <span>Back to Auth / Sign Out</span>
             </button>
             <button
-              onClick={() => setCurrentView('particles')}
-              className="inline-flex items-center gap-2 px-6 h-12 rounded-xl bg-gradient-to-r from-[#ff2a3d] to-[#cc1829] hover:from-[#ff4758] hover:to-[#ff2a3d] text-white text-xs sm:text-sm font-semibold shadow-[0_0_20px_rgba(255,42,61,0.35)] transition-all"
+              onClick={() => setCurrentView(isAttacker ? 'attacker-particles' : 'defender-particles')}
+              className={`inline-flex items-center gap-2 px-6 h-12 rounded-xl text-white text-xs sm:text-sm font-semibold transition-all ${
+                isAttacker
+                  ? 'bg-gradient-to-r from-[#ff2a3d] to-[#cc1829] hover:from-[#ff4758] hover:to-[#ff2a3d] shadow-[0_0_20px_rgba(255,42,61,0.35)]'
+                  : 'bg-gradient-to-r from-[#2ab7ff] to-[#1c98db] hover:from-[#3bc0ff] hover:to-[#2ab7ff] shadow-[0_0_20px_rgba(42,183,255,0.35)]'
+              }`}
             >
               <span>Replay Particles</span>
             </button>

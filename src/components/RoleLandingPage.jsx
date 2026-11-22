@@ -62,7 +62,7 @@ const ATTACKER_TASKS = [
   {
     id: 'cmd-injection',
     title: 'Command Injection',
-    badge: 'Remote Code Execution',
+    badge: 'Remote Execution',
     desc: 'Execute arbitrary host system instructions directly through vulnerable server parameters.',
     vector: '; cat /etc/passwd; id; uname -a',
     details: 'Chain system commands via shell metacharacters through diagnostic endpoints to spawn background reverse shells.',
@@ -172,8 +172,8 @@ const ATTACKER_TASKS = [
   },
   {
     id: 'ssrf',
-    title: 'Server-Side Request Forgery',
-    badge: 'Cloud Pivot',
+    title: 'SSRF Cloud Pivot',
+    badge: 'Metadata Exfil',
     desc: 'Force backend hosts to query cloud metadata services (169.254.169.254) and internal APIs.',
     vector: 'http://victim.com/proxy?url=http://169.254.169.254/latest/meta-data/iam/security-credentials/',
     details: 'Pivot through vulnerable webhook endpoints to exfiltrate temporary AWS IAM tokens and internal cluster service accounts.',
@@ -186,7 +186,7 @@ const ATTACKER_TASKS = [
   },
   {
     id: 'kerberoast',
-    title: 'Active Directory Kerberoasting',
+    title: 'AD Kerberoasting',
     badge: 'Domain Compromise',
     desc: 'Request service tickets (TGS) for SPNs and crack encrypted service account hashes offline.',
     vector: 'GetUserSPNs.py -request -dc-ip 10.0.0.1 domain.local/user:password -outputfile hashes.txt',
@@ -390,21 +390,19 @@ export default function RoleLandingPage({ role = 'attacker', email = '', onSignO
 
   const [selectedTask, setSelectedTask] = useState(null);
 
-  const introRef = useRef(null);
-  const mainBlockRef = useRef(null);
+  const blockRef = useRef(null);
   const wrapperRef = useRef(null);
   const contentRef = useRef(null);
   const titleRef = useRef(null);
   const descRef = useRef(null);
-  const btnRef = useRef(null);
+  const buttonRef = useRef(null);
   const gridRef = useRef(null);
 
   useEffect(() => {
-    // 1. Initialize Lenis Smooth Scrolling (exact Codrops parameters)
+    // 1. Initialize Lenis Smooth Scrolling (matching user code)
     const lenis = new Lenis({
       lerp: 0.08,
       wheelMultiplier: 1.4,
-      smoothWheel: true
     });
 
     lenis.on('scroll', ScrollTrigger.update);
@@ -415,130 +413,136 @@ export default function RoleLandingPage({ role = 'attacker', email = '', onSignO
     gsap.ticker.add(tickerCb);
     gsap.ticker.lagSmoothing(0);
 
-    // 2. Query DOM elements
-    const blockEl = mainBlockRef.current;
-    const wrapperEl = wrapperRef.current;
-    const contentEl = contentRef.current;
-    const titleEl = titleRef.current;
-    const descEl = descRef.current;
-    const buttonEl = btnRef.current;
-    const gridEl = gridRef.current;
+    // 2. Cache DOM Elements
+    const block = blockRef.current;
+    const wrapper = wrapperRef.current;
+    const content = contentRef.current;
+    const title = titleRef.current;
+    const description = descRef.current;
+    const button = buttonRef.current;
+    const grid = gridRef.current;
 
     let items = [];
-    if (gridEl) {
-      items = Array.from(gridEl.querySelectorAll('.gallery__item'));
+    if (grid) {
+      items = Array.from(grid.querySelectorAll('.gallery__item'));
     }
 
-    // 3. Distribute items into 3 columns (4 items each)
+    // 3. Group Grid Items into 3 Columns
     const numColumns = 3;
     const columns = Array.from({ length: numColumns }, () => []);
     items.forEach((item, index) => {
       columns[index % numColumns].push(item);
     });
 
-    // 4. Initial Content State (exact Codrops logic)
+    // 4. Initialize Visual State of Content (initContent)
     let titleOffsetY = 0;
-    if (descEl && buttonEl) {
-      gsap.set([descEl, buttonEl], { opacity: 0, pointerEvents: 'none' });
+    if (description && button) {
+      gsap.set([description, button], { opacity: 0, pointerEvents: 'none' });
     }
-    if (contentEl && titleEl) {
-      const dy = (contentEl.offsetHeight - titleEl.offsetHeight) / 2;
-      titleOffsetY = (dy / contentEl.offsetHeight) * 100;
-      gsap.set(titleEl, { yPercent: titleOffsetY });
+    if (content && title) {
+      const dy = (content.offsetHeight - title.offsetHeight) / 2;
+      titleOffsetY = (dy / content.offsetHeight) * 100;
+      gsap.set(title, { yPercent: titleOffsetY });
     }
 
-    // 5. Parallax on Wrapper (exact Codrops implementation)
-    const parallaxTrigger = gsap.from(wrapperEl, {
-      yPercent: -100,
-      ease: 'none',
-      scrollTrigger: {
-        trigger: blockEl,
-        start: 'top bottom',
-        end: 'top top',
-        scrub: true
-      }
-    });
+    // 5. Parallax on Wrapper (addParallaxOnScroll)
+    let parallaxTrigger = null;
+    if (block && wrapper) {
+      parallaxTrigger = gsap.from(wrapper, {
+        yPercent: -100,
+        ease: 'none',
+        scrollTrigger: {
+          trigger: block,
+          start: 'top bottom',
+          end: 'top top',
+          scrub: true,
+        },
+      });
+    }
 
-    // 6. Animate Title Opacity
-    const titleTrigger = gsap.from(titleEl, {
-      opacity: 0,
-      duration: 0.7,
-      ease: 'power1.out',
-      scrollTrigger: {
-        trigger: blockEl,
-        start: 'top 57%',
-        toggleActions: 'play none none reset'
-      }
-    });
+    // 6. Animate Title on Scroll (animateTitleOnScroll)
+    let titleTrigger = null;
+    if (block && title) {
+      titleTrigger = gsap.from(title, {
+        opacity: 0,
+        duration: 0.7,
+        ease: 'power1.out',
+        scrollTrigger: {
+          trigger: block,
+          start: 'top 57%',
+          toggleActions: 'play none none reset',
+        },
+      });
+    }
 
-    // 7. Grid Reveal Timeline (exact Codrops stagger & alternation)
+    // 7. Grid Reveal Timeline (gridRevealTimeline)
     const wh = window.innerHeight;
-    const r = wh - (wh - (gridEl?.offsetHeight || 650)) / 2;
+    const dy = wh - (wh - (grid?.offsetHeight || 650)) / 2;
     const revealTimeline = gsap.timeline();
     columns.forEach((column, colIndex) => {
       const fromTop = colIndex % 2 === 0;
       revealTimeline.from(
         column,
         {
-          y: r * (fromTop ? -1 : 1),
+          y: dy * (fromTop ? -1 : 1),
           stagger: {
             each: 0.06,
-            from: fromTop ? 'end' : 'start'
+            from: fromTop ? 'end' : 'start',
           },
-          ease: 'power1.inOut'
+          ease: 'power1.inOut',
         },
-        'grid-reveal'
+        'grid-reveal',
       );
     });
 
-    // 8. Grid Zoom Timeline (exact Codrops scale 2.05 & split)
+    // 8. Grid Zoom Timeline (gridZoomTimeline)
     const zoomTimeline = gsap.timeline({ defaults: { duration: 1, ease: 'power3.inOut' } });
-    if (gridEl) {
-      zoomTimeline.to(gridEl, { scale: 2.05 });
+    if (grid) {
+      zoomTimeline.to(grid, { scale: 2.05 });
     }
-    if (columns[0].length) zoomTimeline.to(columns[0], { xPercent: -40 }, '<');
-    if (columns[2].length) zoomTimeline.to(columns[2], { xPercent: 40 }, '<');
-    if (columns[1].length) {
+    if (columns[0]?.length) zoomTimeline.to(columns[0], { xPercent: -40 }, '<');
+    if (columns[2]?.length) zoomTimeline.to(columns[2], { xPercent: 40 }, '<');
+    if (columns[1]?.length) {
       zoomTimeline.to(
         columns[1],
         {
           yPercent: (index) => (index < Math.floor(columns[1].length / 2) ? -1 : 1) * 40,
           duration: 0.5,
-          ease: 'power1.inOut'
+          ease: 'power1.inOut',
         },
-        '-=0.5'
+        '-=0.5',
       );
     }
 
-    // 9. Content Toggle Callback (exact Codrops easing & timing)
-    const toggleContent = (isVisible) => {
-      if (!titleEl || !descEl || !buttonEl) return;
+    // 9. Toggle Content (toggleContent)
+    const toggleContent = (isVisible = true) => {
+      if (!title || !description || !button) return;
       gsap.timeline({ defaults: { overwrite: true } })
-        .to(titleEl, {
+        .to(title, {
           yPercent: isVisible ? 0 : titleOffsetY,
           duration: 0.7,
-          ease: 'power2.inOut'
+          ease: 'power2.inOut',
         })
         .to(
-          [descEl, buttonEl],
+          [description, button],
           {
             opacity: isVisible ? 1 : 0,
             duration: 0.4,
             ease: `power1.${isVisible ? 'inOut' : 'out'}`,
-            pointerEvents: isVisible ? 'all' : 'none'
+            pointerEvents: isVisible ? 'all' : 'none',
           },
-          isVisible ? '-=90%' : '<'
+          isVisible ? '-=90%' : '<',
         );
     };
 
-    // 10. Master Grid Scroll Timeline (scrubbed from top 25% to bottom bottom)
+    // 10. Animate Grid On Scroll (animateGridOnScroll)
     const masterTimeline = gsap.timeline({
       scrollTrigger: {
-        trigger: blockEl,
+        trigger: block,
         start: 'top 25%',
         end: 'bottom bottom',
-        scrub: true
-      }
+        scrub: true,
+      },
     });
 
     masterTimeline
@@ -551,8 +555,8 @@ export default function RoleLandingPage({ role = 'attacker', email = '', onSignO
     return () => {
       lenis.destroy();
       gsap.ticker.remove(tickerCb);
-      parallaxTrigger.kill();
-      titleTrigger.kill();
+      if (parallaxTrigger) parallaxTrigger.kill();
+      if (titleTrigger) titleTrigger.kill();
       masterTimeline.kill();
       ScrollTrigger.getAll().forEach((t) => t.kill());
     };
@@ -596,17 +600,13 @@ export default function RoleLandingPage({ role = 'attacker', email = '', onSignO
         </div>
       </header>
 
-      {/* ---------------- BLOCK INTRO: Fixed 3D Particle Canvas Viewport ---------------- */}
-      <section ref={introRef} className="block--intro">
-        {/* WebGL Particle Simulation (Hooded Mask / Shield Hood) */}
-        {isAttacker ? (
-          <AttackerParticles />
-        ) : (
-          <DefenderParticles />
-        )}
+      {/* ---------------- BLOCK INTRO: Particle Simulation ---------------- */}
+      <section className="block block--intro">
+        {/* 3D Particle Simulation (forms together, explodes on scroll) */}
+        {isAttacker ? <AttackerParticles /> : <DefenderParticles />}
 
-        {/* Hero Scroll Cue */}
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-2 pointer-events-none opacity-85">
+        {/* Scroll cue */}
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-2 pointer-events-none opacity-80">
           <span className={`text-[11px] font-mono tracking-widest uppercase ${isAttacker ? 'text-red-300/80' : 'text-sky-300/80'}`}>
             Scroll to Explode & Reveal Mission Grid
           </span>
@@ -615,29 +615,29 @@ export default function RoleLandingPage({ role = 'attacker', email = '', onSignO
       </section>
 
       {/* ---------------- BLOCK MAIN: 425vh Sticky Parallax & Zoom Grid ---------------- */}
-      <section ref={mainBlockRef} className="block block--main">
-        <div ref={wrapperRef} className="block__wrapper">
+      <section className="block block--main" ref={blockRef}>
+        <div className="block__wrapper" ref={wrapperRef}>
           {/* Centered Content Overlay (revealed upon scroll zoom) */}
-          <div ref={contentRef} className="content">
-            <h1
-              ref={titleRef}
+          <div className="content" ref={contentRef}>
+            <h2
               className={`content__title bg-clip-text text-transparent bg-gradient-to-b ${
                 isAttacker
                   ? 'from-white via-zinc-200 to-red-500'
                   : 'from-white via-zinc-200 to-[#2ab7ff]'
               }`}
+              ref={titleRef}
             >
               {isAttacker ? 'Offensive Protocols' : 'Perimeter Defense'}
-            </h1>
+            </h2>
 
-            <p ref={descRef} className="content__description">
+            <p className="content__description" ref={descRef}>
               {isAttacker
                 ? 'EXPLOIT HIGH-VALUE SYSTEM VECTORS, EXTRACT PRIVILEGED CREDENTIALS, AND COMPROMISE TARGET ARCHITECTURES.'
                 : 'MONITOR REAL-TIME TELEMETRY, FORMULATE WAF INSPECT FILTERS, AND FORTIFY HOST SECURITY TOPOLOGY.'}
             </p>
 
             <button
-              ref={btnRef}
+              ref={buttonRef}
               onClick={() => alert(`Launching ${isAttacker ? 'Attacker Command Center' : 'Defender Console'}...`)}
               className={`content__button inline-flex items-center gap-2 px-8 py-3.5 rounded-xl border shadow-xl ${
                 isAttacker
@@ -651,15 +651,13 @@ export default function RoleLandingPage({ role = 'attacker', email = '', onSignO
 
           {/* 3-Column Tactical Task Gallery Grid (12 Items) */}
           <div className="gallery">
-            <div ref={gridRef} className="gallery__grid">
+            <ul className="gallery__grid" ref={gridRef}>
               {tasks.map((task) => (
-                <div key={task.id} className="gallery__item">
+                <li key={task.id} className="gallery__item">
                   <div
                     onClick={() => setSelectedTask(task)}
-                    className={`cyber-card bg-[#0b0e17]/95 border backdrop-blur-md ${
-                      isAttacker
-                        ? 'border-[#26141a] hover:border-red-500/80 hover:shadow-[0_0_24px_rgba(255,42,61,0.3)]'
-                        : 'border-[#152336] hover:border-[#2ab7ff]/80 hover:shadow-[0_0_24px_rgba(42,183,255,0.3)]'
+                    className={`cyber-task-card ${
+                      isAttacker ? 'cyber-task-card--attacker' : 'cyber-task-card--defender'
                     }`}
                   >
                     <div>
@@ -702,19 +700,19 @@ export default function RoleLandingPage({ role = 'attacker', email = '', onSignO
                           e.stopPropagation();
                           setSelectedTask(task);
                         }}
-                        className={`inline-flex items-center gap-1.5 text-xs font-mono font-bold group-hover:underline ${
+                        className={`task-more-btn ${
                           isAttacker ? 'text-red-400 hover:text-red-300' : 'text-[#2ab7ff] hover:text-[#7ad6ff]'
                         }`}
                       >
                         <span>More</span>
-                        <span className="transition-transform group-hover:translate-x-1">→</span>
+                        <span className="arrow">→</span>
                       </button>
                       <span className="text-[9px] font-mono text-zinc-600">MISSION</span>
                     </div>
                   </div>
-                </div>
+                </li>
               ))}
-            </div>
+            </ul>
           </div>
         </div>
       </section>

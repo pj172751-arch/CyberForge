@@ -1,0 +1,390 @@
+import React, { useEffect, useRef, useState } from 'react';
+import * as THREE from 'three';
+import { ATTACKER_MASK_SRC } from '../assets/attackerMask';
+
+export default function AttackerParticles({ onComplete }) {
+  const containerRef = useRef(null);
+  const [canSkip, setCanSkip] = useState(false);
+  const hasCompletedRef = useRef(false);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    // Show skip button after a short moment
+    const skipTimer = setTimeout(() => {
+      setCanSkip(true);
+    }, 1500);
+
+    let isDisposed = false;
+    let animId = null;
+
+    const N = 640;
+    const FIXED = null; // null for normal animation flow
+
+    const renderer = new THREE.WebGLRenderer({ antialias: false, alpha: false });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.setClearColor(0x000000, 1);
+    container.appendChild(renderer.domElement);
+
+    const scene = new THREE.Scene();
+    const FOV = 30;
+    const camera = new THREE.PerspectiveCamera(FOV, 1, 0.1, 100);
+    const group = new THREE.Group();
+    scene.add(group);
+
+    const uniforms = {
+      uP: { value: 0 },
+      uFade: { value: 1 },
+      uTime: { value: 0 },
+      uScale: { value: 800 },
+      uMix: { value: 0 }
+    };
+
+    const VS = `
+      attribute vec3 aStart;
+      attribute vec3 aColor;
+      attribute float aDelay;
+      attribute vec3 aRnd;
+      attribute float aGlow;
+      uniform float uP, uFade, uTime, uScale, uSize, uGain, uAlpha;
+      varying vec3 vCol;
+      varying float vA;
+      float ease(float t){ return t<0.5 ? 4.0*t*t*t : 1.0-pow(-2.0*t+2.0,3.0)/2.0; }
+      void main(){
+        float t = clamp((uP - aDelay*0.55) / 0.45, 0.0, 1.0);
+        float e = 1.0 - pow(1.0 - t, 3.0);
+        vec3 p = mix(aStart, position, e);
+        float sw = sin(3.14159*e) * (1.0 - e*0.2);
+        float ang = sw * (1.6 + aRnd.x*1.4);
+        float cs = cos(ang), sn = sin(ang);
+        p.xz = mat2(cs, -sn, sn, cs) * p.xz;
+        p.y += sw * (aRnd.y - 0.5) * 1.2;
+        float settle = smoothstep(0.92, 1.0, e);
+        p += settle * 0.004 * vec3(sin(uTime*1.3 + aRnd.x*40.0), cos(uTime*1.1 + aRnd.y*40.0), sin(uTime*0.9 + aRnd.z*40.0));
+        vec4 mv = modelViewMatrix * vec4(p, 1.0);
+        gl_Position = projectionMatrix * mv;
+        float pulse = 1.0 + aGlow * (0.22 * sin(uTime*2.2) + 0.1 * sin(uTime*5.3));
+        float flight = 1.0 + (1.0 - e) * 0.6;
+        gl_PointSize = max(1.2, uSize * uScale / -mv.z * (0.95 + 0.2*aRnd.z) * (aGlow>0.0?1.25:1.0));
+        vCol = aColor * uGain * pulse * flight * uFade;
+        vA = uAlpha;
+      }
+    `;
+
+    const FS = `
+      precision mediump float;
+      varying vec3 vCol;
+      varying float vA;
+      void main(){
+        vec2 c = gl_PointCoord - 0.5;
+        float d = length(c);
+        float a = smoothstep(0.5, 0.05, d);
+        gl_FragColor = vec4(vCol * a, 1.0) * vec4(vec3(1.0), 1.0);
+        gl_FragColor.rgb *= vA;
+      }
+    `;
+
+    function rand(a, b) {
+      return a + Math.random() * (b - a);
+    }
+
+    const createdGeometries = [];
+    const createdMaterials = [];
+
+    function resize() {
+      if (!renderer.domElement) return;
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      renderer.setSize(w, h, false);
+      renderer.domElement.style.width = w + 'px';
+      renderer.domElement.style.height = h + 'px';
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+
+      const fitH = 1.04 / Math.tan((FOV * Math.PI) / 360);
+      const fitW = 1.04 / (Math.tan((FOV * Math.PI) / 360) * camera.aspect);
+      camera.position.set(0, 0, Math.max(fitH, fitW));
+      uniforms.uScale.value = renderer.domElement.height / (2 * Math.tan((FOV * Math.PI) / 360));
+    }
+
+    window.addEventListener('resize', resize);
+    resize();
+
+    // Changed HOLD to 2.0s as explicitly requested (was 5.0s)
+    const FORM = 6.0;
+    const HOLD = 2.0;
+    const SCAT = 3.5;
+    const t0 = performance.now();
+
+    function phaseP(t) {
+      if (t < FORM) return t / FORM;
+      if (t < FORM + HOLD) return 1;
+      return Math.max(0, 1 - (t - FORM - HOLD) / SCAT);
+    }
+
+    function fadeOf(t) {
+      const s = (t - FORM - HOLD) / SCAT;
+      if (s <= 0) return 1;
+      const clamped = Math.min(1, Math.max(0, (s - 0.25) / 0.75));
+      return 1 - clamped * clamped * (3 - 2 * clamped);
+    }
+
+    let mx = 0, my = 0, tx = 0, ty = 0;
+    function handlePointerMove(e) {
+      tx = (e.clientX / window.innerWidth - 0.5) * 2;
+      ty = (e.clientY / window.innerHeight - 0.5) * 2;
+    }
+    window.addEventListener('pointermove', handlePointerMove);
+
+    function mk(P, S, C, D, extra, halo, spacing) {
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.Float32BufferAttribute(P, 3));
+      geo.setAttribute('aStart', new THREE.Float32BufferAttribute(S, 3));
+      geo.setAttribute('aColor', new THREE.Float32BufferAttribute(C, 3));
+      geo.setAttribute('aDelay', new THREE.Float32BufferAttribute(D, 1));
+
+      if (extra) {
+        geo.setAttribute('aRnd', new THREE.Float32BufferAttribute(extra.rnd, 3));
+        geo.setAttribute('aGlow', new THREE.Float32BufferAttribute(extra.glw, 1));
+      } else {
+        const n = D.length;
+        const z3 = new Float32Array(n * 3);
+        const z1 = new Float32Array(n);
+        for (let k = 0; k < n * 3; k++) z3[k] = Math.random();
+        geo.setAttribute('aRnd', new THREE.BufferAttribute(z3, 3));
+        geo.setAttribute('aGlow', new THREE.BufferAttribute(z1, 1));
+      }
+
+      const mat = new THREE.ShaderMaterial({
+        uniforms: THREE.UniformsUtils.merge([
+          uniforms,
+          {
+            uSize: { value: halo ? 16 * spacing : 1.9 * spacing },
+            uAlpha: { value: halo ? 0.07 : 1.0 },
+            uGain: { value: halo ? 1.0 : 0.78 }
+          }
+        ]),
+        vertexShader: VS,
+        fragmentShader: FS,
+        transparent: true,
+        depthWrite: false,
+        depthTest: false,
+        blending: THREE.AdditiveBlending
+      });
+
+      mat.uniforms.uP = uniforms.uP;
+      mat.uniforms.uFade = uniforms.uFade;
+      mat.uniforms.uTime = uniforms.uTime;
+      mat.uniforms.uScale = uniforms.uScale;
+      mat.uniforms.uMix = uniforms.uMix;
+
+      createdGeometries.push(geo);
+      createdMaterials.push(mat);
+
+      const pts = new THREE.Points(geo, mat);
+      pts.frustumCulled = false;
+      return pts;
+    }
+
+    const img = new Image();
+    img.onload = function () {
+      if (isDisposed) return;
+
+      const cv = document.createElement('canvas');
+      cv.width = cv.height = N;
+      const cx = cv.getContext('2d');
+      cx.drawImage(img, 0, 0, N, N);
+      const d = cx.getImageData(0, 0, N, N).data;
+
+      const pos = [], start = [], col = [], dly = [], rnd = [], glw = [];
+      const gpos = [], gstart = [], gcol = [], gdly = [];
+      const spacing = 2 / N;
+
+      for (let y = 0; y < N; y++) {
+        for (let x = 0; x < N; x++) {
+          const i = (y * N + x) * 4;
+          const r = d[i] / 255;
+          const g = d[i + 1] / 255;
+          const b = d[i + 2] / 255;
+          const l = (r + g + b) / 3;
+          if (l < 0.02) continue;
+
+          const px = ((x + Math.random()) / N - 0.5) * 2;
+          const py = -((y + Math.random()) / N - 0.5) * 2;
+          const pz = l * 0.22 + rand(-0.01, 0.01);
+          pos.push(px, py, pz);
+
+          const th = Math.random() * 6.2832;
+          const ph = Math.acos(rand(-1, 1));
+          const R = rand(2.2, 6.5);
+          start.push(
+            R * Math.sin(ph) * Math.cos(th) * 1.4,
+            R * Math.sin(ph) * Math.sin(th),
+            R * Math.cos(ph) * 0.9
+          );
+          col.push(r, g, b);
+
+          const dd =
+            0.55 * Math.random() +
+            0.25 * (1 - (px + 1) / 2) +
+            0.2 * (l > 0.35 ? 1 : 0.3 * Math.random());
+          dly.push(Math.min(dd, 1));
+          rnd.push(Math.random(), Math.random(), Math.random());
+
+          const red = Math.max(0, r - Math.max(g, b) * 0.6);
+          glw.push(l > 0.3 ? Math.min(1, red * 1.4) : 0);
+
+          if (l > 0.35 && (x + y) % 2 === 0) {
+            gpos.push(px, py, pz);
+            gstart.push(start[start.length - 3], start[start.length - 2], start[start.length - 1]);
+            gcol.push(r, g * 0.6, b * 0.7);
+            gdly.push(Math.min(dd + 0.05, 1));
+          }
+        }
+      }
+
+      // ---- "Attacker" written in particles (italic) ----
+      (function () {
+        const W = 1280;
+        const tc = document.createElement('canvas');
+        tc.width = tc.height = W;
+        const c = tc.getContext('2d');
+        const word = 'Attacker';
+        const fs = 86;
+        const gap = fs * 0.16;
+
+        c.font = 'italic 600 ' + fs + 'px Georgia, "Times New Roman", serif';
+        c.fillStyle = '#fff';
+        c.textBaseline = 'alphabetic';
+
+        let total = -gap;
+        for (let k = 0; k < word.length; k++) {
+          total += c.measureText(word[k]).width + gap;
+        }
+
+        let cxp = (W - total) / 2;
+        const base = W * 0.915;
+        for (let k = 0; k < word.length; k++) {
+          c.fillText(word[k], cxp, base);
+          cxp += c.measureText(word[k]).width + gap;
+        }
+
+        const td = c.getImageData(0, 0, W, W).data;
+        for (let yy = 0; yy < W; yy++) {
+          for (let xx = 0; xx < W; xx++) {
+            const al = td[(yy * W + xx) * 4 + 3] / 255;
+            if (al < 0.3) continue;
+
+            const px = ((xx + Math.random()) / W - 0.5) * 2;
+            const py = -((yy + Math.random()) / W - 0.5) * 2;
+            pos.push(px, py, 0.03);
+
+            const th = Math.random() * 6.2832;
+            const ph = Math.acos(rand(-1, 1));
+            const R = rand(2.2, 6.5);
+            const sx = R * Math.sin(ph) * Math.cos(th) * 1.4;
+            const sy = R * Math.sin(ph) * Math.sin(th);
+            const sz = R * Math.cos(ph) * 0.9;
+            start.push(sx, sy, sz);
+            col.push(1.0 * al * 0.42, 0.22 * al * 0.42, 0.28 * al * 0.42);
+
+            const dd = 0.75 + 0.25 * Math.random();
+            dly.push(dd);
+            rnd.push(Math.random(), Math.random(), Math.random());
+            glw.push(0.7);
+
+            if (Math.random() < 0.12) {
+              gpos.push(px, py, 0.03);
+              gstart.push(sx, sy, sz);
+              gcol.push(1.0, 0.2, 0.28);
+              gdly.push(Math.min(dd + 0.05, 1));
+            }
+          }
+        }
+      })();
+
+      const halo = mk(gpos, gstart, gcol, gdly, null, true, spacing);
+      const main = mk(pos, start, col, dly, { rnd, glw }, false, spacing);
+      group.add(halo);
+      group.add(main);
+
+      function frame() {
+        if (isDisposed) return;
+        const now = performance.now();
+        const t = (now - t0) / 1000;
+
+        uniforms.uTime.value = t;
+        uniforms.uP.value = FIXED !== null ? FIXED : phaseP(t);
+        uniforms.uFade.value = FIXED !== null ? 1 : fadeOf(t);
+
+        if (t > FORM + HOLD + SCAT + 0.2) {
+          renderer.render(scene, camera);
+          if (onComplete && !hasCompletedRef.current) {
+            hasCompletedRef.current = true;
+            setTimeout(() => {
+              if (!isDisposed) onComplete();
+            }, 300);
+          }
+          return;
+        }
+
+        mx += (tx - mx) * 0.05;
+        my += (ty - my) * 0.05;
+        group.rotation.y = mx * 0.22 + Math.sin(t * 0.3) * 0.03;
+        group.rotation.x = my * 0.12;
+        renderer.render(scene, camera);
+        animId = requestAnimationFrame(frame);
+      }
+
+      frame();
+    };
+
+    img.src = ATTACKER_MASK_SRC;
+
+    return () => {
+      isDisposed = true;
+      clearTimeout(skipTimer);
+      if (animId) cancelAnimationFrame(animId);
+      window.removeEventListener('resize', resize);
+      window.removeEventListener('pointermove', handlePointerMove);
+
+      createdGeometries.forEach((g) => g.dispose());
+      createdMaterials.forEach((m) => m.dispose());
+      renderer.dispose();
+      if (renderer.domElement && renderer.domElement.parentNode) {
+        renderer.domElement.parentNode.removeChild(renderer.domElement);
+      }
+    };
+  }, [onComplete]);
+
+  const handleSkip = () => {
+    if (onComplete && !hasCompletedRef.current) {
+      hasCompletedRef.current = true;
+      onComplete();
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black overflow-hidden flex items-center justify-center">
+      <div ref={containerRef} className="absolute inset-0 cursor-crosshair" />
+
+      {/* Top Banner overlay */}
+      <div className="absolute top-6 left-6 z-20 flex items-center gap-2.5 px-4 py-2 rounded-full bg-black/60 backdrop-blur-md border border-red-500/30 text-xs font-semibold text-red-300">
+        <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse shadow-[0_0_8px_#ff2a3d]" />
+        <span className="uppercase tracking-widest font-mono text-[11px]">Attacker Protocol Initialized</span>
+      </div>
+
+      {/* Skip button for seamless UX */}
+      {canSkip && (
+        <button
+          onClick={handleSkip}
+          className="absolute bottom-8 right-8 z-20 px-5 py-2.5 rounded-xl bg-black/60 hover:bg-red-950/40 backdrop-blur-md border border-red-500/40 hover:border-red-400 text-xs font-mono font-medium text-red-200 transition-all flex items-center gap-2 shadow-[0_0_20px_rgba(255,42,61,0.2)]"
+        >
+          <span>Skip sequence</span>
+          <span className="text-red-400">→</span>
+        </button>
+      )}
+    </div>
+  );
+}

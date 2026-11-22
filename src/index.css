@@ -1,75 +1,49 @@
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  color-scheme: dark;
-}
-
-body {
+html, body, #root {
   margin: 0;
-  background-color: #0A0A0B;
-  color: #E2E8F0;
-  font-family: 'Space Grotesk', system-ui, -apple-system, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  padding: 0;
+  height: 100%;
+  width: 100%;
   overflow-x: hidden;
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  background-color: #1c1d22;
 }
 
-/* Custom scrollbars for security console aesthetic */
+/* Physics item styling strictly matching user code */
+.it {
+  position: absolute;
+  left: 0;
+  top: 0;
+  opacity: 0;
+  will-change: transform;
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+}
+
+.it:active {
+  cursor: grabbing;
+}
+
+.it svg {
+  display: block;
+  overflow: visible;
+}
+
+/* Custom scrollbars */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
 }
-
 ::-webkit-scrollbar-track {
-  background: #0A0A0B;
+  background: transparent;
 }
-
 ::-webkit-scrollbar-thumb {
-  background: #232326;
-  border-radius: 3px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #2E2E33;
-}
-
-/* Code and mono styling */
-code, pre, .font-mono {
-  font-family: 'Commit Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
-}
-
-/* Hairline dividers */
-.border-hairline {
-  border-color: #232326;
-}
-
-.bg-panel {
-  background-color: #141416;
-}
-
-.text-cyan-accent {
-  color: #00E5CC;
-}
-
-.bg-cyan-accent {
-  background-color: #00E5CC;
-}
-
-/* CRT Scanline & Phosphor Overlay (Optional Toggle) */
-.scanlines-overlay {
-  background: linear-gradient(
-    rgba(18, 16, 16, 0) 50%, 
-    rgba(0, 0, 0, 0.25) 50%
-  ), linear-gradient(
-    90deg,
-    rgba(255, 0, 0, 0.02),
-    rgba(0, 255, 0, 0.01),
-    rgba(0, 0, 255, 0.02)
-  );
-  background-size: 100% 3px, 6px 100%;
-  pointer-events: none;
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 9999px;
 }

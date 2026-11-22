@@ -2,13 +2,8 @@ import React, { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { ATTACKER_MASK_SRC } from '../assets/attackerMask';
 
-export default function AttackerParticles({ boomProgress = 0 }) {
+export default function AttackerParticles() {
   const containerRef = useRef(null);
-  const boomRef = useRef(boomProgress);
-
-  useEffect(() => {
-    boomRef.current = boomProgress;
-  }, [boomProgress]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -18,7 +13,7 @@ export default function AttackerParticles({ boomProgress = 0 }) {
     let animId = null;
 
     const N = 640;
-    const renderer = new THREE.WebGLRenderer({ antialias: false, alpha: true });
+    const renderer = new THREE.WebGLRenderer({ antialias: false, alpha: false });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.setClearColor(0x000000, 1);
     container.appendChild(renderer.domElement);
@@ -96,8 +91,9 @@ export default function AttackerParticles({ boomProgress = 0 }) {
       const w = window.innerWidth;
       const h = window.innerHeight;
       renderer.setSize(w, h, false);
-      renderer.domElement.style.width = w + 'px';
-      renderer.domElement.style.height = h + 'px';
+      renderer.domElement.style.width = '100%';
+      renderer.domElement.style.height = '100%';
+      renderer.domElement.style.display = 'block';
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
 
@@ -110,7 +106,7 @@ export default function AttackerParticles({ boomProgress = 0 }) {
     window.addEventListener('resize', resize);
     resize();
 
-    // Come together over 3s, then stay together
+    // Come together over 3s, then stay assembled
     const FORM = 3.0;
     let t0 = performance.now();
 
@@ -302,13 +298,16 @@ export default function AttackerParticles({ boomProgress = 0 }) {
         const t = (now - t0) / 1000;
 
         uniforms.uTime.value = t;
-        // Assembles together and remains assembled indefinitely
+        // Forms together over 3s, then remains formed indefinitely
         uniforms.uP.value = Math.min(t / FORM, 1.0);
 
-        // Explosion is driven exclusively by scroll progress
-        const boomVal = boomRef.current || 0;
-        uniforms.uBoom.value = boomVal * 2.2;
-        uniforms.uFade.value = Math.max(0, 1.0 - boomVal * 1.4);
+        // Explosion is driven smoothly by window scroll position
+        const scrollY = window.scrollY || window.pageYOffset || 0;
+        const vh = window.innerHeight || 800;
+        const scrollBoom = Math.min(1.8, Math.max(0, scrollY / (vh * 0.75)));
+
+        uniforms.uBoom.value = scrollBoom * 2.0;
+        uniforms.uFade.value = Math.max(0, 1.0 - scrollBoom * 1.3);
 
         mx += (tx - mx) * 0.05;
         my += (ty - my) * 0.05;
@@ -339,8 +338,8 @@ export default function AttackerParticles({ boomProgress = 0 }) {
   }, []);
 
   return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      <div ref={containerRef} className="absolute inset-0 pointer-events-auto cursor-crosshair" />
+    <div className="absolute inset-0 w-full h-full overflow-hidden">
+      <div ref={containerRef} className="w-full h-full cursor-crosshair" />
     </div>
   );
 }

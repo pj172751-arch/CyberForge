@@ -1,30 +1,34 @@
-/* Scoped styles for the Sticky Grid Scroll Animation */
+/* Scoped styles strictly matching the Codrops Sticky Grid Scroll architecture */
 
 .scroll-page {
-  background-color: #050608;
+  background-color: #05060a;
   color: #fff;
   min-height: 100vh;
   position: relative;
-  overflow-x: hidden;
+  width: 100%;
 }
 
-/* ---------------- Block intro ---------------- */
+/* ---------------- Block intro (Fixed / Background Particle Viewport) ---------------- */
 .block--intro {
-  position: relative;
-  width: 100%;
+  position: fixed;
+  inset: 0;
+  width: 100vw;
   height: 100vh;
   overflow: hidden;
-  z-index: 2;
+  z-index: 1;
   display: flex;
   align-items: center;
   justify-content: center;
+  background-color: #000000;
+  pointer-events: auto;
 }
 
-/* ---------------- Block main ---------------- */
+/* ---------------- Block main (Scroll track: 425vh matching Codrops) ---------------- */
 .block.block--main {
   height: 425vh;
   position: relative;
   z-index: 10;
+  pointer-events: none;
 }
 
 .block__wrapper {
@@ -37,9 +41,11 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: #07080d;
+  background: transparent;
+  pointer-events: none;
 }
 
+/* ---------------- Content (Title, Description, CTA) ---------------- */
 .content {
   position: relative;
   display: flex;
@@ -49,58 +55,59 @@
   width: 100%;
   height: 100vh;
   text-align: center;
-  z-index: 10;
+  z-index: 20;
   pointer-events: none;
   padding: 0 1.5rem;
 }
 
 .content__title {
   max-width: 950px;
-  font-size: clamp(2.5rem, 6vw, 5.5rem);
-  font-weight: 800;
-  line-height: 1.1;
-  letter-spacing: -0.02em;
+  font-size: clamp(2.6rem, 6.2vw, 5.8rem);
+  font-weight: 900;
+  line-height: 1.08;
+  letter-spacing: -0.03em;
   text-transform: uppercase;
   pointer-events: auto;
 }
 
 .content__description {
-  max-width: 580px;
+  max-width: 540px;
   margin-top: 1.5rem;
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   line-height: 1.6;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   color: #94a3b8;
   pointer-events: auto;
 }
 
 .content__button {
   margin-top: 2rem;
-  font-size: 0.875rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
+  font-size: 0.8125rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   pointer-events: auto;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.25s ease;
 }
 
-/* ---------------- Gallery ---------------- */
+/* ---------------- Gallery & Grid ---------------- */
 .gallery {
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate3d(-50%, -50%, 0);
-  width: min(880px, 88vw);
-  z-index: 5;
+  width: min(840px, 86vw);
+  z-index: 10;
   pointer-events: auto;
 }
 
 .gallery__grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  column-gap: 1.5rem;
-  row-gap: 1.5rem;
+  column-gap: 1.25rem;
+  row-gap: 1.25rem;
   will-change: transform;
 }
 
@@ -108,20 +115,22 @@
   width: 100%;
   aspect-ratio: 1;
   will-change: transform;
+  pointer-events: auto;
 }
 
 /* ---------------- Cyber Card Styling ---------------- */
 .cyber-card {
   width: 100%;
   height: 100%;
-  border-radius: 1.25rem;
+  border-radius: 1.15rem;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  padding: 1.25rem;
-  transition: border-color 0.3s ease, box-shadow 0.3s ease, transform 0.3s ease;
+  padding: 1.15rem;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease;
   position: relative;
   overflow: hidden;
+  cursor: pointer;
 }
 
 @media (max-width: 768px) {
@@ -129,10 +138,11 @@
     width: 92vw;
   }
   .gallery__grid {
-    column-gap: 0.75rem;
-    row-gap: 0.75rem;
+    column-gap: 0.65rem;
+    row-gap: 0.65rem;
   }
   .cyber-card {
     padding: 0.75rem;
+    border-radius: 0.85rem;
   }
 }

@@ -4,9 +4,9 @@ import { ChevronDown, Eye, EyeOff } from 'lucide-react';
 
 export default function App() {
   const [isSignUp, setIsSignUp] = useState(true);
-  const [fullName, setFullName] = useState('Amélie Laurent');
-  const [email, setEmail] = useState('amelielaurent7622@gmail.com');
-  const [password, setPassword] = useState('password123');
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [role, setRole] = useState('attacker'); // 'attacker' | 'defender'
   const [submitted, setSubmitted] = useState(false);
@@ -17,12 +17,17 @@ export default function App() {
     setTimeout(() => setSubmitted(false), 3000);
   };
 
+  const handleToggleMode = () => {
+    setIsSignUp(prev => !prev);
+    setSubmitted(false);
+  };
+
   return (
     <div className="min-h-screen w-screen bg-[#070709] flex items-center justify-center p-3 sm:p-6 md:p-8 font-sans selection:bg-[#2ab7ff]/30 selection:text-[#dbf5ff]">
       {/* Big Modal Container (Matching color with right half physics) */}
       <div className="relative w-[95vw] max-w-[1400px] h-[88vh] min-h-[700px] bg-[#0c0d12] rounded-[28px] shadow-[0_0_80px_rgba(0,0,0,0.9)] overflow-hidden flex flex-col md:flex-row border border-[#1e202c]">
         
-        {/* LEFT COLUMN: Login / Sign Up Form (Color matched to dark physics side) */}
+        {/* LEFT COLUMN: Login / Sign Up Form */}
         <div className="w-full md:w-[45%] lg:w-[42%] p-8 sm:p-10 md:p-12 lg:p-14 flex flex-col justify-between bg-gradient-to-b from-[#0e1017] via-[#0c0d12] to-[#090a0f] relative z-10 overflow-y-auto border-r border-[#181a24]">
           <div>
             {/* Top Brand Pill */}
@@ -101,34 +106,36 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Role Dropdown: Attacker & Defender */}
-              <div>
-                <label className="block text-xs font-medium text-zinc-400 mb-1.5 ml-1">
-                  Designated Role
-                </label>
-                <div className="relative">
-                  <select
-                    value={role}
-                    onChange={(e) => setRole(e.target.value)}
-                    className="w-full h-12 pl-4 pr-11 text-xs sm:text-sm font-semibold text-zinc-100 bg-[#141622] border border-[#232638] rounded-xl focus:outline-none focus:border-[#2ab7ff] focus:ring-1 focus:ring-[#2ab7ff] appearance-none cursor-pointer transition-all"
-                  >
-                    <option value="attacker" className="bg-[#141622] text-zinc-100">
-                      Attacker
-                    </option>
-                    <option value="defender" className="bg-[#141622] text-zinc-100">
-                      Defender
-                    </option>
-                  </select>
-                  <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none flex items-center gap-1.5">
-                    {role === 'attacker' ? (
-                      <span className="w-2.5 h-2.5 rounded-full bg-[#ff2a3d] shadow-[0_0_8px_#ff2a3d]" />
-                    ) : (
-                      <span className="w-2.5 h-2.5 rounded-full bg-[#2ab7ff] shadow-[0_0_8px_#2ab7ff]" />
-                    )}
-                    <ChevronDown className="w-4 h-4 text-zinc-400" />
+              {/* Role Dropdown: ONLY IN SIGN UP */}
+              {isSignUp && (
+                <div>
+                  <label className="block text-xs font-medium text-zinc-400 mb-1.5 ml-1">
+                    Designated Role
+                  </label>
+                  <div className="relative">
+                    <select
+                      value={role}
+                      onChange={(e) => setRole(e.target.value)}
+                      className="w-full h-12 pl-4 pr-11 text-xs sm:text-sm font-semibold text-zinc-100 bg-[#141622] border border-[#232638] rounded-xl focus:outline-none focus:border-[#2ab7ff] focus:ring-1 focus:ring-[#2ab7ff] appearance-none cursor-pointer transition-all"
+                    >
+                      <option value="attacker" className="bg-[#141622] text-zinc-100">
+                        Attacker
+                      </option>
+                      <option value="defender" className="bg-[#141622] text-zinc-100">
+                        Defender
+                      </option>
+                    </select>
+                    <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none flex items-center gap-1.5">
+                      {role === 'attacker' ? (
+                        <span className="w-2.5 h-2.5 rounded-full bg-[#ff2a3d] shadow-[0_0_8px_#ff2a3d]" />
+                      ) : (
+                        <span className="w-2.5 h-2.5 rounded-full bg-[#2ab7ff] shadow-[0_0_8px_#2ab7ff]" />
+                      )}
+                      <ChevronDown className="w-4 h-4 text-zinc-400" />
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
 
               {/* Submit Button */}
               <div className="pt-3">
@@ -139,24 +146,39 @@ export default function App() {
                   {submitted ? (
                     <span>Authenticated ✓</span>
                   ) : (
-                    <span>{isSignUp ? 'Create Account' : 'Sign In'}</span>
+                    <span>{isSignUp ? 'Sign Up' : 'Log In'}</span>
                   )}
                 </button>
               </div>
             </form>
           </div>
 
-          {/* Bottom Switcher: Already have account? Sign in */}
+          {/* Bottom Switcher: Clean toggle between Sign Up and Log In */}
           <div className="pt-6 flex items-center justify-between text-xs text-zinc-400 border-t border-[#181a24] mt-6">
             <div>
-              <span>{isSignUp ? 'Already have an account? ' : "Don't have an account? "}</span>
-              <button
-                type="button"
-                onClick={() => setIsSignUp(!isSignUp)}
-                className="font-semibold text-[#2ab7ff] hover:text-[#7ad6ff] hover:underline transition-colors"
-              >
-                {isSignUp ? 'Sign in' : 'Sign up'}
-              </button>
+              {isSignUp ? (
+                <>
+                  <span>Already have an account? </span>
+                  <button
+                    type="button"
+                    onClick={handleToggleMode}
+                    className="font-semibold text-[#2ab7ff] hover:text-[#7ad6ff] hover:underline transition-colors"
+                  >
+                    Log in
+                  </button>
+                </>
+              ) : (
+                <>
+                  <span>Don't have an account? </span>
+                  <button
+                    type="button"
+                    onClick={handleToggleMode}
+                    className="font-semibold text-[#2ab7ff] hover:text-[#7ad6ff] hover:underline transition-colors"
+                  >
+                    Sign up
+                  </button>
+                </>
+              )}
             </div>
             <a href="#terms" className="hover:underline text-zinc-500 hover:text-zinc-400 transition-colors">
               Terms & Conditions
@@ -164,7 +186,7 @@ export default function App() {
           </div>
         </div>
 
-        {/* RIGHT COLUMN: The Matter.js Falling Physics Playground (Clean, no overlays, full sized) */}
+        {/* RIGHT COLUMN: The Matter.js Falling Physics Playground */}
         <div className="w-full md:w-[55%] lg:w-[58%] h-[380px] md:h-full relative overflow-hidden bg-black flex flex-col justify-end">
           <FallingPhysics mode="both" />
         </div>

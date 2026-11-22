@@ -9,7 +9,7 @@ import './StickyGridScroll.css';
 
 gsap.registerPlugin(ScrollTrigger);
 
-// 12 Tactical Mission Tasks for Attacker (3 columns x 4 rows)
+// 12 Tactical Tasks for Attacker
 const ATTACKER_TASKS = [
   {
     id: 'sqli',
@@ -200,7 +200,7 @@ const ATTACKER_TASKS = [
   }
 ];
 
-// 12 Tactical Defense Tasks for Defender (3 columns x 4 rows)
+// 12 Tactical Tasks for Defender
 const DEFENDER_TASKS = [
   {
     id: 'ddos',
@@ -388,7 +388,7 @@ export default function RoleLandingPage({ role = 'attacker', email = '', onSignO
   const isAttacker = role === 'attacker';
   const tasks = isAttacker ? ATTACKER_TASKS : DEFENDER_TASKS;
 
-  const [selectedTask, setSelectedTask] = useState(null);
+  const [showOverviewModal, setShowOverviewModal] = useState(false);
 
   const blockRef = useRef(null);
   const wrapperRef = useRef(null);
@@ -608,7 +608,7 @@ export default function RoleLandingPage({ role = 'attacker', email = '', onSignO
         {/* Scroll cue */}
         <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-2 pointer-events-none opacity-80">
           <span className={`text-[11px] font-mono tracking-widest uppercase ${isAttacker ? 'text-red-300/80' : 'text-sky-300/80'}`}>
-            Scroll to Explode & Reveal Mission Grid
+            Scroll to Explode & Reveal Grid
           </span>
           <ChevronDown className={`w-5 h-5 animate-bounce ${isAttacker ? 'text-red-400' : 'text-[#2ab7ff]'}`} />
         </div>
@@ -636,16 +636,16 @@ export default function RoleLandingPage({ role = 'attacker', email = '', onSignO
                 : 'MONITOR REAL-TIME TELEMETRY, FORMULATE WAF INSPECT FILTERS, AND FORTIFY HOST SECURITY TOPOLOGY.'}
             </p>
 
+            {/* "More ->" link in the middle (strictly in the middle, not on each task) */}
             <button
               ref={buttonRef}
-              onClick={() => alert(`Launching ${isAttacker ? 'Attacker Command Center' : 'Defender Console'}...`)}
-              className={`content__button inline-flex items-center gap-2 px-8 py-3.5 rounded-xl border shadow-xl ${
-                isAttacker
-                  ? 'bg-red-950/60 hover:bg-red-900/80 border-red-500/50 text-red-200 shadow-red-500/25'
-                  : 'bg-sky-950/60 hover:bg-sky-900/80 border-[#2ab7ff]/50 text-[#dbf5ff] shadow-[#2ab7ff]/25'
+              onClick={() => setShowOverviewModal(true)}
+              className={`content__button ${
+                isAttacker ? 'text-red-400 hover:text-red-300' : 'text-[#2ab7ff] hover:text-[#7ad6ff]'
               }`}
             >
-              <span>{isAttacker ? 'Engage War Room →' : 'Activate SOC Console →'}</span>
+              <span>More</span>
+              <span>&rarr;</span>
             </button>
           </div>
 
@@ -655,59 +655,40 @@ export default function RoleLandingPage({ role = 'attacker', email = '', onSignO
               {tasks.map((task) => (
                 <li key={task.id} className="gallery__item">
                   <div
-                    onClick={() => setSelectedTask(task)}
-                    className={`cyber-task-card ${
-                      isAttacker ? 'cyber-task-card--attacker' : 'cyber-task-card--defender'
+                    className={`gallery__task-box ${
+                      isAttacker ? 'gallery__task-box--attacker' : 'gallery__task-box--defender'
                     }`}
                   >
-                    <div>
-                      {/* Card Header with SVG & Badge */}
-                      <div className="flex items-center justify-between mb-2">
-                        <div
-                          className={`p-2 rounded-xl ${
-                            isAttacker
-                              ? 'bg-red-950/60 border border-red-500/30'
-                              : 'bg-sky-950/60 border border-[#2ab7ff]/30'
-                          }`}
-                        >
-                          {task.svg}
-                        </div>
-                        <span
-                          className={`text-[9px] font-mono px-2 py-0.5 rounded-full border ${
-                            isAttacker
-                              ? 'bg-red-950/50 text-red-300 border-red-500/30'
-                              : 'bg-sky-950/50 text-sky-300 border-[#2ab7ff]/30'
-                          }`}
-                        >
-                          {task.badge}
-                        </span>
+                    {/* Card Header with SVG & Badge */}
+                    <div className="flex items-center justify-between mb-2">
+                      <div
+                        className={`p-2 rounded-xl ${
+                          isAttacker
+                            ? 'bg-red-950/60 border border-red-500/30'
+                            : 'bg-sky-950/60 border border-[#2ab7ff]/30'
+                        }`}
+                      >
+                        {task.svg}
                       </div>
+                      <span
+                        className={`text-[9px] font-mono px-2 py-0.5 rounded-full border ${
+                          isAttacker
+                            ? 'bg-red-950/50 text-red-300 border-red-500/30'
+                            : 'bg-sky-950/50 text-sky-300 border-[#2ab7ff]/30'
+                        }`}
+                      >
+                        {task.badge}
+                      </span>
+                    </div>
 
-                      {/* Card Title & Desc */}
+                    {/* Card Title & Desc (No "More ->" here) */}
+                    <div className="mt-auto">
                       <h3 className="text-xs sm:text-sm font-bold text-white mb-1 tracking-tight">
                         {task.title}
                       </h3>
                       <p className="text-[10px] text-zinc-400 line-clamp-2 leading-relaxed">
                         {task.desc}
                       </p>
-                    </div>
-
-                    {/* "More ->" Link */}
-                    <div className="pt-2 border-t border-white/5 flex items-center justify-between mt-auto">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedTask(task);
-                        }}
-                        className={`task-more-btn ${
-                          isAttacker ? 'text-red-400 hover:text-red-300' : 'text-[#2ab7ff] hover:text-[#7ad6ff]'
-                        }`}
-                      >
-                        <span>More</span>
-                        <span className="arrow">→</span>
-                      </button>
-                      <span className="text-[9px] font-mono text-zinc-600">MISSION</span>
                     </div>
                   </div>
                 </li>
@@ -717,15 +698,15 @@ export default function RoleLandingPage({ role = 'attacker', email = '', onSignO
         </div>
       </section>
 
-      {/* ---------------- TACTICAL TASK MODAL ("More ->") ---------------- */}
-      {selectedTask && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+      {/* ---------------- TACTICAL MODAL (Opened from "More ->" in the middle) ---------------- */}
+      {showOverviewModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
           <div
-            className={`w-full max-w-lg bg-[#0e111a] border rounded-2xl p-6 sm:p-8 shadow-2xl relative overflow-hidden ${
+            className={`w-full max-w-2xl bg-[#0e111a] border rounded-2xl p-6 sm:p-8 shadow-2xl relative max-h-[85vh] overflow-y-auto ${
               isAttacker ? 'border-red-500/40' : 'border-[#2ab7ff]/40'
             }`}
           >
-            {/* Modal Ambient Top Glow */}
+            {/* Modal Top Glow */}
             <div
               className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent ${
                 isAttacker ? 'via-red-500' : 'via-[#2ab7ff]'
@@ -733,7 +714,7 @@ export default function RoleLandingPage({ role = 'attacker', email = '', onSignO
             />
 
             {/* Modal Header */}
-            <div className="flex items-start justify-between mb-5">
+            <div className="flex items-start justify-between mb-6 pb-4 border-b border-white/10">
               <div className="flex items-center gap-3">
                 <div
                   className={`p-3 rounded-xl ${
@@ -742,52 +723,59 @@ export default function RoleLandingPage({ role = 'attacker', email = '', onSignO
                       : 'bg-sky-950/50 border border-[#2ab7ff]/40 text-[#2ab7ff]'
                   }`}
                 >
-                  {selectedTask.svg}
+                  {isAttacker ? <Terminal className="w-6 h-6" /> : <Shield className="w-6 h-6" />}
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-white tracking-tight">{selectedTask.title}</h3>
+                  <h3 className="text-xl font-bold text-white tracking-tight">
+                    {isAttacker ? 'Offensive Operations Matrix' : 'Defense Architecture Catalog'}
+                  </h3>
                   <span
                     className={`inline-block text-[11px] font-mono uppercase tracking-wider ${
                       isAttacker ? 'text-red-400' : 'text-[#2ab7ff]'
                     }`}
                   >
-                    {selectedTask.badge}
+                    12 Active Protocols Deployed
                   </span>
                 </div>
               </div>
               <button
-                onClick={() => setSelectedTask(null)}
+                onClick={() => setShowOverviewModal(false)}
                 className="p-1.5 rounded-lg bg-zinc-800/60 hover:bg-zinc-700 text-zinc-400 hover:text-white transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            {/* Modal Body */}
-            <div className="space-y-4 text-xs sm:text-sm text-zinc-300 leading-relaxed">
-              <div>
-                <span className="block text-[11px] font-mono uppercase text-zinc-500 mb-1">Mission Objective</span>
-                <p className="bg-[#141824] p-3 rounded-xl border border-white/5 font-mono text-zinc-200">
-                  {selectedTask.details}
-                </p>
-              </div>
-
-              <div>
-                <span className="block text-[11px] font-mono uppercase text-zinc-500 mb-1">
-                  {isAttacker ? 'Exploit Vector Signature' : 'Defense Rule Signature'}
-                </span>
-                <div className="bg-[#08090f] p-3 rounded-xl border border-white/10 font-mono text-[11px] sm:text-xs overflow-x-auto text-amber-300/90">
-                  <code>{selectedTask.vector}</code>
+            {/* Modal Tasks List */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs leading-relaxed">
+              {tasks.map((task) => (
+                <div
+                  key={task.id}
+                  className="bg-[#141824] p-3.5 rounded-xl border border-white/5 flex flex-col justify-between"
+                >
+                  <div className="flex items-center gap-2.5 mb-2">
+                    <div className="p-1.5 rounded-lg bg-black/40">{task.svg}</div>
+                    <div>
+                      <h4 className="font-bold text-white">{task.title}</h4>
+                      <span className={`text-[9px] font-mono ${isAttacker ? 'text-red-400' : 'text-[#2ab7ff]'}`}>
+                        {task.badge}
+                      </span>
+                    </div>
+                  </div>
+                  <p className="text-zinc-400 text-[11px] mb-2">{task.details}</p>
+                  <div className="bg-[#08090f] p-2 rounded-lg border border-white/5 font-mono text-[10px] text-amber-300/90 overflow-x-auto">
+                    <code>{task.vector}</code>
+                  </div>
                 </div>
-              </div>
+              ))}
             </div>
 
             {/* Modal Footer */}
             <div className="mt-6 pt-4 border-t border-white/10 flex items-center justify-between">
-              <span className="text-[11px] font-mono text-zinc-500">CyberForge Module Briefing</span>
+              <span className="text-[11px] font-mono text-zinc-500">CyberForge Operator Module</span>
               <button
-                onClick={() => setSelectedTask(null)}
-                className={`px-5 py-2 rounded-xl text-xs font-semibold text-white transition-all ${
+                onClick={() => setShowOverviewModal(false)}
+                className={`px-6 py-2.5 rounded-xl text-xs font-semibold text-white transition-all ${
                   isAttacker
                     ? 'bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 shadow-[0_0_15px_rgba(255,42,61,0.4)]'
                     : 'bg-gradient-to-r from-sky-500 to-sky-600 hover:from-sky-400 hover:to-sky-500 shadow-[0_0_15px_rgba(42,183,255,0.4)]'

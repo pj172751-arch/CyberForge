@@ -1,14 +1,16 @@
-/* Scoped styles strictly matching the user's Codrops Sticky Grid Scroll specifications */
+/* Exact stylesheet matching user code specifications */
 
 :root {
   --font-primary: 'Plus Jakarta Sans', Arial, sans-serif;
   --font-secondary: Georgia, 'Times New Roman', serif;
   --color-text: #fff;
-  --color-bg: #07080d;
+  --color-bg: #000000;
+  --color-link: #fff;
+  --color-link-hover: #2ab7ff;
 }
 
 .scroll-page {
-  background-color: #07080d;
+  background-color: #000000;
   color: #fff;
   min-height: 100vh;
   position: relative;
@@ -16,7 +18,7 @@
   overflow-x: hidden;
 }
 
-/* ---------------- Block Intro (Hero with Particle Simulation) ---------------- */
+/* ---------------- Block Intro (3D Particle Canvas Hero) ---------------- */
 .block--intro {
   position: relative;
   width: 100%;
@@ -29,7 +31,7 @@
   background-color: #000000;
 }
 
-/* ---------------- Block Main (425vh track matching user code) ---------------- */
+/* ---------------- Block Main (425vh sticky track matching user code) ---------------- */
 .block.block--main {
   height: 425vh;
   position: relative;
@@ -41,16 +43,16 @@
   top: 0;
   width: 100%;
   height: 100vh;
-  overflow: hidden;
+  padding: 0 24px;
   will-change: transform;
+  overflow: hidden;
+  background: transparent;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: transparent;
-  pointer-events: none;
 }
 
-/* ---------------- Content (Title, Description, Button) ---------------- */
+/* ---------------- Content in the middle ---------------- */
 .content {
   position: relative;
   display: flex;
@@ -68,7 +70,7 @@
 .content__title {
   width: min(924px, 90vw);
   font-family: var(--font-secondary);
-  font-size: clamp(2.4rem, 5.8vw, 5.5rem);
+  font-size: clamp(2.8rem, 6.5vw, 6rem);
   line-height: 1.15;
   letter-spacing: -0.02em;
   font-weight: 700;
@@ -77,24 +79,31 @@
 }
 
 .content__description {
-  width: min(480px, 85vw);
+  width: min(455px, 85vw);
   margin-top: 24px;
   font-size: 14px;
-  line-height: 1.5;
+  line-height: 1.4;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: #94a3b8;
   pointer-events: auto;
 }
 
+/* "More ->" link in the middle */
 .content__button {
   margin-top: 32px;
-  font-size: 14px;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
+  font-size: 15px;
+  font-family: 'JetBrains Mono', monospace;
   font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   pointer-events: auto;
   cursor: pointer;
+  background: transparent;
+  border: none;
   transition: all 0.2s ease;
 }
 
@@ -103,13 +112,13 @@
   text-underline-offset: 3px;
 }
 
-/* ---------------- Gallery & 3-Column Grid ---------------- */
+/* ---------------- Gallery & Grid ---------------- */
 .gallery {
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate3d(-50%, -50%, 0);
-  width: min(840px, 86vw);
+  width: min(780px, 86vw);
   z-index: 5;
   pointer-events: auto;
 }
@@ -129,65 +138,36 @@
   width: 100%;
   aspect-ratio: 1;
   will-change: transform;
-  pointer-events: auto;
 }
 
-/* ---------------- Task Card Styling (replacing flower images with cyber boxes) ---------------- */
-.cyber-task-card {
+/* ---------------- Task Cards (replacing flower image, NO "More ->" inside cards) ---------------- */
+.gallery__task-box {
   width: 100%;
   height: 100%;
   border-radius: 18px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  padding: 1.15rem;
-  background-color: rgba(11, 14, 23, 0.96);
+  padding: 1.25rem;
+  background-color: rgba(12, 15, 24, 0.96);
   border: 1px solid rgba(255, 255, 255, 0.08);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(10px);
-  transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
   position: relative;
   overflow: hidden;
-  cursor: pointer;
+  transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
 }
 
-.cyber-task-card--attacker:hover {
+.gallery__task-box--attacker:hover {
   border-color: rgba(255, 42, 61, 0.7);
-  box-shadow: 0 0 25px rgba(255, 42, 61, 0.3);
+  box-shadow: 0 0 25px rgba(255, 42, 61, 0.25);
   transform: translateY(-2px);
 }
 
-.cyber-task-card--defender:hover {
+.gallery__task-box--defender:hover {
   border-color: rgba(42, 183, 255, 0.7);
-  box-shadow: 0 0 25px rgba(42, 183, 255, 0.3);
+  box-shadow: 0 0 25px rgba(42, 183, 255, 0.25);
   transform: translateY(-2px);
-}
-
-.task-more-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 12px;
-  font-weight: 700;
-  background: transparent;
-  border: none;
-  padding: 0;
-  cursor: pointer;
-  transition: opacity 0.2s ease;
-}
-
-.task-more-btn:hover {
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-
-.task-more-btn .arrow {
-  transition: transform 0.2s ease;
-}
-
-.cyber-task-card:hover .task-more-btn .arrow {
-  transform: translateX(4px);
 }
 
 @media (max-width: 768px) {
@@ -198,7 +178,7 @@
     column-gap: 12px;
     row-gap: 14px;
   }
-  .cyber-task-card {
+  .gallery__task-box {
     padding: 0.75rem;
     border-radius: 12px;
   }

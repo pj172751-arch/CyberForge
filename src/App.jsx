@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
 import FallingPhysics from './components/FallingPhysics';
-import AttackerParticles from './components/AttackerParticles';
-import DefenderParticles from './components/DefenderParticles';
-import { ChevronDown, Eye, EyeOff, ShieldAlert, ShieldCheck, LogOut } from 'lucide-react';
+import RoleLandingPage from './components/RoleLandingPage';
+import { ChevronDown, Eye, EyeOff } from 'lucide-react';
 
 export default function App() {
-  const [currentView, setCurrentView] = useState('auth'); // 'auth' | 'attacker-particles' | 'defender-particles' | 'dashboard'
+  const [currentView, setCurrentView] = useState('auth'); // 'auth' | 'landing'
   const [isSignUp, setIsSignUp] = useState(true);
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -15,16 +14,8 @@ export default function App() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    // Trigger role-specific particle intro
-    if (role === 'attacker') {
-      setCurrentView('attacker-particles');
-    } else {
-      setCurrentView('defender-particles');
-    }
-  };
-
-  const handleParticleComplete = () => {
-    setCurrentView('dashboard');
+    // Navigate straight to the role-specific landing page
+    setCurrentView('landing');
   };
 
   const handleLogout = () => {
@@ -35,79 +26,21 @@ export default function App() {
   };
 
   const handleToggleMode = () => {
-    setIsSignUp(prev => !prev);
+    setIsSignUp((prev) => !prev);
     setFullName('');
     setEmail('');
     setPassword('');
   };
 
-  // If in Attacker particle sequence
-  if (currentView === 'attacker-particles') {
-    return <AttackerParticles onComplete={handleParticleComplete} />;
-  }
-
-  // If in Defender particle sequence
-  if (currentView === 'defender-particles') {
-    return <DefenderParticles onComplete={handleParticleComplete} />;
-  }
-
-  // If in dashboard view (clean placeholder as user will provide dashboard idea)
-  if (currentView === 'dashboard') {
-    const isAttacker = role === 'attacker';
-
-    return (
-      <div className={`min-h-screen w-screen bg-[#070709] text-white flex flex-col items-center justify-center p-6 ${isAttacker ? 'selection:bg-[#ff2a3d]/30 selection:text-[#ffdbdf]' : 'selection:bg-[#2ab7ff]/30 selection:text-[#dbf5ff]'}`}>
-        <div className="w-full max-w-2xl bg-[#0c0d12] border border-[#1e202c] rounded-3xl p-8 sm:p-12 shadow-[0_0_80px_rgba(0,0,0,0.9)] relative overflow-hidden text-center">
-          <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent ${isAttacker ? 'via-[#ff2a3d]' : 'via-[#2ab7ff]'} to-transparent`} />
-          
-          <div className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full ${isAttacker ? 'bg-[#161217] border-[#3b1820] text-red-300' : 'bg-[#101926] border-[#1d3550] text-sky-300'} border text-xs font-semibold tracking-wider mb-6`}>
-            <span className={`w-2 h-2 rounded-full ${isAttacker ? 'bg-[#ff2a3d] shadow-[0_0_8px_#ff2a3d]' : 'bg-[#2ab7ff] shadow-[0_0_8px_#2ab7ff]'}`} />
-            <span className="uppercase text-[11px] font-mono tracking-widest">{role} Session Active</span>
-          </div>
-
-          <div className={`w-16 h-16 mx-auto mb-6 rounded-2xl ${isAttacker ? 'bg-red-950/40 border-red-500/30 text-red-400 shadow-[0_0_30px_rgba(255,42,61,0.25)]' : 'bg-sky-950/40 border-sky-500/30 text-[#2ab7ff] shadow-[0_0_30px_rgba(42,183,255,0.25)]'} border flex items-center justify-center`}>
-            {isAttacker ? <ShieldAlert className="w-8 h-8" /> : <ShieldCheck className="w-8 h-8" />}
-          </div>
-
-          <h1 className="text-3xl font-bold tracking-tight mb-3">
-            {isAttacker ? 'Attacker Command Center' : 'Defender Security Console'}
-          </h1>
-          
-          <p className="text-zinc-400 text-sm max-w-md mx-auto mb-8 font-normal leading-relaxed">
-            Authenticated as <span className="text-zinc-200 font-semibold">{email || (isAttacker ? 'attacker@cyberforge.local' : 'defender@cyberforge.local')}</span>.
-            <br />
-            {isAttacker ? 'Attacker' : 'Defender'} particle sequence completed. Standing by for dashboard layout and modules.
-          </p>
-
-          <div className="flex items-center justify-center gap-4">
-            <button
-              onClick={handleLogout}
-              className="inline-flex items-center gap-2 px-6 h-12 rounded-xl bg-[#141622] hover:bg-[#1a1d2d] border border-[#232638] text-zinc-300 hover:text-white text-xs sm:text-sm font-semibold transition-all"
-            >
-              <LogOut className="w-4 h-4" />
-              <span>Back to Auth / Sign Out</span>
-            </button>
-            <button
-              onClick={() => setCurrentView(isAttacker ? 'attacker-particles' : 'defender-particles')}
-              className={`inline-flex items-center gap-2 px-6 h-12 rounded-xl text-white text-xs sm:text-sm font-semibold transition-all ${
-                isAttacker
-                  ? 'bg-gradient-to-r from-[#ff2a3d] to-[#cc1829] hover:from-[#ff4758] hover:to-[#ff2a3d] shadow-[0_0_20px_rgba(255,42,61,0.35)]'
-                  : 'bg-gradient-to-r from-[#2ab7ff] to-[#1c98db] hover:from-[#3bc0ff] hover:to-[#2ab7ff] shadow-[0_0_20px_rgba(42,183,255,0.35)]'
-              }`}
-            >
-              <span>Replay Particles</span>
-            </button>
-          </div>
-        </div>
-      </div>
-    );
+  // If in role landing page view (with scroll explosion and sticky task grid)
+  if (currentView === 'landing') {
+    return <RoleLandingPage role={role} email={email} onSignOut={handleLogout} />;
   }
 
   return (
     <div className="min-h-screen w-screen bg-[#070709] flex items-center justify-center p-3 sm:p-6 md:p-8 font-sans selection:bg-[#2ab7ff]/30 selection:text-[#dbf5ff]">
       {/* Big Modal Container (Matching color with right half physics) */}
       <div className="relative w-[95vw] max-w-[1400px] h-[88vh] min-h-[700px] bg-[#0c0d12] rounded-[28px] shadow-[0_0_80px_rgba(0,0,0,0.9)] overflow-hidden flex flex-col md:flex-row border border-[#1e202c]">
-        
         {/* LEFT COLUMN: Login / Sign Up Form */}
         <div className="w-full md:w-[45%] lg:w-[42%] p-8 sm:p-10 md:p-12 lg:p-14 flex flex-col justify-between bg-gradient-to-b from-[#0e1017] via-[#0c0d12] to-[#090a0f] relative z-10 overflow-y-auto border-r border-[#181a24]">
           <div>
@@ -132,8 +65,20 @@ export default function App() {
             {/* The Form with strict browser autofill blocking */}
             <form onSubmit={handleSubmit} autoComplete="off" className="space-y-4">
               {/* Browser autofill traps */}
-              <input type="text" name="fakeusernameremembered" style={{ display: 'none' }} tabIndex={-1} autoComplete="off" />
-              <input type="password" name="fakepasswordremembered" style={{ display: 'none' }} tabIndex={-1} autoComplete="off" />
+              <input
+                type="text"
+                name="fakeusernameremembered"
+                style={{ display: 'none' }}
+                tabIndex={-1}
+                autoComplete="off"
+              />
+              <input
+                type="password"
+                name="fakepasswordremembered"
+                style={{ display: 'none' }}
+                tabIndex={-1}
+                autoComplete="off"
+              />
 
               {/* Full Name (Sign up only) */}
               {isSignUp && (

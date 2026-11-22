@@ -1,0 +1,138 @@
+/* Scoped styles for the Sticky Grid Scroll Animation */
+
+.scroll-page {
+  background-color: #050608;
+  color: #fff;
+  min-height: 100vh;
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* ---------------- Block intro ---------------- */
+.block--intro {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  overflow: hidden;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ---------------- Block main ---------------- */
+.block.block--main {
+  height: 425vh;
+  position: relative;
+  z-index: 10;
+}
+
+.block__wrapper {
+  position: sticky;
+  top: 0;
+  width: 100%;
+  height: 100vh;
+  overflow: hidden;
+  will-change: transform;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #07080d;
+}
+
+.content {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 100vh;
+  text-align: center;
+  z-index: 10;
+  pointer-events: none;
+  padding: 0 1.5rem;
+}
+
+.content__title {
+  max-width: 950px;
+  font-size: clamp(2.5rem, 6vw, 5.5rem);
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+  pointer-events: auto;
+}
+
+.content__description {
+  max-width: 580px;
+  margin-top: 1.5rem;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  letter-spacing: 0.05em;
+  color: #94a3b8;
+  pointer-events: auto;
+}
+
+.content__button {
+  margin-top: 2rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  pointer-events: auto;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+/* ---------------- Gallery ---------------- */
+.gallery {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate3d(-50%, -50%, 0);
+  width: min(880px, 88vw);
+  z-index: 5;
+  pointer-events: auto;
+}
+
+.gallery__grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  column-gap: 1.5rem;
+  row-gap: 1.5rem;
+  will-change: transform;
+}
+
+.gallery__item {
+  width: 100%;
+  aspect-ratio: 1;
+  will-change: transform;
+}
+
+/* ---------------- Cyber Card Styling ---------------- */
+.cyber-card {
+  width: 100%;
+  height: 100%;
+  border-radius: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 1.25rem;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease, transform 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+@media (max-width: 768px) {
+  .gallery {
+    width: 92vw;
+  }
+  .gallery__grid {
+    column-gap: 0.75rem;
+    row-gap: 0.75rem;
+  }
+  .cyber-card {
+    padding: 0.75rem;
+  }
+}

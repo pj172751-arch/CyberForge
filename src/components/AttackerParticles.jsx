@@ -1,28 +1,24 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { ATTACKER_MASK_SRC } from '../assets/attackerMask';
 
-export default function AttackerParticles({ onComplete }) {
+export default function AttackerParticles({ boomProgress = 0 }) {
   const containerRef = useRef(null);
-  const [canSkip, setCanSkip] = useState(false);
-  const hasCompletedRef = useRef(false);
+  const boomRef = useRef(boomProgress);
+
+  useEffect(() => {
+    boomRef.current = boomProgress;
+  }, [boomProgress]);
 
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
-    // Show skip button after a short moment
-    const skipTimer = setTimeout(() => {
-      setCanSkip(true);
-    }, 1000);
-
     let isDisposed = false;
     let animId = null;
 
     const N = 640;
-    const FIXED = null; // null for normal animation flow
-
-    const renderer = new THREE.WebGLRenderer({ antialias: false, alpha: false });
+    const renderer = new THREE.WebGLRenderer({ antialias: false, alpha: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.setClearColor(0x000000, 1);
     container.appendChild(renderer.domElement);
@@ -114,29 +110,9 @@ export default function AttackerParticles({ onComplete }) {
     window.addEventListener('resize', resize);
     resize();
 
-    // Plays once: come together (3s) -> stay intact (1s) -> explode (2s) -> end
+    // Come together over 3s, then stay together
     const FORM = 3.0;
-    const HOLD = 1.0;
-    const SCAT = 2.0;
     let t0 = performance.now();
-
-    function phaseP(t) {
-      return Math.min(t / FORM, 1);
-    }
-
-    function boomOf(t) {
-      const s = (t - FORM - HOLD) / SCAT;
-      if (s <= 0) return 0;
-      const clamped = Math.min(1, s);
-      return 1 - Math.pow(1 - clamped, 2.2);
-    }
-
-    function fadeOf(t) {
-      const s = (t - FORM - HOLD) / SCAT;
-      if (s <= 0.25) return 1;
-      const clamped = Math.min(1, (s - 0.25) / 0.75);
-      return 1 - clamped * clamped * (3 - 2 * clamped);
-    }
 
     let mx = 0, my = 0, tx = 0, ty = 0;
     function handlePointerMove(e) {
@@ -326,20 +302,13 @@ export default function AttackerParticles({ onComplete }) {
         const t = (now - t0) / 1000;
 
         uniforms.uTime.value = t;
-        uniforms.uP.value = FIXED !== null ? FIXED : phaseP(t);
-        uniforms.uBoom.value = boomOf(t);
-        uniforms.uFade.value = FIXED !== null ? 1 : fadeOf(t);
+        // Assembles together and remains assembled indefinitely
+        uniforms.uP.value = Math.min(t / FORM, 1.0);
 
-        if (t > FORM + HOLD + SCAT + 0.2) {
-          renderer.render(scene, camera);
-          if (onComplete && !hasCompletedRef.current) {
-            hasCompletedRef.current = true;
-            setTimeout(() => {
-              if (!isDisposed) onComplete();
-            }, 200);
-          }
-          return;
-        }
+        // Explosion is driven exclusively by scroll progress
+        const boomVal = boomRef.current || 0;
+        uniforms.uBoom.value = boomVal * 2.2;
+        uniforms.uFade.value = Math.max(0, 1.0 - boomVal * 1.4);
 
         mx += (tx - mx) * 0.05;
         my += (ty - my) * 0.05;
@@ -356,7 +325,6 @@ export default function AttackerParticles({ onComplete }) {
 
     return () => {
       isDisposed = true;
-      clearTimeout(skipTimer);
       if (animId) cancelAnimationFrame(animId);
       window.removeEventListener('resize', resize);
       window.removeEventListener('pointermove', handlePointerMove);
@@ -368,35 +336,11 @@ export default function AttackerParticles({ onComplete }) {
         renderer.domElement.parentNode.removeChild(renderer.domElement);
       }
     };
-  }, [onComplete]);
-
-  const handleSkip = () => {
-    if (onComplete && !hasCompletedRef.current) {
-      hasCompletedRef.current = true;
-      onComplete();
-    }
-  };
+  }, []);
 
   return (
-    <div className="fixed inset-0 z-50 bg-black overflow-hidden flex items-center justify-center">
-      <div ref={containerRef} className="absolute inset-0 cursor-crosshair" />
-
-      {/* Top Banner overlay */}
-      <div className="absolute top-6 left-6 z-20 flex items-center gap-2.5 px-4 py-2 rounded-full bg-black/60 backdrop-blur-md border border-red-500/30 text-xs font-semibold text-red-300">
-        <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse shadow-[0_0_8px_#ff2a3d]" />
-        <span className="uppercase tracking-widest font-mono text-[11px]">Attacker Protocol Initialized</span>
-      </div>
-
-      {/* Skip button for seamless UX */}
-      {canSkip && (
-        <button
-          onClick={handleSkip}
-          className="absolute bottom-8 right-8 z-20 px-5 py-2.5 rounded-xl bg-black/60 hover:bg-red-950/40 backdrop-blur-md border border-red-500/40 hover:border-red-400 text-xs font-mono font-medium text-red-200 transition-all flex items-center gap-2 shadow-[0_0_20px_rgba(255,42,61,0.2)]"
-        >
-          <span>Skip sequence</span>
-          <span className="text-red-400">→</span>
-        </button>
-      )}
+    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      <div ref={containerRef} className="absolute inset-0 pointer-events-auto cursor-crosshair" />
     </div>
   );
 }

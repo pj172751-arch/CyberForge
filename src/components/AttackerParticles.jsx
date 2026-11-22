@@ -14,7 +14,7 @@ export default function AttackerParticles({ onComplete }) {
     // Show skip button after a short moment
     const skipTimer = setTimeout(() => {
       setCanSkip(true);
-    }, 1500);
+    }, 1000);
 
     let isDisposed = false;
     let animId = null;
@@ -36,6 +36,7 @@ export default function AttackerParticles({ onComplete }) {
     const uniforms = {
       uP: { value: 0 },
       uFade: { value: 1 },
+      uBoom: { value: 0 },
       uTime: { value: 0 },
       uScale: { value: 800 },
       uMix: { value: 0 }
@@ -47,7 +48,7 @@ export default function AttackerParticles({ onComplete }) {
       attribute float aDelay;
       attribute vec3 aRnd;
       attribute float aGlow;
-      uniform float uP, uFade, uTime, uScale, uSize, uGain, uAlpha;
+      uniform float uP, uFade, uBoom, uTime, uScale, uSize, uGain, uAlpha;
       varying vec3 vCol;
       varying float vA;
       float ease(float t){ return t<0.5 ? 4.0*t*t*t : 1.0-pow(-2.0*t+2.0,3.0)/2.0; }
@@ -62,6 +63,8 @@ export default function AttackerParticles({ onComplete }) {
         p.y += sw * (aRnd.y - 0.5) * 1.2;
         float settle = smoothstep(0.92, 1.0, e);
         p += settle * 0.004 * vec3(sin(uTime*1.3 + aRnd.x*40.0), cos(uTime*1.1 + aRnd.y*40.0), sin(uTime*0.9 + aRnd.z*40.0));
+        vec3 dir = normalize(position + (aRnd - 0.5) * 0.9 + vec3(0.0, 0.0, 0.25));
+        p += dir * uBoom * (1.2 + 5.0 * aRnd.y);
         vec4 mv = modelViewMatrix * vec4(p, 1.0);
         gl_Position = projectionMatrix * mv;
         float pulse = 1.0 + aGlow * (0.22 * sin(uTime*2.2) + 0.1 * sin(uTime*5.3));
@@ -111,22 +114,27 @@ export default function AttackerParticles({ onComplete }) {
     window.addEventListener('resize', resize);
     resize();
 
-    // Changed HOLD to 2.0s as explicitly requested (was 5.0s)
-    const FORM = 6.0;
-    const HOLD = 2.0;
-    const SCAT = 3.5;
-    const t0 = performance.now();
+    // Plays once: come together (3s) -> stay intact (1s) -> explode (2s) -> end
+    const FORM = 3.0;
+    const HOLD = 1.0;
+    const SCAT = 2.0;
+    let t0 = performance.now();
 
     function phaseP(t) {
-      if (t < FORM) return t / FORM;
-      if (t < FORM + HOLD) return 1;
-      return Math.max(0, 1 - (t - FORM - HOLD) / SCAT);
+      return Math.min(t / FORM, 1);
+    }
+
+    function boomOf(t) {
+      const s = (t - FORM - HOLD) / SCAT;
+      if (s <= 0) return 0;
+      const clamped = Math.min(1, s);
+      return 1 - Math.pow(1 - clamped, 2.2);
     }
 
     function fadeOf(t) {
       const s = (t - FORM - HOLD) / SCAT;
-      if (s <= 0) return 1;
-      const clamped = Math.min(1, Math.max(0, (s - 0.25) / 0.75));
+      if (s <= 0.25) return 1;
+      const clamped = Math.min(1, (s - 0.25) / 0.75);
       return 1 - clamped * clamped * (3 - 2 * clamped);
     }
 
@@ -175,6 +183,7 @@ export default function AttackerParticles({ onComplete }) {
 
       mat.uniforms.uP = uniforms.uP;
       mat.uniforms.uFade = uniforms.uFade;
+      mat.uniforms.uBoom = uniforms.uBoom;
       mat.uniforms.uTime = uniforms.uTime;
       mat.uniforms.uScale = uniforms.uScale;
       mat.uniforms.uMix = uniforms.uMix;
@@ -309,6 +318,8 @@ export default function AttackerParticles({ onComplete }) {
       group.add(halo);
       group.add(main);
 
+      t0 = performance.now();
+
       function frame() {
         if (isDisposed) return;
         const now = performance.now();
@@ -316,6 +327,7 @@ export default function AttackerParticles({ onComplete }) {
 
         uniforms.uTime.value = t;
         uniforms.uP.value = FIXED !== null ? FIXED : phaseP(t);
+        uniforms.uBoom.value = boomOf(t);
         uniforms.uFade.value = FIXED !== null ? 1 : fadeOf(t);
 
         if (t > FORM + HOLD + SCAT + 0.2) {
@@ -324,7 +336,7 @@ export default function AttackerParticles({ onComplete }) {
             hasCompletedRef.current = true;
             setTimeout(() => {
               if (!isDisposed) onComplete();
-            }, 300);
+            }, 200);
           }
           return;
         }

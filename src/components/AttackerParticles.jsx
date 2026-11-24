@@ -13,9 +13,9 @@ export default function AttackerParticles() {
     let animId = null;
 
     const N = 640;
-    const renderer = new THREE.WebGLRenderer({ antialias: false, alpha: false });
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-    renderer.setClearColor(0x000000, 1);
+    renderer.setClearColor(0x000000, 0);
     container.appendChild(renderer.domElement);
 
     const scene = new THREE.Scene();
@@ -42,6 +42,7 @@ export default function AttackerParticles() {
       uniform float uP, uFade, uBoom, uTime, uScale, uSize, uGain, uAlpha;
       varying vec3 vCol;
       varying float vA;
+      varying float vDark;
       float ease(float t){ return t<0.5 ? 4.0*t*t*t : 1.0-pow(-2.0*t+2.0,3.0)/2.0; }
       void main(){
         float t = clamp((uP - aDelay*0.55) / 0.45, 0.0, 1.0);
@@ -60,9 +61,11 @@ export default function AttackerParticles() {
         gl_Position = projectionMatrix * mv;
         float pulse = 1.0 + aGlow * (0.22 * sin(uTime*2.2) + 0.1 * sin(uTime*5.3));
         float flight = 1.0 + (1.0 - e) * 0.6;
-        gl_PointSize = max(1.2, uSize * uScale / -mv.z * (0.95 + 0.2*aRnd.z) * (aGlow>0.0?1.25:1.0));
-        vCol = aColor * uGain * pulse * flight * uFade;
-        vA = uAlpha;
+        float dark = 1.0 - smoothstep(0.0, 0.12, dot(aColor, vec3(0.333)));
+        gl_PointSize = max(1.2, uSize * uScale / -mv.z * (0.95 + 0.2*aRnd.z) * (aGlow>0.0?1.25:1.0) * (1.0 + 1.8 * dark));
+        vCol = aColor * uGain * pulse * flight;
+        vA = uAlpha * uFade;
+        vDark = dark;
       }
     `;
 
@@ -70,12 +73,13 @@ export default function AttackerParticles() {
       precision mediump float;
       varying vec3 vCol;
       varying float vA;
+      varying float vDark;
       void main(){
         vec2 c = gl_PointCoord - 0.5;
         float d = length(c);
-        float a = smoothstep(0.5, 0.05, d);
-        gl_FragColor = vec4(vCol * a, 1.0) * vec4(vec3(1.0), 1.0);
-        gl_FragColor.rgb *= vA;
+        if (d > 0.5) discard;
+        float a = smoothstep(0.5, mix(0.36, 0.44, vDark), d);
+        gl_FragColor = vec4(vCol, a * vA);
       }
     `;
 
@@ -142,7 +146,7 @@ export default function AttackerParticles() {
           {
             uSize: { value: halo ? 16 * spacing : 1.9 * spacing },
             uAlpha: { value: halo ? 0.07 : 1.0 },
-            uGain: { value: halo ? 1.0 : 0.78 }
+            uGain: { value: 1.0 }
           }
         ]),
         vertexShader: VS,
@@ -150,7 +154,7 @@ export default function AttackerParticles() {
         transparent: true,
         depthWrite: false,
         depthTest: false,
-        blending: THREE.AdditiveBlending
+        blending: halo ? THREE.AdditiveBlending : THREE.NormalBlending
       });
 
       mat.uniforms.uP = uniforms.uP;
@@ -178,112 +182,127 @@ export default function AttackerParticles() {
       cx.drawImage(img, 0, 0, N, N);
       const d = cx.getImageData(0, 0, N, N).data;
 
+      // ---- solid silhouette: fill the figure (even its black parts) with particles ----
+      const inside = (function () {
+        const R = 6, n = N * N, m = new Uint8Array(n), a = new Uint8Array(n), b = new Uint8Array(n);
+        let x, y, k, v;
+        for (k = 0; k < n; k++) m[k] = ((d[k * 4] + d[k * 4 + 1] + d[k * 4 + 2]) / 765 > 0.02) ? 1 : 0;
+        function pass(src, dst, horiz, wantMax) {
+          for (y = 0; y < N; y++) {
+            for (x = 0; x < N; x++) {
+              v = wantMax ? 0 : 1;
+              for (let o = -R; o <= R; o++) {
+                const xx = horiz ? x + o : x, yy = horiz ? y : y + o;
+                let s;
+                if (xx < 0 || yy < 0 || xx >= N || yy >= N) s = 0;
+                else s = src[yy * N + xx];
+                if (wantMax) {
+                  if (s) { v = 1; break; }
+                } else {
+                  if (!s) { v = 0; break; }
+                }
+              }
+              dst[y * N + x] = v;
+            }
+          }
+        }
+        pass(m, a, true, true);
+        pass(a, b, false, true); // dilate
+        pass(b, a, true, false);
+        pass(a, b, false, false); // erode -> closed shape
+
+        // flood the outside from the borders; whatever is not reached is inside the figure
+        const out = new Uint8Array(n), st = [];
+        function push(px, py) {
+          const q = py * N + px;
+          if (!out[q] && !b[q]) {
+            out[q] = 1;
+            st.push(q);
+          }
+        }
+        for (let i = 0; i < N; i++) {
+          push(i, 0);
+          if (i < N * 0.55) {
+            push(0, i);
+            push(N - 1, i);
+          }
+        }
+        while (st.length) {
+          const q = st.pop(), qx = q % N, qy = (q / N) | 0;
+          if (qx > 0) push(qx - 1, qy);
+          if (qx < N - 1) push(qx + 1, qy);
+          if (qy > 0) push(qx, qy - 1);
+          if (qy < N - 1) push(qx, qy + 1);
+        }
+        const res = new Uint8Array(n);
+        for (k = 0; k < n; k++) res[k] = out[k] ? 0 : 1;
+
+        // lower body: fill each row between the figure's left and right edge
+        let refLo = N, refHi = 0;
+        for (y = Math.floor(N * 0.5); y < N; y++) {
+          let lo = -1, hi = -1;
+          for (x = 0; x < N; x++) {
+            if (b[y * N + x]) {
+              if (lo < 0) lo = x;
+              hi = x;
+            }
+          }
+          if (y >= N * 0.6 && y < N * 0.78 && lo >= 0) {
+            refLo = Math.min(refLo, lo);
+            refHi = Math.max(refHi, hi);
+          }
+          if (y >= N * 0.8) {
+            lo = 0;
+            hi = N - 1;
+          }
+          if (lo >= 0) {
+            for (x = lo; x <= hi; x++) res[y * N + x] = 1;
+          }
+        }
+        return res;
+      })();
+
       const pos = [], start = [], col = [], dly = [], rnd = [], glw = [];
       const gpos = [], gstart = [], gcol = [], gdly = [];
       const spacing = 2 / N;
 
-      for (let y = 0; y < N; y++) {
-        for (let x = 0; x < N; x++) {
-          const i = (y * N + x) * 4;
-          const r = d[i] / 255;
-          const g = d[i + 1] / 255;
-          const b = d[i + 2] / 255;
-          const l = (r + g + b) / 3;
-          if (l < 0.02) continue;
+      for (let pass = 0; pass < 2; pass++) {
+        for (let y = 0; y < N; y++) {
+          for (let x = 0; x < N; x++) {
+            const i = (y * N + x) * 4;
+            const r = d[i] / 255, g = d[i + 1] / 255, b = d[i + 2] / 255;
+            const l = (r + g + b) / 3;
+            if (!inside[y * N + x] && l < 0.02) continue;
+            if ((l < 0.12) !== (pass === 0)) continue; // dark particles first, bright ones on top
 
-          const px = ((x + Math.random()) / N - 0.5) * 2;
-          const py = -((y + Math.random()) / N - 0.5) * 2;
-          const pz = l * 0.22 + rand(-0.01, 0.01);
-          pos.push(px, py, pz);
+            const px = ((x + Math.random()) / N - 0.5) * 2;
+            const py = -((y + Math.random()) / N - 0.5) * 2;
+            const pz = l * 0.22 + rand(-0.01, 0.01); // slight depth from brightness
+            pos.push(px, py, pz);
 
-          const th = Math.random() * 6.2832;
-          const ph = Math.acos(rand(-1, 1));
-          const R = rand(2.2, 6.5);
-          start.push(
-            R * Math.sin(ph) * Math.cos(th) * 1.4,
-            R * Math.sin(ph) * Math.sin(th),
-            R * Math.cos(ph) * 0.9
-          );
-          col.push(r, g, b);
+            // start: far random point on a wide shell, pulled around like a swarm
+            const th = Math.random() * 6.2832, ph = Math.acos(rand(-1, 1)), R = rand(2.2, 6.5);
+            start.push(R * Math.sin(ph) * Math.cos(th) * 1.4, R * Math.sin(ph) * Math.sin(th), R * Math.cos(ph) * 0.9);
+            col.push(r, g, b);
 
-          const dd =
-            0.55 * Math.random() +
-            0.25 * (1 - (px + 1) / 2) +
-            0.2 * (l > 0.35 ? 1 : 0.3 * Math.random());
-          dly.push(Math.min(dd, 1));
-          rnd.push(Math.random(), Math.random(), Math.random());
-
-          const red = Math.max(0, r - Math.max(g, b) * 0.6);
-          glw.push(l > 0.3 ? Math.min(1, red * 1.4) : 0);
-
-          if (l > 0.35 && (x + y) % 2 === 0) {
-            gpos.push(px, py, pz);
-            gstart.push(start[start.length - 3], start[start.length - 2], start[start.length - 1]);
-            gcol.push(r, g * 0.6, b * 0.7);
-            gdly.push(Math.min(dd + 0.05, 1));
-          }
-        }
-      }
-
-      // ---- "Attacker" written in particles (italic) ----
-      (function () {
-        const W = 1280;
-        const tc = document.createElement('canvas');
-        tc.width = tc.height = W;
-        const c = tc.getContext('2d');
-        const word = 'Attacker';
-        const fs = 86;
-        const gap = fs * 0.16;
-
-        c.font = 'italic 600 ' + fs + 'px Georgia, "Times New Roman", serif';
-        c.fillStyle = '#fff';
-        c.textBaseline = 'alphabetic';
-
-        let total = -gap;
-        for (let k = 0; k < word.length; k++) {
-          total += c.measureText(word[k]).width + gap;
-        }
-
-        let cxp = (W - total) / 2;
-        const base = W * 0.915;
-        for (let k = 0; k < word.length; k++) {
-          c.fillText(word[k], cxp, base);
-          cxp += c.measureText(word[k]).width + gap;
-        }
-
-        const td = c.getImageData(0, 0, W, W).data;
-        for (let yy = 0; yy < W; yy++) {
-          for (let xx = 0; xx < W; xx++) {
-            const al = td[(yy * W + xx) * 4 + 3] / 255;
-            if (al < 0.3) continue;
-
-            const px = ((xx + Math.random()) / W - 0.5) * 2;
-            const py = -((yy + Math.random()) / W - 0.5) * 2;
-            pos.push(px, py, 0.03);
-
-            const th = Math.random() * 6.2832;
-            const ph = Math.acos(rand(-1, 1));
-            const R = rand(2.2, 6.5);
-            const sx = R * Math.sin(ph) * Math.cos(th) * 1.4;
-            const sy = R * Math.sin(ph) * Math.sin(th);
-            const sz = R * Math.cos(ph) * 0.9;
-            start.push(sx, sy, sz);
-            col.push(1.0 * al * 0.42, 0.22 * al * 0.42, 0.28 * al * 0.42);
-
-            const dd = 0.75 + 0.25 * Math.random();
-            dly.push(dd);
+            // delay: particles from the left/bottom arrive first, bright mask last
+            const dd = 0.55 * Math.random() + 0.25 * (1 - (px + 1) / 2) + 0.2 * (l > 0.35 ? 1 : 0.3 * Math.random());
+            dly.push(Math.min(dd, 1));
             rnd.push(Math.random(), Math.random(), Math.random());
-            glw.push(0.7);
 
-            if (Math.random() < 0.12) {
-              gpos.push(px, py, 0.03);
-              gstart.push(sx, sy, sz);
-              gcol.push(1.0, 0.2, 0.28);
+            const red = Math.max(0, r - Math.max(g, b) * 0.6);
+            glw.push(l > 0.3 ? Math.min(1, red * 1.4) : 0);
+
+            // soft halo layer for the neon lines
+            if (l > 0.35 && ((x + y) % 2 === 0)) {
+              gpos.push(px, py, pz);
+              gstart.push(start[start.length - 3], start[start.length - 2], start[start.length - 1]);
+              gcol.push(r, g * 0.6, b * 0.7);
               gdly.push(Math.min(dd + 0.05, 1));
             }
           }
         }
-      })();
+      }
 
       const halo = mk(gpos, gstart, gcol, gdly, null, true, spacing);
       const main = mk(pos, start, col, dly, { rnd, glw }, false, spacing);
@@ -338,7 +357,7 @@ export default function AttackerParticles() {
   }, []);
 
   return (
-    <div className="absolute inset-0 w-full h-full overflow-hidden">
+    <div className="absolute inset-0 w-full h-full overflow-hidden z-10 pointer-events-auto">
       <div ref={containerRef} className="w-full h-full cursor-crosshair" />
     </div>
   );

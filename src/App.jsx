@@ -1,25 +1,74 @@
 import React, { useState } from 'react';
 import FallingPhysics from './components/FallingPhysics';
 import RoleLandingPage from './components/RoleLandingPage';
-import { ChevronDown, Eye, EyeOff } from 'lucide-react';
+import TaskMatrixPage from './components/TaskMatrixPage';
+import AdminDashboard from './components/AdminDashboard';
+import ModeratorDashboard from './components/ModeratorDashboard';
+import { ChevronDown, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import {
+  registerUser,
+  loginUser
+} from './utils/authStorage';
 
 export default function App() {
-  const [currentView, setCurrentView] = useState('auth'); // 'auth' | 'landing'
+  const [currentView, setCurrentView] = useState('auth'); // 'auth' | 'landing' | 'tasks' | 'admin' | 'moderator'
   const [isSignUp, setIsSignUp] = useState(true);
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [role, setRole] = useState('attacker'); // 'attacker' | 'defender'
+  const [role, setRole] = useState('attacker'); // 'attacker' | 'defender' | 'moderator' | 'admin'
+  const [authError, setAuthError] = useState('');
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    // Navigate straight to the role-specific landing page
-    setCurrentView('landing');
+    setAuthError('');
+
+    if (isSignUp) {
+      // Register account into persistent storage with designated role
+      const res = registerUser({ fullName, email, password, role });
+      if (!res.success) {
+        setAuthError(res.error);
+        return;
+      }
+      const user = res.user;
+      setRole(user.role);
+      setEmail(user.email);
+      setFullName(user.fullName);
+
+      if (user.role === 'admin') {
+        setCurrentView('admin');
+      } else if (user.role === 'moderator') {
+        setCurrentView('moderator');
+      } else {
+        setCurrentView('landing');
+      }
+    } else {
+      // Authenticate against stored accounts and retrieve authoritative registered role
+      const res = loginUser({ email, password });
+      if (!res.success) {
+        setAuthError(res.error);
+        return;
+      }
+      const user = res.user;
+      setRole(user.role);
+      setEmail(user.email);
+      setFullName(user.fullName);
+
+      // Route strictly according to the account's registered role
+      if (user.role === 'admin') {
+        setCurrentView('admin');
+      } else if (user.role === 'moderator') {
+        setCurrentView('moderator');
+      } else {
+        setCurrentView('landing');
+      }
+    }
   };
 
   const handleLogout = () => {
     setCurrentView('auth');
+    setAuthError('');
     setFullName('');
     setEmail('');
     setPassword('');
@@ -27,18 +76,58 @@ export default function App() {
 
   const handleToggleMode = () => {
     setIsSignUp((prev) => !prev);
+    setAuthError('');
     setFullName('');
     setEmail('');
     setPassword('');
   };
 
+  // If in admin dashboard
+  if (currentView === 'admin') {
+    return (
+      <AdminDashboard
+        email={email || 'admin@cyberforge.dev'}
+        onSignOut={handleLogout}
+      />
+    );
+  }
+
+  // If in moderator dashboard
+  if (currentView === 'moderator') {
+    return (
+      <ModeratorDashboard
+        email={email || 'moderator@cyberforge.dev'}
+        onSignOut={handleLogout}
+      />
+    );
+  }
+
   // If in role landing page view (with scroll explosion and sticky task grid)
   if (currentView === 'landing') {
-    return <RoleLandingPage role={role} email={email} onSignOut={handleLogout} />;
+    return (
+      <RoleLandingPage
+        role={role}
+        email={email}
+        onSignOut={handleLogout}
+        onNavigateToTasks={() => setCurrentView('tasks')}
+      />
+    );
+  }
+
+  // If in tasks matrix view (Codrops grid item hover effect)
+  if (currentView === 'tasks') {
+    return (
+      <TaskMatrixPage
+        role={role}
+        email={email}
+        onBack={() => setCurrentView('landing')}
+        onSignOut={handleLogout}
+      />
+    );
   }
 
   return (
-    <div className="min-h-screen w-screen bg-[#070709] flex items-center justify-center p-3 sm:p-6 md:p-8 font-sans selection:bg-[#2ab7ff]/30 selection:text-[#dbf5ff]">
+    <div className="min-h-screen w-full bg-[#070709] flex items-center justify-center p-3 sm:p-6 md:p-8 font-sans selection:bg-[#2ab7ff]/30 selection:text-[#dbf5ff]">
       {/* Big Modal Container (Matching color with right half physics) */}
       <div className="relative w-[95vw] max-w-[1400px] h-[88vh] min-h-[700px] bg-[#0c0d12] rounded-[28px] shadow-[0_0_80px_rgba(0,0,0,0.9)] overflow-hidden flex flex-col md:flex-row border border-[#1e202c]">
         {/* LEFT COLUMN: Login / Sign Up Form */}
@@ -51,7 +140,7 @@ export default function App() {
             </div>
 
             {/* Title & Subtitle */}
-            <div className="space-y-1.5 mb-7">
+            <div className="space-y-1.5 mb-5">
               <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-white">
                 {isSignUp ? 'Create an account' : 'Welcome back'}
               </h1>
@@ -61,6 +150,14 @@ export default function App() {
                   : 'Log in with your operator credentials'}
               </p>
             </div>
+
+            {/* Auth Error Banner */}
+            {authError && (
+              <div className="mb-4 p-3 rounded-xl bg-red-950/70 border border-red-500/50 text-red-200 text-xs font-mono flex items-start gap-2 shadow-[0_0_20px_rgba(239,68,68,0.2)]">
+                <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
+                <span>{authError}</span>
+              </div>
+            )}
 
             {/* The Form with strict browser autofill blocking */}
             <form onSubmit={handleSubmit} autoComplete="off" className="space-y-4">
@@ -162,9 +259,10 @@ export default function App() {
                       </option>
                     </select>
                     <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none flex items-center gap-1.5">
-                      {role === 'attacker' ? (
+                      {role === 'attacker' && (
                         <span className="w-2.5 h-2.5 rounded-full bg-[#ff2a3d] shadow-[0_0_8px_#ff2a3d]" />
-                      ) : (
+                      )}
+                      {role === 'defender' && (
                         <span className="w-2.5 h-2.5 rounded-full bg-[#2ab7ff] shadow-[0_0_8px_#2ab7ff]" />
                       )}
                       <ChevronDown className="w-4 h-4 text-zinc-400" />

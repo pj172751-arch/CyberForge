@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  app_db:
+    image: postgres:16
+    container_name: cyberforge-app_db
+    restart: always
+    environment:
+      POSTGRES_DB: cyberforge
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - app_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d cyberforge"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - cyberforge-network
+
+  dvwa_db:
+    image: mariadb:10.4
+    container_name: cyberforge-dvwa_db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: dvwa
+      MYSQL_USER: dvwa
+      MYSQL_PASSWORD: password
+    networks:
+      - cyberforge-network
+
+  dvwa:
+    image: vulnerables/web-dvwa
+    container_name: cyberforge-dvwa
+    restart: always
+    ports:
+      - "8081:80"
+    environment:
+      DBMS: MySQL
+      DB_SERVER: dvwa_db
+      DB_DATABASE: dvwa
+      DB_USER: dvwa
+      DB_PASSWORD: password
+    depends_on:
+      - dvwa_db
+    networks:
+      - cyberforge-network
+
+volumes:
+  app_db_data:
+
+networks:
+  cyberforge-network:
+    driver: bridge

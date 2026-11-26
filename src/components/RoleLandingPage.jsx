@@ -245,6 +245,17 @@ export default function RoleLandingPage({ role = 'attacker', email = '', onSignO
             <span>{email || (isAttacker ? 'attacker@cyberforge.local' : 'defender@cyberforge.local')}</span>
           </div>
 
+          {typeof onNavigateToTasks === 'function' && (
+            <button
+              type="button"
+              onClick={onNavigateToTasks}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#00E5CC] hover:bg-[#00CCA6] text-[#0A0A0B] text-xs font-mono font-semibold transition-colors"
+            >
+              <span>Open Console</span>
+              <span aria-hidden="true">&rarr;</span>
+            </button>
+          )}
+
           <button
             onClick={onSignOut}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#141724] hover:bg-white/10 border border-[#23283b] text-xs font-mono text-zinc-300 hover:text-white transition-colors"

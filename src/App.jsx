@@ -1,77 +1,75 @@
 import React, { useState } from 'react';
 import FallingPhysics from './components/FallingPhysics';
 import RoleLandingPage from './components/RoleLandingPage';
-import TaskMatrixPage from './components/TaskMatrixPage';
-import AdminDashboard from './components/AdminDashboard';
-import ModeratorDashboard from './components/ModeratorDashboard';
+import AdminConsole from './components/console/AdminConsole';
+import ModeratorConsole from './components/console/ModeratorConsole';
+import AttackerConsole from './components/console/AttackerConsole';
+import DefenderConsole from './components/console/DefenderConsole';
 import { ChevronDown, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import {
   registerUser,
-  loginUser
+  loginUser,
+  getCurrentUser,
+  clearCurrentUser
 } from './utils/authStorage';
 
+function viewForRole(userRole) {
+  if (userRole === 'admin') return 'admin';
+  if (userRole === 'moderator') return 'moderator';
+  return 'landing';
+}
+
 export default function App() {
-  const [currentView, setCurrentView] = useState('auth'); // 'auth' | 'landing' | 'tasks' | 'admin' | 'moderator'
+  const [currentUser, setCurrentUser] = useState(() => getCurrentUser());
+  const [currentView, setCurrentView] = useState(() =>
+    currentUser ? viewForRole(currentUser.role) : 'auth'
+  ); // 'auth' | 'landing' | 'console' | 'admin' | 'moderator'
   const [isSignUp, setIsSignUp] = useState(true);
-  const [fullName, setFullName] = useState('');
-  const [email, setEmail] = useState('');
+  const [fullName, setFullName] = useState(() => currentUser?.username || '');
+  const [email, setEmail] = useState(() => currentUser?.email || '');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [role, setRole] = useState('attacker'); // 'attacker' | 'defender' | 'moderator' | 'admin'
+  const [role, setRole] = useState('attacker'); // Sign-up role selector: 'attacker' | 'defender'
   const [authError, setAuthError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isSubmitting) return;
     setAuthError('');
+    setIsSubmitting(true);
 
-    if (isSignUp) {
-      // Register account into persistent storage with designated role
-      const res = registerUser({ fullName, email, password, role });
+    try {
+      const signupRole = role === 'defender' ? 'defender' : 'attacker';
+      const res = isSignUp
+        ? await registerUser({ fullName, email, password, role: signupRole })
+        : await loginUser({ email, password });
+
       if (!res.success) {
         setAuthError(res.error);
         return;
       }
-      const user = res.user;
-      setRole(user.role);
-      setEmail(user.email);
-      setFullName(user.fullName);
 
-      if (user.role === 'admin') {
-        setCurrentView('admin');
-      } else if (user.role === 'moderator') {
-        setCurrentView('moderator');
-      } else {
-        setCurrentView('landing');
-      }
-    } else {
-      // Authenticate against stored accounts and retrieve authoritative registered role
-      const res = loginUser({ email, password });
-      if (!res.success) {
-        setAuthError(res.error);
-        return;
-      }
       const user = res.user;
-      setRole(user.role);
+      setCurrentUser(user);
       setEmail(user.email);
-      setFullName(user.fullName);
-
-      // Route strictly according to the account's registered role
-      if (user.role === 'admin') {
-        setCurrentView('admin');
-      } else if (user.role === 'moderator') {
-        setCurrentView('moderator');
-      } else {
-        setCurrentView('landing');
-      }
+      setFullName(user.username || '');
+      setPassword('');
+      setCurrentView(viewForRole(user.role));
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleLogout = () => {
+    clearCurrentUser();
+    setCurrentUser(null);
     setCurrentView('auth');
     setAuthError('');
     setFullName('');
     setEmail('');
     setPassword('');
+    setRole('attacker');
   };
 
   const handleToggleMode = () => {
@@ -80,48 +78,57 @@ export default function App() {
     setFullName('');
     setEmail('');
     setPassword('');
+    setRole('attacker');
   };
 
-  // If in admin dashboard
-  if (currentView === 'admin') {
+  // If in admin console
+  if (currentView === 'admin' && currentUser) {
     return (
-      <AdminDashboard
-        email={email || 'admin@cyberforge.dev'}
+      <AdminConsole
+        user={currentUser}
         onSignOut={handleLogout}
       />
     );
   }
 
-  // If in moderator dashboard
-  if (currentView === 'moderator') {
+  // If in moderator console
+  if (currentView === 'moderator' && currentUser) {
     return (
-      <ModeratorDashboard
-        email={email || 'moderator@cyberforge.dev'}
+      <ModeratorConsole
+        user={currentUser}
         onSignOut={handleLogout}
       />
     );
   }
 
   // If in role landing page view (with scroll explosion and sticky task grid)
-  if (currentView === 'landing') {
+  if (currentView === 'landing' && currentUser) {
     return (
       <RoleLandingPage
-        role={role}
-        email={email}
+        role={currentUser.role || role}
+        email={currentUser.email || email}
         onSignOut={handleLogout}
-        onNavigateToTasks={() => setCurrentView('tasks')}
+        onNavigateToTasks={() => setCurrentView('console')}
       />
     );
   }
 
-  // If in tasks matrix view (Codrops grid item hover effect)
-  if (currentView === 'tasks') {
+  // If in trainee console view (Attacker or Defender)
+  if ((currentView === 'console' || currentView === 'tasks') && currentUser) {
+    if (currentUser.role === 'defender') {
+      return (
+        <DefenderConsole
+          user={currentUser}
+          onSignOut={handleLogout}
+          onOpenOverview={() => setCurrentView('landing')}
+        />
+      );
+    }
     return (
-      <TaskMatrixPage
-        role={role}
-        email={email}
-        onBack={() => setCurrentView('landing')}
+      <AttackerConsole
+        user={currentUser}
         onSignOut={handleLogout}
+        onOpenOverview={() => setCurrentView('landing')}
       />
     );
   }
@@ -196,18 +203,18 @@ export default function App() {
                 </div>
               )}
 
-              {/* Email */}
+              {/* Email / Username */}
               <div>
                 <label className="block text-xs font-medium text-zinc-400 mb-1.5 ml-1">
-                  Email
+                  {isSignUp ? 'Email' : 'Username or Email'}
                 </label>
                 <input
-                  type="email"
+                  type={isSignUp ? 'email' : 'text'}
                   name="cf_user_email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  placeholder="name@example.com"
+                  placeholder={isSignUp ? 'name@example.com' : 'username or name@example.com'}
                   autoComplete="new-password"
                   className="w-full h-12 px-4 text-xs sm:text-sm font-medium text-zinc-100 bg-[#141622] border border-[#232638] rounded-xl focus:outline-none focus:border-[#2ab7ff] focus:ring-1 focus:ring-[#2ab7ff] transition-all placeholder:text-zinc-600"
                 />
@@ -225,6 +232,7 @@ export default function App() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
+                    minLength={isSignUp ? 8 : undefined}
                     placeholder="••••••••••••"
                     autoComplete="new-password"
                     className="w-full h-12 px-4 pr-11 text-xs sm:text-sm font-medium text-zinc-100 bg-[#141622] border border-[#232638] rounded-xl focus:outline-none focus:border-[#2ab7ff] focus:ring-1 focus:ring-[#2ab7ff] transition-all placeholder:text-zinc-600"
@@ -275,9 +283,14 @@ export default function App() {
               <div className="pt-3">
                 <button
                   type="submit"
-                  className="w-full h-12 bg-gradient-to-r from-[#2ab7ff] to-[#1c98db] hover:from-[#3bc0ff] hover:to-[#2ab7ff] active:scale-[0.99] text-[#001026] font-bold text-xs sm:text-sm rounded-xl shadow-[0_0_24px_rgba(42,183,255,0.35)] hover:shadow-[0_0_30px_rgba(42,183,255,0.5)] transition-all flex items-center justify-center tracking-wide"
+                  disabled={isSubmitting}
+                  className="w-full h-12 bg-gradient-to-r from-[#2ab7ff] to-[#1c98db] hover:from-[#3bc0ff] hover:to-[#2ab7ff] active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed text-[#001026] font-bold text-xs sm:text-sm rounded-xl shadow-[0_0_24px_rgba(42,183,255,0.35)] hover:shadow-[0_0_30px_rgba(42,183,255,0.5)] transition-all flex items-center justify-center tracking-wide"
                 >
-                  <span>{isSignUp ? 'Sign Up' : 'Log In'}</span>
+                  <span>
+                    {isSubmitting
+                      ? (isSignUp ? 'Creating account...' : 'Signing in...')
+                      : (isSignUp ? 'Sign Up' : 'Log In')}
+                  </span>
                 </button>
               </div>
             </form>

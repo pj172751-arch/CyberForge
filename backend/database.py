@@ -1,6 +1,10 @@
 import os
+from pathlib import Path
+from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
+
+load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
 # Database Connection URL (from environment or default local Postgres)
 DATABASE_URL = os.getenv(

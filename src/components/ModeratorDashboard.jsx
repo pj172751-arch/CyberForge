@@ -11,7 +11,7 @@ const INITIAL_CHALLENGES = [
   { id: 7, title: 'Broken Access Control', vuln: 'IDOR & Role Elevation', difficulty: 'Medium', dvwa_page: 'vulnerabilities/weak_id/', payload: 'Cookie: dvwaSession=admin_token' },
   { id: 8, title: 'SSRF Explorer', vuln: 'Server-Side Request Forgery', difficulty: 'High', dvwa_page: 'vulnerabilities/ssrf/', payload: 'http://169.254.169.254/latest/meta-data/' },
   { id: 9, title: 'IDOR', vuln: 'Insecure Direct Object Ref', difficulty: 'Medium', dvwa_page: 'vulnerabilities/idor/?id=', payload: '?id=0 OR 1=1' },
-  { id: 10, title: 'Web Shell Upload', vuln: 'Arbitrary File Upload', difficulty: 'High', dvwa_page: 'vulnerabilities/upload/', payload: 'shell.php.jpg -> <?php system($_GET["cmd"]); ?>' },
+  { id: 10, title: 'Web Shell Upload', vuln: 'Arbitrary File Upload', difficulty: 'High', dvwa_page: 'vulnerabilities/upload/', payload: 'polyglot-upload.php.jpg (MIME bypass sample)' },
   { id: 11, title: 'API Exploitation', vuln: 'Unauthenticated REST API', difficulty: 'Medium', dvwa_page: 'vulnerabilities/api/v1/', payload: 'GET /api/v1/users/export' },
   { id: 12, title: 'Final Breach', vuln: 'Full Chain Compromise', difficulty: 'Impossible', dvwa_page: 'vulnerabilities/audit/', payload: 'Chain: SQLi -> Shell Upload -> Root Execution' }
 ];

@@ -1,68 +1,5 @@
 import React from 'react';
 
-// Helper to generate bespoke SVG cyber backgrounds for cards
-export const getTaskCyberBg = (taskNumber, role, title) => {
-  const isAttacker = role === 'attacker';
-  const primaryColor = isAttacker ? '#ff2a3d' : '#2ab7ff';
-  const secondaryColor = isAttacker ? '#ff7582' : '#00f0ff';
-  const darkBase = isAttacker ? '#16080a' : '#07131e';
-  const accentGlow = isAttacker ? 'rgba(255,42,61,0.25)' : 'rgba(42,183,255,0.25)';
-
-  const svgContent = `
-    <svg xmlns="http://www.w3.org/2000/svg" width="600" height="600" viewBox="0 0 600 600">
-      <defs>
-        <radialGradient id="glow" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stop-color="${primaryColor}" stop-opacity="0.3"/>
-          <stop offset="70%" stop-color="${darkBase}" stop-opacity="0.8"/>
-          <stop offset="100%" stop-color="#05060a" stop-opacity="1"/>
-        </radialGradient>
-        <pattern id="grid" width="30" height="30" patternUnits="userSpaceOnUse">
-          <path d="M 30 0 L 0 0 0 30" fill="none" stroke="${primaryColor}" stroke-opacity="0.08" stroke-width="1"/>
-        </pattern>
-        <linearGradient id="cyberGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stop-color="${primaryColor}" stop-opacity="0.5"/>
-          <stop offset="100%" stop-color="${secondaryColor}" stop-opacity="0.1"/>
-        </linearGradient>
-      </defs>
-      
-      <rect width="600" height="600" fill="#05060a"/>
-      <rect width="600" height="600" fill="url(#glow)"/>
-      <rect width="600" height="600" fill="url(#grid)"/>
-
-      <!-- Cyber Circuit Lines -->
-      <g stroke="${primaryColor}" stroke-opacity="0.25" stroke-width="1.5" fill="none">
-        <path d="M 50 150 L 200 150 L 250 200 L 450 200 L 500 250" />
-        <path d="M 100 450 L 250 450 L 300 400 L 520 400" />
-        <path d="M 150 50 L 150 250 L 200 300 L 200 520" stroke-dasharray="6,6" />
-        <path d="M 400 80 L 400 280 L 350 330 L 350 550" stroke-dasharray="4,4" />
-        <circle cx="200" cy="150" r="4" fill="${primaryColor}" />
-        <circle cx="250" cy="200" r="4" fill="${secondaryColor}" />
-        <circle cx="450" cy="200" r="4" fill="${primaryColor}" />
-        <circle cx="300" cy="400" r="5" fill="${primaryColor}" />
-      </g>
-
-      <!-- Central Hex / Radar Geometry -->
-      <g transform="translate(300, 300)">
-        <polygon points="0,-120 104,-60 104,60 0,120 -104,60 -104,-60" fill="none" stroke="${primaryColor}" stroke-opacity="0.2" stroke-width="2"/>
-        <polygon points="0,-80 69,-40 69,40 0,80 -69,40 -69,-40" fill="none" stroke="${secondaryColor}" stroke-opacity="0.3" stroke-width="1.5"/>
-        <circle cx="0" cy="0" r="50" fill="none" stroke="${primaryColor}" stroke-opacity="0.4" stroke-dasharray="5,3"/>
-        <circle cx="0" cy="0" r="18" fill="${primaryColor}" fill-opacity="0.15" stroke="${primaryColor}" stroke-width="2"/>
-        <line x1="-140" y1="0" x2="140" y2="0" stroke="${primaryColor}" stroke-opacity="0.2"/>
-        <line x1="0" y1="-140" x2="0" y2="140" stroke="${primaryColor}" stroke-opacity="0.2"/>
-      </g>
-
-      <!-- Corner Telemetry Markers -->
-      <text x="40" y="60" fill="${primaryColor}" fill-opacity="0.4" font-family="monospace" font-size="12" letter-spacing="2">SYS//PROTOCOL_${taskNumber}</text>
-      <text x="40" y="80" fill="#ffffff" fill-opacity="0.2" font-family="monospace" font-size="10">NODE_${taskNumber}_SEC_${role.toUpperCase()}</text>
-      <text x="560" y="60" text-anchor="end" fill="${secondaryColor}" fill-opacity="0.4" font-family="monospace" font-size="12">[ONLINE]</text>
-      <text x="560" y="550" text-anchor="end" fill="${primaryColor}" fill-opacity="0.3" font-family="monospace" font-size="11">HEX::0x${taskNumber}F9A_22</text>
-      <text x="40" y="550" fill="${secondaryColor}" fill-opacity="0.3" font-family="monospace" font-size="11">TARGET::VIRTUAL_HOST</text>
-    </svg>
-  `;
-
-  return `url("data:image/svg+xml;utf8,${encodeURIComponent(svgContent.trim())}")`;
-};
-
 // 12 Offensive Tasks
 export const ATTACKER_TASKS = [
   {
@@ -471,7 +408,7 @@ export const DEFENDER_TASKS = [
     tags: '#modsec #owasp #regex',
     category: 'Layer 7 Filter',
     desc: 'Inspect inbound HTTP payloads in real-time, blocking malicious regular expressions.',
-    vector: 'SecRule REQUEST_COOKIES|!REQUEST_COOKIES:/__utm/ "(?:^|[^\w])(?:union\s+select)" "id:1001,phase:2,deny,status:403"',
+    vector: 'SecRule REQUEST_COOKIES|!REQUEST_COOKIES:/__utm/ "(?:^|[^\\w])(?:union\\s+select)" "id:1001,phase:2,deny,status:403"',
     details: 'Configure ModSecurity Core Rule Set filters to inspect URI arguments and headers, stopping OWASP Top 10 exploits.',
     svg: (
       <svg className="w-7 h-7 text-[#2ab7ff]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">

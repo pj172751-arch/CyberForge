@@ -3,8 +3,6 @@ import React from 'react';
 export default function RolePosterBackdrop({ role = 'attacker' }) {
   const isAttacker = role === 'attacker';
   const primaryColor = isAttacker ? '#ff2a3d' : '#2ab7ff';
-  const secondaryColor = isAttacker ? '#ff7582' : '#70d6ff';
-  const darkGlow = isAttacker ? 'rgba(255, 42, 61, 0.22)' : 'rgba(42, 183, 255, 0.22)';
 
   return (
     <div className="absolute inset-0 w-full h-full pointer-events-none select-none overflow-hidden z-0 flex flex-col justify-between">

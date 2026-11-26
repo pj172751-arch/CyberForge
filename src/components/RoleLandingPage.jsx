@@ -5,7 +5,7 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import AttackerParticles from './AttackerParticles';
 import DefenderParticles from './DefenderParticles';
 import RolePosterBackdrop from './RolePosterBackdrop';
-import { ChevronDown, LogOut, X, Terminal, Shield } from 'lucide-react';
+import { CaretDown, SignOut, X, TerminalWindow, ShieldCheck } from '@phosphor-icons/react';
 import { ATTACKER_TASKS, DEFENDER_TASKS } from '../data/cyberTasks';
 import './StickyGridScroll.css';
 
@@ -224,9 +224,9 @@ export default function RoleLandingPage({ role = 'attacker', email = '', onSignO
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-[#141724] border border-[#23283b] flex items-center justify-center">
             {isAttacker ? (
-              <Terminal className="w-4 h-4 text-red-500" />
+              <TerminalWindow className="w-4 h-4 text-red-500" weight="bold" />
             ) : (
-              <Shield className="w-4 h-4 text-[#2ab7ff]" />
+              <ShieldCheck className="w-4 h-4 text-[#2ab7ff]" weight="bold" />
             )}
           </div>
           <div>
@@ -260,7 +260,7 @@ export default function RoleLandingPage({ role = 'attacker', email = '', onSignO
             onClick={onSignOut}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#141724] hover:bg-white/10 border border-[#23283b] text-xs font-mono text-zinc-300 hover:text-white transition-colors"
           >
-            <LogOut className="w-3.5 h-3.5" />
+            <SignOut className="w-3.5 h-3.5" />
             <span>Sign Out</span>
           </button>
         </div>
@@ -279,7 +279,7 @@ export default function RoleLandingPage({ role = 'attacker', email = '', onSignO
           <span className={`text-[10px] font-mono tracking-widest uppercase ${isAttacker ? 'text-red-300/80' : 'text-sky-300/80'}`}>
             Scroll to Explode & Reveal Matrix
           </span>
-          <ChevronDown className={`w-4 h-4 animate-bounce ${isAttacker ? 'text-red-400' : 'text-[#2ab7ff]'}`} />
+          <CaretDown className={`w-4 h-4 animate-bounce ${isAttacker ? 'text-red-400' : 'text-[#2ab7ff]'}`} />
         </div>
       </section>
 
@@ -398,7 +398,7 @@ export default function RoleLandingPage({ role = 'attacker', email = '', onSignO
                       : 'bg-sky-950/50 border border-[#2ab7ff]/40 text-[#2ab7ff]'
                   }`}
                 >
-                  {isAttacker ? <Terminal className="w-6 h-6" /> : <Shield className="w-6 h-6" />}
+                  {isAttacker ? <TerminalWindow className="w-6 h-6" weight="bold" /> : <ShieldCheck className="w-6 h-6" weight="bold" />}
                 </div>
                 <div>
                   <h3 className="text-xl font-bold text-white tracking-tight">

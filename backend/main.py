@@ -13,6 +13,14 @@ from sqlalchemy.orm import Session
 
 from .auth import hash_password, verify_password
 from .database import Base, SessionLocal, engine, get_db
+from .dvwa import (
+    check_dvwa_health,
+    fetch_dvwa_source,
+    resolve_dvwa_module,
+    verify_attack,
+    verify_defense,
+)
+from .lab_guides import get_public_guide, grade_patch_choice
 from .models import Admin, Alert, Attempt, Attacker, Challenge, Defense, Defender, Moderator
 from .schemas import (
     AccountDeleteRequest,
@@ -26,12 +34,14 @@ from .schemas import (
     AuthUserResponse,
     ChallengeCreate,
     ChallengeResponse,
+    ChallengeSourceResponse,
     ChallengeUpdate,
     DefenderCreate,
     DefenderResponse,
     DefenderUpdate,
     DefenseCreate,
     DefenseResponse,
+    DvwaHealthResponse,
     LoginRequest,
     LoginResponse,
     ModeratorCreate,
@@ -53,29 +63,25 @@ ROLE_MODELS: dict[str, Tuple[Type, str]] = {
 CANONICAL_DVWA_CHALLENGES = [
     ("Broken Login", "SQLi", "Medium", "vulnerabilities/sqli/", "' OR '1'='1"),
     ("Reflected XSS", "XSS", "Easy", "vulnerabilities/xss_r/", "<script>alert(1)</script>"),
-    ("File Disclosure", "LFI", "Medium", "vulnerabilities/fi/?page=", "../../../../etc/passwd"),
+    ("Stored XSS", "Stored XSS", "Medium", "vulnerabilities/xss_s/", "<script>alert(1)</script>"),
+    ("DOM XSS", "DOM XSS", "Medium", "vulnerabilities/xss_d/", "<script>alert(1)</script>"),
+    ("File Disclosure", "LFI", "Medium", "vulnerabilities/fi/?page=", "../../../../../etc/passwd"),
     ("Command Injection", "RCE", "Hard", "vulnerabilities/exec/", "127.0.0.1; id"),
-    ("Privilege Escalation", "AuthZ", "Hard", "vulnerabilities/sqli_blind/", "1 UNION SELECT 1, @@version"),
-    (
-        "Insecure Deserialization",
-        "Deserialization",
-        "Medium",
-        "vulnerabilities/unserialize/",
-        'O:8:"Exploit":1:{s:4:"code";s:10:"phpinfo();";}',
-    ),
-    (
-        "Web Shell Upload",
-        "File Upload",
-        "Hard",
-        "vulnerabilities/upload/",
-        "polyglot-upload.php.jpg (MIME bypass sample)",
-    ),
-    ("API Exploitation", "API", "Medium", "vulnerabilities/api/v1/", "GET /api/v1/users/export"),
-    ("IDOR", "IDOR", "Medium", "vulnerabilities/idor/?id=", "?id=0 OR 1=1"),
-    ("SSRF Explorer", "SSRF", "Hard", "vulnerabilities/ssrf/", "http://169.254.169.254/latest/meta-data/"),
-    ("Broken Access Control", "Weak Session", "Medium", "vulnerabilities/weak_id/", "Cookie: dvwaSession=admin_token"),
-    ("Final Breach", "Chaining", "Hard", "vulnerabilities/audit/", "Chain: SQLi -> Upload -> RCE"),
+    ("Blind SQL Injection", "SQLi (Blind)", "Hard", "vulnerabilities/sqli_blind/", "1' AND '1'='1"),
+    ("Web Shell Upload", "File Upload", "Hard", "vulnerabilities/upload/", "cf_probe.php"),
+    ("Weak Session IDs", "Weak Session", "Medium", "vulnerabilities/weak_id/", "Cookie: dvwaSession=1"),
+    ("CSRF Password Forge", "CSRF", "Medium", "vulnerabilities/csrf/", "password_new=password&password_conf=password&Change=Change"),
+    ("Brute Force Login", "Brute Force", "Easy", "vulnerabilities/brute/", "admin:password"),
+    ("CSP Bypass", "CSP Bypass", "Hard", "vulnerabilities/csp/", "https://pastebin.com/raw/R570EE00"),
 ]
+
+LEGACY_CHALLENGE_REMAP = {
+    "vulnerabilities/unserialize/": ("Stored XSS", "Stored XSS", "Medium", "vulnerabilities/xss_s/", "<script>alert(1)</script>"),
+    "vulnerabilities/api/v1/": ("DOM XSS", "DOM XSS", "Medium", "vulnerabilities/xss_d/", "<script>alert(1)</script>"),
+    "vulnerabilities/idor/?id=": ("CSRF Password Forge", "CSRF", "Medium", "vulnerabilities/csrf/", "password_new=password&password_conf=password&Change=Change"),
+    "vulnerabilities/ssrf/": ("Brute Force Login", "Brute Force", "Easy", "vulnerabilities/brute/", "admin:password"),
+    "vulnerabilities/audit/": ("CSP Bypass", "CSP Bypass", "Hard", "vulnerabilities/csp/", "https://pastebin.com/raw/R570EE00"),
+}
 
 DIFFICULTY_POINTS = {
     "easy": 50,
@@ -85,17 +91,18 @@ DIFFICULTY_POINTS = {
 
 VULN_PAYLOAD_HINTS: dict[str, tuple[str, ...]] = {
     "sqli": ("' or '1'='1", "1'='1", "or 1=1", "union select", "'--"),
+    "sqli (blind)": ("1' and '1'='1", "' and ", "union select", "sleep(", "1=1"),
     "authz": ("union select", "@@version", "1=1", "' or "),
     "xss": ("<script>", "onerror=", "onload=", "javascript:", "alert("),
+    "stored xss": ("<script>", "onerror=", "onload=", "<svg", "alert("),
+    "dom xss": ("<script>", "onerror=", "onload=", "<svg", "javascript:"),
     "lfi": ("../", "etc/passwd", "boot.ini"),
     "rce": ("; id", "| id", "&& id", "$(id)", "whoami", "uname"),
-    "deserialization": ("o:8:", "phpinfo()", "__wakeup", "__destruct"),
-    "file upload": (".php.", "polyglot", "mime"),
-    "api": ("/api/v1/users/export", "users/export"),
-    "idor": ("?id=0", "or 1=1", "id=1"),
-    "ssrf": ("169.254.169.254", "meta-data", "http://127.0.0.1", "localhost"),
-    "weak session": ("dvwasession=", "admin_token", "session="),
-    "chaining": ("sqli", "upload", "rce"),
+    "file upload": (".php", "cf_probe", "polyglot", "mime"),
+    "weak session": ("dvwasession=", "session", "weak_id"),
+    "csrf": ("password_new=", "password_conf=", "change=change", "csrf"),
+    "brute force": ("admin:password", "username=", "password="),
+    "csp bypass": ("pastebin.com", "nonce=", "unsafe-inline"),
 }
 
 
@@ -165,6 +172,40 @@ def _seed_initial_challenges() -> None:
         session.commit()
 
 
+def _align_legacy_challenge_refs() -> None:
+    """Update the 5 non-DVWA legacy rows and brittle reference payloads in place while preserving FK history."""
+    with SessionLocal() as session:
+        challenges = session.query(Challenge).all()
+        changed = False
+        for ch in challenges:
+            ref = (ch.dvwa_page_ref or "").strip()
+            if ref in LEGACY_CHALLENGE_REMAP:
+                title, vuln_type, difficulty, new_ref, new_payload = LEGACY_CHALLENGE_REMAP[ref]
+                ch.title = title
+                ch.vulnerability_type = vuln_type
+                ch.difficulty = difficulty
+                ch.dvwa_page_ref = new_ref
+                ch.reference_payload = new_payload
+                changed = True
+            elif ref == "vulnerabilities/fi/?page=" and ch.reference_payload.strip() == "../../../../etc/passwd":
+                ch.reference_payload = "../../../../../etc/passwd"
+                changed = True
+            elif ref == "vulnerabilities/sqli_blind/" and ch.reference_payload.strip() == "1 UNION SELECT 1, @@version":
+                ch.title = "Blind SQL Injection"
+                ch.vulnerability_type = "SQLi (Blind)"
+                ch.reference_payload = "1' AND '1'='1"
+                changed = True
+            elif ref == "vulnerabilities/upload/" and "polyglot" in ch.reference_payload:
+                ch.reference_payload = "cf_probe.php"
+                changed = True
+            elif ref == "vulnerabilities/weak_id/" and ch.reference_payload.strip() == "Cookie: dvwaSession=admin_token":
+                ch.title = "Weak Session IDs"
+                ch.reference_payload = "Cookie: dvwaSession=1"
+                changed = True
+        if changed:
+            session.commit()
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Initialize schema and optionally seed configured accounts and challenges on startup."""
@@ -173,6 +214,7 @@ async def lifespan(app: FastAPI):
         print("CyberForge database tables verified.")
         _seed_initial_accounts()
         _seed_initial_challenges()
+        _align_legacy_challenge_refs()
     except Exception as e:
         print(f"Notice: Database connection not ready on startup ({e}). Run docker compose up -d.")
     yield
@@ -438,6 +480,12 @@ def health_db_check(db: Session = Depends(get_db)):
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=f"Database connection error: {str(e)}",
         )
+
+
+@app.get("/health/dvwa", response_model=DvwaHealthResponse, tags=["Health"])
+def health_dvwa_check():
+    """Live DVWA container reachability and initialization probe."""
+    return check_dvwa_health()
 
 
 # --- Authentication & Account Endpoints ---
@@ -888,6 +936,33 @@ def list_challenges(db: Session = Depends(get_db)):
     return db.query(Challenge).order_by(Challenge.challenge_id.asc()).all()
 
 
+@app.get("/api/challenges/{challenge_id}/source", response_model=ChallengeSourceResponse, tags=["Challenges"])
+def get_challenge_source(challenge_id: int, db: Session = Depends(get_db)):
+    """Return live DVWA PHP handler source, progressive hints, debrief, and unspoiled patch quiz."""
+    challenge = db.query(Challenge).filter(Challenge.challenge_id == challenge_id).first()
+    if not challenge:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Challenge not found")
+
+    module_key = resolve_dvwa_module(challenge.dvwa_page_ref)
+    vulnerable_code = fetch_dvwa_source(module_key, "low") if module_key else None
+    hardened_code = fetch_dvwa_source(module_key, "impossible") if module_key else None
+    source_available = bool(module_key and (vulnerable_code or hardened_code))
+    guide = get_public_guide(module_key)
+
+    return ChallengeSourceResponse(
+        challenge_id=challenge.challenge_id,
+        module_key=module_key,
+        source_available=source_available,
+        vulnerable_code=vulnerable_code,
+        hardened_code=hardened_code,
+        sink_pattern=guide.get("sink_pattern"),
+        owasp_category=guide["owasp_category"],
+        hints=guide["hints"],
+        debrief=guide["debrief"],
+        patch_quiz=guide["patch_quiz"],
+    )
+
+
 @app.post("/api/challenges", response_model=ChallengeResponse, status_code=status.HTTP_201_CREATED, tags=["Challenges"])
 def create_challenge(challenge_in: ChallengeCreate, db: Session = Depends(get_db)):
     """Create a new training challenge (Moderator action)."""
@@ -973,7 +1048,7 @@ def list_attempts(attacker_id: Optional[int] = None, db: Session = Depends(get_d
 
 @app.post("/api/attempts", response_model=AttemptResponse, status_code=status.HTTP_201_CREATED, tags=["Attacker"])
 def submit_attempt(attempt_in: AttemptCreate, db: Session = Depends(get_db)):
-    """Evaluate an exploit payload, score by challenge difficulty, and log an Alert."""
+    """Evaluate an exploit payload against live DVWA (with heuristic fallback), score by difficulty, and log an Alert."""
     challenge = db.query(Challenge).filter(Challenge.challenge_id == attempt_in.challenge_id).first()
     if not challenge:
         raise HTTPException(status_code=404, detail="Challenge not found")
@@ -982,7 +1057,23 @@ def submit_attempt(attempt_in: AttemptCreate, db: Session = Depends(get_db)):
     if not attacker:
         raise HTTPException(status_code=404, detail="Attacker not found")
 
-    is_success = _evaluate_attempt_payload(challenge, attempt_in.payload_used)
+    dvwa_result = verify_attack(challenge, attempt_in.payload_used)
+    if dvwa_result is not None:
+        is_success = dvwa_result.matched
+        verification_mode = dvwa_result.verification_mode
+        dvwa_http_status = dvwa_result.http_status
+        dvwa_security_level = dvwa_result.security_level
+        evidence = dvwa_result.evidence
+    else:
+        is_success = _evaluate_attempt_payload(challenge, attempt_in.payload_used)
+        verification_mode = "heuristic_fallback"
+        dvwa_http_status = None
+        dvwa_security_level = "low"
+        evidence = (
+            f"Heuristic fallback evaluation against reference vector "
+            f"({'matched' if is_success else 'not matched'})."
+        )
+
     attempt_status = "success" if is_success else "failed"
     score = DIFFICULTY_POINTS.get(challenge.difficulty.strip().lower(), 100) if is_success else 0
 
@@ -1016,6 +1107,10 @@ def submit_attempt(attempt_in: AttemptCreate, db: Session = Depends(get_db)):
         status=attempt.status,
         timestamp=attempt.timestamp,
         score_earned=attempt.score_earned,
+        verification_mode=verification_mode,
+        dvwa_http_status=dvwa_http_status,
+        dvwa_security_level=dvwa_security_level,
+        evidence=evidence,
     )
 
 
@@ -1045,7 +1140,7 @@ def list_defenses(defender_id: Optional[int] = None, db: Session = Depends(get_d
 
 @app.post("/api/defenses", response_model=DefenseResponse, status_code=status.HTTP_201_CREATED, tags=["Defender"])
 def submit_defense(defense_in: DefenseCreate, db: Session = Depends(get_db)):
-    """Apply a security level remediation, verify against the reference vector, and log an Alert."""
+    """Apply a security level remediation, verify via live before/after DVWA replay, grade patch choice, and log an Alert."""
     challenge = db.query(Challenge).filter(Challenge.challenge_id == defense_in.challenge_id).first()
     if not challenge:
         raise HTTPException(status_code=404, detail="Challenge not found")
@@ -1054,7 +1149,35 @@ def submit_defense(defense_in: DefenseCreate, db: Session = Depends(get_db)):
     if not defender:
         raise HTTPException(status_code=404, detail="Defender not found")
 
-    verified = defense_in.security_level_applied in {"high", "impossible"}
+    module_key = resolve_dvwa_module(challenge.dvwa_page_ref)
+    after_res, baseline_before = verify_defense(challenge, defense_in.security_level_applied)
+    if after_res is not None:
+        replay_blocked = not after_res.matched
+        verification_mode = after_res.verification_mode
+        dvwa_http_status = after_res.http_status
+        dvwa_security_level = after_res.security_level
+        evidence = after_res.evidence
+    else:
+        replay_blocked = defense_in.security_level_applied in {"high", "impossible"}
+        verification_mode = "heuristic_fallback"
+        dvwa_http_status = None
+        dvwa_security_level = defense_in.security_level_applied
+        evidence = (
+            f"Heuristic fallback: security tier '{defense_in.security_level_applied}' "
+            f"{'blocks' if replay_blocked else 'does not block'} the reference vector."
+        )
+        baseline_before = {
+            "exploited": True,
+            "http_status": None,
+            "evidence": f"Heuristic baseline: reference vector succeeds at 'low' security.",
+        }
+
+    patch_correct: Optional[bool] = None
+    patch_feedback: Optional[str] = None
+    if defense_in.patch_option_id:
+        patch_correct, patch_feedback = grade_patch_choice(module_key, defense_in.patch_option_id)
+
+    verified = replay_blocked and (patch_correct is not False)
     score = 150 if verified else 25
 
     now = datetime.datetime.utcnow()
@@ -1090,6 +1213,13 @@ def submit_defense(defense_in: DefenseCreate, db: Session = Depends(get_db)):
         verified=defense.verified,
         timestamp=defense.timestamp,
         score_earned=defense.score_earned,
+        verification_mode=verification_mode,
+        dvwa_http_status=dvwa_http_status,
+        dvwa_security_level=dvwa_security_level,
+        evidence=evidence,
+        baseline_before=baseline_before,
+        patch_correct=patch_correct,
+        patch_feedback=patch_feedback,
     )
 
 

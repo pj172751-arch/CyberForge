@@ -204,7 +204,7 @@ export default function DefenderParticles() {
       const bgThresh = 8;
 
       for (let x = 0; x < N; x++) {
-        const idx = (0 * N + x) * 4;
+        const idx = x * 4;
         if (Math.max(d[idx], d[idx + 1], d[idx + 2]) <= bgThresh) {
           visited[x] = 1;
           isSubject[x] = 0;

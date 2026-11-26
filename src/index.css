@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Bebas+Neue&family=Playfair+Display:ital,wght@1,500;1,700&family=Alex+Brush&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Bebas+Neue&family=Playfair+Display:ital,wght@1,500;1,700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -115,6 +115,16 @@ input:-webkit-autofill:active {
   -webkit-text-fill-color: #f4f4f5 !important;
   caret-color: #f4f4f5 !important;
   transition: background-color 50000s ease-in-out 0s;
+}
+
+/* Hide native select dropdown arrows cleanly when paired with custom icon */
+select {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+}
+select::-ms-expand {
+  display: none;
 }
 
 /* Custom scrollbars */

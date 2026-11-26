@@ -5,7 +5,7 @@ import AdminConsole from './components/console/AdminConsole';
 import ModeratorConsole from './components/console/ModeratorConsole';
 import AttackerConsole from './components/console/AttackerConsole';
 import DefenderConsole from './components/console/DefenderConsole';
-import { ChevronDown, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { CaretDown, Eye, EyeSlash, WarningCircle } from '@phosphor-icons/react';
 import {
   registerUser,
   loginUser,
@@ -161,7 +161,7 @@ export default function App() {
             {/* Auth Error Banner */}
             {authError && (
               <div className="mb-4 p-3 rounded-xl bg-red-950/70 border border-red-500/50 text-red-200 text-xs font-mono flex items-start gap-2 shadow-[0_0_20px_rgba(239,68,68,0.2)]">
-                <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
+                <WarningCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" weight="bold" />
                 <span>{authError}</span>
               </div>
             )}
@@ -242,7 +242,7 @@ export default function App() {
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors"
                   >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    {showPassword ? <EyeSlash className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
               </div>
@@ -273,7 +273,7 @@ export default function App() {
                       {role === 'defender' && (
                         <span className="w-2.5 h-2.5 rounded-full bg-[#2ab7ff] shadow-[0_0_8px_#2ab7ff]" />
                       )}
-                      <ChevronDown className="w-4 h-4 text-zinc-400" />
+                      <CaretDown className="w-4 h-4 text-zinc-400" />
                     </div>
                   </div>
                 </div>

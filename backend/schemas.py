@@ -226,6 +226,26 @@ class ChallengeResponse(ChallengeBase):
     moderator_id: Optional[int] = None
 
 
+class ChallengeSourceResponse(BaseModel):
+    challenge_id: int
+    module_key: Optional[str] = None
+    source_available: bool
+    vulnerable_code: Optional[str] = None
+    hardened_code: Optional[str] = None
+    sink_pattern: Optional[str] = None
+    owasp_category: str
+    hints: list[dict]
+    debrief: dict
+    patch_quiz: dict
+
+
+class DvwaHealthResponse(BaseModel):
+    status: Literal["ok", "setup_required", "offline"]
+    reachable: bool
+    initialized: bool
+    base_url: str
+
+
 # --- Attempt Schemas (Attacker) ---
 class AttemptCreate(BaseModel):
     attacker_id: int
@@ -244,6 +264,10 @@ class AttemptResponse(BaseModel):
     status: str
     timestamp: datetime.datetime
     score_earned: int
+    verification_mode: Optional[Literal["dvwa_live", "heuristic_fallback"]] = None
+    dvwa_http_status: Optional[int] = None
+    dvwa_security_level: Optional[str] = None
+    evidence: Optional[str] = None
 
 
 # --- Defense Schemas (Defender) ---
@@ -251,6 +275,7 @@ class DefenseCreate(BaseModel):
     defender_id: int
     challenge_id: int
     security_level_applied: str
+    patch_option_id: Optional[str] = None
 
     @field_validator("security_level_applied")
     @classmethod
@@ -272,6 +297,13 @@ class DefenseResponse(BaseModel):
     verified: bool
     timestamp: datetime.datetime
     score_earned: int
+    verification_mode: Optional[Literal["dvwa_live", "heuristic_fallback"]] = None
+    dvwa_http_status: Optional[int] = None
+    dvwa_security_level: Optional[str] = None
+    evidence: Optional[str] = None
+    baseline_before: Optional[dict] = None
+    patch_correct: Optional[bool] = None
+    patch_feedback: Optional[str] = None
 
 
 # --- Alert & Activity Schemas ---

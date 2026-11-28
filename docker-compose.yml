@@ -4,20 +4,20 @@ services:
     container_name: cyberforge-app_db
     restart: always
     environment:
-      POSTGRES_DB: cyberforge
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: ${POSTGRES_DB:-cyberforge}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     volumes:
       - app_db_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d cyberforge"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-cyberforge}"]
       interval: 5s
       timeout: 5s
       retries: 5
     networks:
-      - cyberforge-network
+      - app_internal
 
   dvwa_db:
     image: mariadb:10.4
@@ -29,14 +29,20 @@ services:
       MYSQL_USER: dvwa
       MYSQL_PASSWORD: password
     networks:
-      - cyberforge-network
+      - range_isolated
 
   dvwa:
     image: vulnerables/web-dvwa
     container_name: cyberforge-dvwa
     restart: always
+    init: true
+    security_opt:
+      - "no-new-privileges:true"
+    pids_limit: 128
+    mem_limit: 512m
+    cpus: 1.0
     ports:
-      - "8081:80"
+      - "127.0.0.1:8081:80"
     environment:
       DBMS: MySQL
       DB_SERVER: dvwa_db
@@ -46,11 +52,13 @@ services:
     depends_on:
       - dvwa_db
     networks:
-      - cyberforge-network
+      - range_isolated
 
 volumes:
   app_db_data:
 
 networks:
-  cyberforge-network:
+  app_internal:
+    driver: bridge
+  range_isolated:
     driver: bridge

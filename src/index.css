@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Bebas+Neue&family=Playfair+Display:ital,wght@1,500;1,700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800&family=Bricolage+Grotesque:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -9,9 +9,25 @@ html, body {
   padding: 0;
   min-height: 100%;
   width: 100%;
-  font-family: 'Space Grotesk', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
-  background-color: #0A0A0B;
-  color: #f4f4f5;
+  font-family: 'Bricolage Grotesque', system-ui, -apple-system, sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  background-color: #F3EFE6;
+  color: #111317;
+  text-rendering: optimizeLegibility;
+}
+
+.font-sans {
+  font-family: 'Bricolage Grotesque', system-ui, -apple-system, sans-serif;
+}
+
+code, pre, kbd, .font-mono {
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.font-display {
+  font-family: 'Big Shoulders Display', 'Bricolage Grotesque', sans-serif;
+  letter-spacing: -0.01em;
 }
 
 #root {
@@ -21,25 +37,25 @@ html, body {
 }
 
 ::selection {
-  background-color: rgba(0, 229, 204, 0.22);
-  color: #00E5CC;
+  background-color: rgba(29, 78, 216, 0.16);
+  color: #111317;
 }
 
-/* Floating Command Deck dot-matrix canvas */
-.cf-dot-canvas {
-  background-color: #07080B;
-  background-image: radial-gradient(rgba(255, 255, 255, 0.065) 1px, transparent 1px);
-  background-size: 22px 22px;
-  background-attachment: fixed;
+/* Warm Archival Vellum drafting ground */
+.cf-archival-canvas {
+  background-color: #F3EFE6;
+  color: #111317;
 }
 
-@keyframes cf-beam-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+/* Darkroom Terminal Well for embedded PHP source, HTTP wires & raw telemetry */
+.cf-darkroom {
+  background-color: #0E1014;
+  color: #ECEFF4;
+}
+
+.cf-darkroom ::selection {
+  background-color: rgba(250, 248, 243, 0.22);
+  color: #FAF8F3;
 }
 
 @keyframes cf-slide-in-right {
@@ -64,27 +80,64 @@ html, body {
   }
 }
 
-.cf-beam-rotator {
-  animation: cf-beam-spin var(--cf-beam-duration, 8s) linear infinite;
+@keyframes cf-stamp-snap {
+  0% {
+    opacity: 0;
+    transform: scale(1.22) rotate(-6deg);
+  }
+  65% {
+    opacity: 1;
+    transform: scale(0.96) rotate(-2.5deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(-3deg);
+  }
+}
+
+@keyframes cf-packet-sweep {
+  0% {
+    opacity: 0.2;
+    transform: translateX(-100%);
+  }
+  30% {
+    opacity: 1;
+  }
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.2;
+    transform: translateX(350%);
+  }
 }
 
 .cf-slide-in-right {
-  animation: cf-slide-in-right 200ms cubic-bezier(0.16, 1, 0.3, 1);
+  animation: cf-slide-in-right 190ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .cf-toast-in {
   animation: cf-toast-in 180ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+.cf-stamp-snap {
+  animation: cf-stamp-snap 220ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.cf-packet-sweep {
+  animation: cf-packet-sweep 900ms cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .cf-beam-rotator,
   .cf-slide-in-right,
-  .cf-toast-in {
+  .cf-toast-in,
+  .cf-stamp-snap,
+  .cf-packet-sweep {
     animation: none !important;
   }
 }
 
-/* Physics item styling strictly matching user code */
+/* Physics item styling strictly matching FallingPhysics.jsx */
 .it {
   position: absolute;
   left: 0;
@@ -106,15 +159,24 @@ html, body {
   overflow: visible;
 }
 
-/* Prevent browser autofill from turning inputs light blue or white */
+/* Archival Paper autofill overrides */
 input:-webkit-autofill,
 input:-webkit-autofill:hover,
 input:-webkit-autofill:focus,
 input:-webkit-autofill:active {
-  -webkit-box-shadow: 0 0 0 1000px #141416 inset !important;
-  -webkit-text-fill-color: #f4f4f5 !important;
-  caret-color: #f4f4f5 !important;
+  -webkit-box-shadow: 0 0 0 1000px #FAF8F3 inset !important;
+  -webkit-text-fill-color: #111317 !important;
+  caret-color: #111317 !important;
   transition: background-color 50000s ease-in-out 0s;
+}
+
+.cf-darkroom input:-webkit-autofill,
+.cf-darkroom input:-webkit-autofill:hover,
+.cf-darkroom input:-webkit-autofill:focus,
+.cf-darkroom input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px #0E1014 inset !important;
+  -webkit-text-fill-color: #ECEFF4 !important;
+  caret-color: #ECEFF4 !important;
 }
 
 /* Hide native select dropdown arrows cleanly when paired with custom icon */
@@ -127,18 +189,37 @@ select::-ms-expand {
   display: none;
 }
 
-/* Custom scrollbars */
+/* Custom thin archival scrollbars */
 ::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
+  width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(17, 19, 23, 0.2);
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.25);
+  background: rgba(17, 19, 23, 0.38);
+}
+
+/* Darkroom well scrollbars */
+.cf-darkroom::-webkit-scrollbar-thumb,
+.cf-darkroom ::-webkit-scrollbar-thumb {
+  background: rgba(236, 239, 244, 0.22);
+}
+.cf-darkroom::-webkit-scrollbar-thumb:hover,
+.cf-darkroom ::-webkit-scrollbar-thumb:hover {
+  background: rgba(236, 239, 244, 0.38);
+}
+
+/* Utility to hide horizontal scrollbars on tab strips cleanly */
+.cf-no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.cf-no-scrollbar::-webkit-scrollbar {
+  display: none;
 }

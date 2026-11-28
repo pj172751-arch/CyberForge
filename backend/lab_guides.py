@@ -543,6 +543,96 @@ LAB_GUIDES: Dict[str, dict] = {
             ],
         },
     },
+    "captcha": {
+        "owasp_category": "A04:2021 · Insecure Design",
+        "sink_pattern": "passed_captcha",
+        "hints": [
+            {
+                "tier": 1,
+                "label": "Concept",
+                "text": "DVWA breaks password change into two POST steps (step=1 verifies reCAPTCHA, step=2 changes the password) without tracking verified state server-side in $_SESSION.",
+            },
+            {
+                "tier": 2,
+                "label": "Syntax Clue",
+                "text": "Send step=2 directly (and on Medium add passed_captcha=true; on High supply g-recaptcha-response=hidd3n_valu3 with User-Agent: reCAPTCHA).",
+            },
+        ],
+        "debrief": {
+            "root_cause": "Step 2 trusts client-submitted POST parameters (step=2, passed_captcha, or hardcoded User-Agent backdoors) instead of verifying CAPTCHA completion inside $_SESSION + CSRF token.",
+            "impact": "Automated scripts can bypass bot protection completely and perform credential resets at scale.",
+            "prevention": "Verify reCAPTCHA responses server-side inside a single request alongside a valid per-session anti-CSRF token.",
+        },
+        "patch_quiz": {
+            "prompt": "Which architectural fix prevents 2-step workflow skipping and hidden backdoor bypasses in CAPTCHA?",
+            "correct_option_id": "opt_b",
+            "options": [
+                {
+                    "id": "opt_a",
+                    "label": "Add a hidden form input passed_captcha=true on step 2",
+                    "code_snippet": "if ($_POST['passed_captcha'] === 'true') { updatePassword(); }",
+                    "explanation": "Hidden POST fields live on the client and can be trivially forged with curl or an intercepting proxy.",
+                },
+                {
+                    "id": "opt_b",
+                    "label": "Verify reCAPTCHA + anti-CSRF token server-side in a single atomic POST",
+                    "code_snippet": "checkToken($_REQUEST['user_token'], $_SESSION['session_token'], 'index.php');\n$resp = recaptcha_check_answer($privkey, $_POST['g-recaptcha-response']);",
+                    "explanation": "Atomic server-side CAPTCHA verification combined with synchronizer CSRF token validation eliminates step-skipping.",
+                },
+                {
+                    "id": "opt_c",
+                    "label": "Check $_SERVER['HTTP_USER_AGENT'] for a trusted verification agent",
+                    "code_snippet": "if ($resp || $_SERVER['HTTP_USER_AGENT'] === 'reCAPTCHA') { ... }",
+                    "explanation": "HTTP request headers such as User-Agent are completely attacker-controlled.",
+                },
+            ],
+        },
+    },
+    "javascript": {
+        "owasp_category": "A08:2021 · Software & Data Integrity Failures",
+        "sink_pattern": "token",
+        "hints": [
+            {
+                "tier": 1,
+                "label": "Concept",
+                "text": "The server relies on a secret-looking token generated inside browser JavaScript before submission—anyone reading the JS can compute the exact token for 'success'.",
+            },
+            {
+                "tier": 2,
+                "label": "Syntax Clue",
+                "text": "Reverse the client-side algorithm in JS and submit phrase=success&token=<digest> (Low: md5(rot13('success')); Medium: reverse('XXsuccessXX'); High: nested sha256).",
+            },
+        ],
+        "debrief": {
+            "root_cause": "Security-critical token signing/obfuscation logic executes in untrusted client-side JavaScript where keys and algorithms are inspectable.",
+            "impact": "Attackers inspect or deobfuscate client scripts to mint arbitrary signed tokens and spoof authorized requests.",
+            "prevention": "Never perform security-sensitive signing or secret validation in client-side JS; enforce HMAC/state checks on the server.",
+        },
+        "patch_quiz": {
+            "prompt": "Why does DVWA's Impossible tier explain there is no JS-side fix for client token validation?",
+            "correct_option_id": "opt_a",
+            "options": [
+                {
+                    "id": "opt_a",
+                    "label": "Move token generation & validation exclusively to the server using HMAC/session state",
+                    "code_snippet": "$expected = hash_hmac('sha256', $_SESSION['challenge'], $SERVER_SECRET);\nif (!hash_equals($expected, $_POST['token'])) { die('Invalid'); }",
+                    "explanation": "Any secret or algorithm shipped to a browser is public; only server-held secrets prevent token forgery.",
+                },
+                {
+                    "id": "opt_b",
+                    "label": "Minify and Packer-obfuscate the JavaScript file on high security",
+                    "code_snippet": "eval(function(p,a,c,k,e,r){...}); // obfuscated token generator",
+                    "explanation": "Obfuscation only delays static reading; attackers simply execute or unpack the JS in DevTools or Node.",
+                },
+                {
+                    "id": "opt_c",
+                    "label": "Use SHA-256 instead of MD5 + ROT13 inside browser JavaScript",
+                    "code_snippet": "token = sha256('XX' + reverse(phrase) + 'ZZ');",
+                    "explanation": "Stronger hash functions in client JS still expose the exact inputs and salts to the attacker.",
+                },
+            ],
+        },
+    },
     "default": {
         "owasp_category": "OWASP Top 10 · Custom Target",
         "sink_pattern": None,
@@ -591,6 +681,116 @@ LAB_GUIDES: Dict[str, dict] = {
 }
 
 
+LEARNING_TRACKS = [
+    {
+        "track_id": "track_1_injection",
+        "track_order": 1,
+        "title": "Track I · Injection Mastery",
+        "subtitle": "Break string, blind boolean, and OS shell sinks across escaping and blacklist barriers.",
+        "modules": ["sqli", "sqli_blind", "exec"],
+    },
+    {
+        "track_id": "track_2_client",
+        "track_order": 2,
+        "title": "Track II · Client-Side & Browser Exploitation",
+        "subtitle": "Exploit reflected, stored, DOM, CSP, and client-side JavaScript token trust flaws.",
+        "modules": ["xss_r", "xss_s", "xss_d", "csp", "javascript"],
+    },
+    {
+        "track_id": "track_3_auth",
+        "track_order": 3,
+        "title": "Track III · Auth, Session & Workflow Abuse",
+        "subtitle": "Subvert weak credentials, sequential cookies, cross-site state changes, and multi-step CAPTCHAs.",
+        "modules": ["brute", "weak_id", "csrf", "captcha"],
+    },
+    {
+        "track_id": "track_4_server",
+        "track_order": 4,
+        "title": "Track IV · Server & File Takeover",
+        "subtitle": "Traverse server include paths and defeat MIME/magic-byte file upload restrictions.",
+        "modules": ["fi", "upload"],
+    },
+]
+
+MODULE_TO_TRACK = {}
+for _tr in LEARNING_TRACKS:
+    for _mod in _tr["modules"]:
+        MODULE_TO_TRACK[_mod] = _tr
+
+STAGE_GUIDES: Dict[str, Dict[str, dict]] = {
+    "sqli": {
+        "low": {"label": "Low · GET String Breakout", "objective": "Break out of single quotes in GET ?id=.", "hint": "Try ' OR '1'='1"},
+        "medium": {"label": "Medium · POST Unquoted SQLi", "objective": "mysqli_real_escape_string blocks quotes; SQL uses unquoted integer $id.", "hint": "Try 1 OR 1=1 (quotes stripped automatically by numeric syntax)"},
+        "high": {"label": "High · Session Storage + LIMIT 1", "objective": "Input moves via POST session-input.php before SELECT ... LIMIT 1.", "hint": "Inject after session storage with ' OR 1=1# or UNION SELECT"},
+    },
+    "sqli_blind": {
+        "low": {"label": "Low · GET Boolean Oracle", "objective": "Trigger 'User ID exists' with injected boolean condition.", "hint": "Try 1' AND '1'='1"},
+        "medium": {"label": "Medium · POST Unquoted Boolean", "objective": "Switch to unquoted boolean condition without single quotes.", "hint": "Try 1 OR 1=1"},
+        "high": {"label": "High · Cookie Injection", "objective": "ID moves into Cookie header before SQL lookup + random sleep traps.", "hint": "Send Cookie-context payload 1' AND '1'='1"},
+    },
+    "exec": {
+        "low": {"label": "Low · Raw Shell Concat", "objective": "Chain a command after 127.0.0.1 using ; or &&.", "hint": "Try 127.0.0.1; id"},
+        "medium": {"label": "Medium · Partial Operator Filter", "objective": "&& and ; are stripped; exploit unblocked || or single |.", "hint": "Try 127.0.0.1 | id"},
+        "high": {"label": "High · Whitespace Trap Filter", "objective": "Extra blacklist removes '; ' (with space); bypass without space after separator.", "hint": "Try 127.0.0.1|id"},
+    },
+    "xss_r": {
+        "low": {"label": "Low · Raw <script> Reflect", "objective": "Inject executable HTML/JS directly into ?name=.", "hint": "Try <script>alert(1)</script>"},
+        "medium": {"label": "Medium · str_replace('<script>')", "objective": "Exact lowercase '<script>' is stripped; bypass with case mutation or event handler.", "hint": "Try <sCrIpT>alert(1)</sCrIpT> or <img src=x onerror=alert(1)>"},
+        "high": {"label": "High · Regex Script Strip", "objective": "<script tags are stripped case-insensitively; pivot to inline SVG/img events.", "hint": "Try <img src=x onerror=alert(1)>"},
+    },
+    "xss_s": {
+        "low": {"label": "Low · Guestbook Script Persist", "objective": "Persist active markup inside DVWA guestbook comment.", "hint": "Try <script>alert(1)</script>"},
+        "medium": {"label": "Medium · txtName Attribute Vector", "objective": "Message is sanitized while txtName strips <script> non-recursively.", "hint": "Use <svg onload=alert(1)> or case-bypassed markup"},
+        "high": {"label": "High · preg_replace Script Filter", "objective": "Regex blocks <script variants in mtxMessage.", "hint": "Pivot to <img src=x onerror=alert(1)>"},
+    },
+    "xss_d": {
+        "low": {"label": "Low · Unvalidated ?default=", "objective": "Inject script/event vector accepted into decodeURI DOM sink.", "hint": "Try <script>alert(1)</script>"},
+        "medium": {"label": "Medium · <script Check Bypass", "objective": "stripos blocks '<script'; escape option tag with event handler.", "hint": "Try English</option><img src=x onerror=alert(1)>"},
+        "high": {"label": "High · Fragment Whitelist Bypass", "objective": "Server whitelists French/English/etc., but fragment/SVG injection executes client-side.", "hint": "Supply #<script>alert(1)</script>"},
+    },
+    "fi": {
+        "low": {"label": "Low · Raw Dot-Dot Traversal", "objective": "Traverse 5 dirs to disclose /etc/passwd.", "hint": "Try ../../../../../etc/passwd"},
+        "medium": {"label": "Medium · Non-Recursive ../ Strip", "objective": "Single-pass str_replace('../') removes naive traversal.", "hint": "Double-nest sequences: ....//....//....//....//....//etc/passwd"},
+        "high": {"label": "High · fnmatch file* Constraint", "objective": "Requires file* prefix or file:// scheme.", "hint": "Try file:///etc/passwd"},
+    },
+    "upload": {
+        "low": {"label": "Low · Unrestricted PHP Upload", "objective": "Upload cf_probe.php directly.", "hint": "Try cf_probe.php"},
+        "medium": {"label": "Medium · Content-Type Spoof", "objective": "Server only checks $_FILES['type']; spoof image/jpeg header.", "hint": "Try cf_probe.php MIME: image/jpeg"},
+        "high": {"label": "High · Extension + Magic Bytes", "objective": "Server inspects extension and getimagesize() header.", "hint": "Include gif89 + .jpg or check PHP image polyglot behavior"},
+    },
+    "csrf": {
+        "low": {"label": "Low · Missing Token & Referer", "objective": "Trigger forged GET password update with no tokens.", "hint": "password_new=password&password_conf=password&Change=Change"},
+        "medium": {"label": "Medium · Weak Referer Substring Check", "objective": "Forge request carrying matching host Referer header.", "hint": "Include Referer: localhost alongside password_new/password_conf"},
+        "high": {"label": "High · Anti-CSRF Token Enforced", "objective": "High tier validates session user_token unless chained with XSS.", "hint": "Demonstrates synchronizer token resistance against forged cross-origin GET"},
+    },
+    "brute": {
+        "low": {"label": "Low · Unlimited Login Guessing", "objective": "Submit admin:password directly without rate limit.", "hint": "admin:password"},
+        "medium": {"label": "Medium · 2-Second Delay Only", "objective": "Adds sleep(2) on failure without lockout or CSRF tokens.", "hint": "admin:password"},
+        "high": {"label": "High · Synchronizer Token Gate", "objective": "Requires extracting per-request anti-CSRF token before spraying.", "hint": "Unauthenticated requests without token fail verification"},
+    },
+    "weak_id": {
+        "low": {"label": "Low · Auto-Increment Counter", "objective": "Observe predictable 1, 2, 3 dvwaSession cookies.", "hint": "Cookie: dvwaSession=1"},
+        "medium": {"label": "Medium · Unix Timestamp Cookie", "objective": "dvwaSession equals predictable time() seconds.", "hint": "Cookie: dvwaSession=predict"},
+        "high": {"label": "High · Unsalted MD5(counter)", "objective": "Weak hash over sequential integer still short/enumerable.", "hint": "Submit weak_id probe"},
+    },
+    "csp": {
+        "low": {"label": "Low · Whitelisted Pastebin Origin", "objective": "Load script from CSP-allowlisted third-party host.", "hint": "https://pastebin.com/raw/R570EE00"},
+        "medium": {"label": "Medium · Fixed Predictable Nonce", "objective": "Bypass CSP using exposed static nonce value.", "hint": "<script nonce=\"TmV2ZXIgZ29pbmcgdG8gZ2l2ZSB5b3UgdXA=\">alert(1)</script>"},
+        "high": {"label": "High · Callback Endpoint Abuse", "objective": "Exploit self-hosted JSONP/source callback inside allowed origin.", "hint": "Probe source/jsonp.php?callback=alert"},
+    },
+    "captcha": {
+        "low": {"label": "Low · Direct step=2 Bypass", "objective": "Skip step=1 CAPTCHA check by submitting step=2 directly.", "hint": "step=2&password_new=password&password_conf=password&Change=Change"},
+        "medium": {"label": "Medium · Hidden passed_captcha Tamper", "objective": "Spoof step=2 along with passed_captcha=true.", "hint": "step=2&passed_captcha=true&password_new=password&password_conf=password"},
+        "high": {"label": "High · Backdoor User-Agent + Token", "objective": "Supply hardcoded g-recaptcha-response=hidd3n_valu3 + User-Agent: reCAPTCHA.", "hint": "g-recaptcha-response=hidd3n_valu3&User-Agent=reCAPTCHA&password_new=password"},
+    },
+    "javascript": {
+        "low": {"label": "Low · MD5(ROT13('success')) Forge", "objective": "Inspect low.php JS and forge md5(rot13('success')).", "hint": "phrase=success&token=38581812b435834ebf84ebcc2c6424d6"},
+        "medium": {"label": "Medium · String Reversal Forge", "objective": "Reverse 'XXsuccessXX' per medium.js logic.", "hint": "phrase=success&token=XXsseccusXX"},
+        "high": {"label": "High · Nested SHA-256 Deobfuscation", "objective": "Unpack packed high.js and compute nested sha256 digest.", "hint": "phrase=success&token=ec7ef8687050b6fe803867ea696734c67b541dfafb286a0b1239f42ac5b0aa84"},
+    },
+}
+
+
 def _resolve_guide(module_key: Optional[str]) -> dict:
     key = (module_key or "").strip().lower()
     return LAB_GUIDES.get(key, LAB_GUIDES["default"])
@@ -598,7 +798,8 @@ def _resolve_guide(module_key: Optional[str]) -> dict:
 
 def get_public_guide(module_key: Optional[str]) -> dict:
     """Return guide data safe for frontend delivery (never exposes correct_option_id or explanations)."""
-    guide = deepcopy(_resolve_guide(module_key))
+    key = (module_key or "").strip().lower()
+    guide = deepcopy(_resolve_guide(key))
     quiz = guide.get("patch_quiz", {})
     public_options = [
         {
@@ -608,9 +809,14 @@ def get_public_guide(module_key: Optional[str]) -> dict:
         }
         for opt in quiz.get("options", [])
     ]
+    track = MODULE_TO_TRACK.get(key) or {"track_id": "track_custom", "title": "Custom Labs", "track_order": 99}
     return {
         "owasp_category": guide["owasp_category"],
         "sink_pattern": guide.get("sink_pattern"),
+        "track_id": track["track_id"],
+        "track_title": track["title"],
+        "track_order": track["track_order"],
+        "stage_guides": STAGE_GUIDES.get(key, {}),
         "hints": guide.get("hints", []),
         "debrief": guide.get("debrief", {}),
         "patch_quiz": {

@@ -1,17 +1,20 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   ArrowRight,
   ArrowsClockwise,
   Check,
   Code,
+  Compass,
+  Copy,
   Crosshair,
+  Globe,
   Lightning,
   ShieldCheck,
   TerminalWindow,
   Trophy,
 } from '@phosphor-icons/react';
-import { Badge, Button } from '../ui/primitives';
-import { AnimatedTicker, CopyChip, SpotlightSurface } from '../ui/spells';
+import { Button } from '../ui/primitives';
+import { AnimatedTicker } from '../ui/spells';
 
 const RANK_TIERS = [
   { name: 'Apprentice', min: 0 },
@@ -19,14 +22,6 @@ const RANK_TIERS = [
   { name: 'Operator', min: 500 },
   { name: 'Specialist', min: 1000 },
   { name: 'Architect', min: 1500 },
-];
-
-const DEFENDER_TIER_META = [
-  { key: 'none', label: 'None', dotClass: 'bg-zinc-500' },
-  { key: 'low', label: 'Low', dotClass: 'bg-[#EF4444]' },
-  { key: 'medium', label: 'Medium', dotClass: 'bg-[#F59E0B]' },
-  { key: 'high', label: 'High', dotClass: 'bg-[#00E5CC]' },
-  { key: 'impossible', label: 'Impossible', dotClass: 'bg-[#10B981]' },
 ];
 
 function getOperatorRank(score) {
@@ -68,6 +63,47 @@ function matchesSinkPattern(line, sinkPattern) {
   }
 }
 
+function DarkroomCopyButton({ value, label = 'Copy source' }) {
+  const [copied, setCopied] = useState(false);
+  const timerRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) window.clearTimeout(timerRef.current);
+    };
+  }, []);
+
+  async function handleCopy() {
+    const text = String(value ?? '');
+    if (!text) return;
+    try {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+      }
+      setCopied(true);
+      if (timerRef.current) window.clearTimeout(timerRef.current);
+      timerRef.current = window.setTimeout(() => setCopied(false), 1600);
+    } catch {
+      // Ignore clipboard failures
+    }
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={handleCopy}
+      className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded border border-white/15 bg-white/[0.06] hover:bg-white/[0.12] text-xs font-mono font-medium text-[#ECEFF4] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ECEFF4]"
+    >
+      {copied ? (
+        <Check className="w-3.5 h-3.5 text-[#34D399]" weight="bold" />
+      ) : (
+        <Copy className="w-3.5 h-3.5 text-[#C8CFD8]" weight="regular" />
+      )}
+      <span>{copied ? 'Copied' : label}</span>
+    </button>
+  );
+}
+
 export function MissionRibbon({
   role = 'attacker',
   challenges = [],
@@ -76,192 +112,148 @@ export function MissionRibbon({
   summaryMap,
   stats,
   onOpenCatalog,
+  onOpenTour,
   onNextTarget,
   onRefresh,
   refreshing = false,
   extraActions = null,
 }) {
   const isAttacker = role === 'attacker';
-  const accent = isAttacker ? 'rose' : 'sky';
   const rankInfo = getOperatorRank(stats?.totalScore || 0);
   const completedCount = isAttacker ? stats?.solved || 0 : stats?.verified || 0;
 
-  const tierSize = Math.max(1, Math.ceil(challenges.length / 3));
-  const tierGroups = [
-    { label: 'I', offset: 0, items: challenges.slice(0, tierSize) },
-    { label: 'II', offset: tierSize, items: challenges.slice(tierSize, tierSize * 2) },
-    { label: 'III', offset: tierSize * 2, items: challenges.slice(tierSize * 2) },
-  ].filter((group) => group.items.length > 0);
-
   return (
-    <SpotlightSurface accent={accent} padding="px-3.5 py-2.5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        {/* 12 Mission Nodes grouped into Tiers I, II, III */}
-        <div className="flex flex-wrap items-center gap-2.5 min-w-0">
-          {challenges.length === 0 ? (
-            <span className="text-xs font-mono text-zinc-400">Syncing mission track...</span>
-          ) : (
-            tierGroups.map((group, groupIdx) => (
-              <div
-                key={group.label}
+    <section
+      aria-label="Target selector and operator rank"
+      className="min-h-[52px] shrink-0 rounded-lg bg-[#FAF8F3] border border-[#111317]/15 px-3.5 py-2 flex flex-wrap lg:flex-nowrap items-center justify-between gap-2.5"
+    >
+      {/* 01..14 Compact Target Selector Nodes */}
+      <div className="flex items-center gap-1 overflow-x-auto cf-no-scrollbar min-w-0 py-0.5">
+        {challenges.length === 0 ? (
+          <span className="text-xs font-mono text-[#4B5260]">Syncing targets...</span>
+        ) : (
+          challenges.map((ch, idx) => {
+            const summary = summaryMap?.get(ch.challenge_id);
+            const isDone = isAttacker ? Boolean(summary?.solved) : Boolean(summary?.verified);
+            const isTried = isAttacker
+              ? !isDone && (summary?.count || 0) > 0
+              : !isDone && Boolean(summary?.latest?.security_level_applied);
+            const isSelected = selectedId === ch.challenge_id;
+            const nodeNum = String(idx + 1).padStart(2, '0');
+
+            const nodeClass = isSelected
+              ? isAttacker
+                ? 'bg-[#C81E1E] border-[#C81E1E] text-[#FAF8F3] ring-2 ring-[#C81E1E]/30'
+                : 'bg-[#1D4ED8] border-[#1D4ED8] text-[#FAF8F3] ring-2 ring-[#1D4ED8]/30'
+              : isDone
+                ? 'bg-[#047857]/12 border-[#047857]/45 text-[#047857] hover:bg-[#047857]/20'
+                : isTried
+                  ? 'bg-[#B45309]/12 border-[#B45309]/45 text-[#92400E] hover:bg-[#B45309]/20'
+                  : 'bg-[#EAE4D7]/70 border-[#111317]/20 text-[#111317] hover:bg-[#EAE4D7]';
+
+            return (
+              <button
+                key={ch.challenge_id}
+                type="button"
+                onClick={() => onSelect?.(ch)}
+                aria-current={isSelected ? 'true' : undefined}
+                aria-label={`Target ${nodeNum}: ${ch.title} (${ch.difficulty})`}
+                title={`${nodeNum}. ${ch.title} · ${ch.difficulty}${
+                  isDone ? (isAttacker ? ' · Solved' : ' · Verified') : ''
+                }`}
                 className={[
-                  'flex items-center gap-1.5',
-                  groupIdx > 0 ? 'pl-2.5 border-l border-white/[0.08]' : '',
-                ]
-                  .filter(Boolean)
-                  .join(' ')}
+                  'h-8 min-w-[32px] px-1.5 rounded border font-mono text-xs font-bold tabular-nums flex items-center justify-center transition-colors shrink-0 active:scale-[0.97]',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#111317]',
+                  nodeClass,
+                ].join(' ')}
               >
-                <span className="text-[10px] font-mono text-zinc-400 select-none pr-0.5">
-                  {group.label}
-                </span>
-                <div className="flex items-center gap-1">
-                  {group.items.map((ch, localIdx) => {
-                    const globalIdx = group.offset + localIdx;
-                    const summary = summaryMap?.get(ch.challenge_id);
-                    const isDone = isAttacker
-                      ? Boolean(summary?.solved)
-                      : Boolean(summary?.verified);
-                    const isTried = isAttacker
-                      ? !isDone && (summary?.count || 0) > 0
-                      : !isDone && Boolean(summary?.latest?.security_level_applied);
-                    const isSelected = selectedId === ch.challenge_id;
+                {isDone && !isSelected ? <Check className="w-3.5 h-3.5" weight="bold" /> : nodeNum}
+              </button>
+            );
+          })
+        )}
+      </div>
 
-                    const activeClass = isAttacker
-                      ? 'ring-2 ring-[#F43F5E] bg-[#F43F5E]/20 border-[#F43F5E]/60 text-zinc-100'
-                      : 'ring-2 ring-[#38BDF8] bg-[#38BDF8]/20 border-[#38BDF8]/60 text-zinc-100';
-
-                    const stateClass = isDone
-                      ? 'bg-[#10B981]/15 border-[#10B981]/40 text-[#10B981]'
-                      : isTried
-                        ? 'bg-[#F59E0B]/15 border-[#F59E0B]/35 text-[#F59E0B]'
-                        : 'bg-[#07080B]/80 border-white/[0.08] text-zinc-300 hover:border-white/[0.2] hover:text-zinc-100';
-
-                    return (
-                      <button
-                        key={ch.challenge_id}
-                        type="button"
-                        onClick={() => onSelect?.(ch)}
-                        aria-current={isSelected ? 'true' : undefined}
-                        aria-label={`Mission ${globalIdx + 1}: ${ch.title} (${ch.difficulty})`}
-                        title={`${globalIdx + 1}. ${ch.title} · ${ch.difficulty}${
-                          isDone ? (isAttacker ? ' · Solved' : ' · Verified') : ''
-                        }`}
-                        className={[
-                          'w-7 h-7 rounded-md border text-[11px] font-mono tabular-nums font-semibold flex items-center justify-center transition-colors',
-                          'focus-visible:outline-none focus-visible:ring-1',
-                          isAttacker
-                            ? 'focus-visible:ring-[#FB7185]'
-                            : 'focus-visible:ring-[#38BDF8]',
-                          isSelected ? activeClass : stateClass,
-                        ].join(' ')}
-                      >
-                        {isDone && !isSelected ? (
-                          <Check className="w-3.5 h-3.5" weight="bold" />
-                        ) : (
-                          globalIdx + 1
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-
-        {/* Right Telemetry + Controls */}
-        <div className="flex flex-wrap items-center gap-2 shrink-0">
-          <div
-            title={
-              rankInfo.nextRank
-                ? `${rankInfo.remaining} pts to ${rankInfo.nextRank} (${rankInfo.pct}%)`
-                : 'Highest operator rank reached'
-            }
-            className="inline-flex items-center gap-2 px-2.5 py-1 rounded-lg bg-[#07080B]/80 border border-white/[0.08] text-xs"
+      {/* Rank XP Meter + Navigation Actions */}
+      <div className="flex flex-wrap items-center gap-2 shrink-0">
+        <div
+          title={
+            rankInfo.nextRank
+              ? `${rankInfo.remaining} pts to ${rankInfo.nextRank} (${rankInfo.pct}%)`
+              : 'Highest operator rank reached'
+          }
+          className="inline-flex items-center gap-2.5 px-3 py-1 rounded bg-[#EAE4D7]/65 border border-[#111317]/15"
+        >
+          <Trophy
+            className={['w-4 h-4 shrink-0', isAttacker ? 'text-[#C81E1E]' : 'text-[#1D4ED8]'].join(
+              ' '
+            )}
+            weight="bold"
+          />
+          <span className="text-[13px] font-bold text-[#111317]">{rankInfo.rank}</span>
+          <span
+            className={[
+              'font-display text-2xl font-extrabold leading-none tabular-nums',
+              isAttacker ? 'text-[#C81E1E]' : 'text-[#1D4ED8]',
+            ].join(' ')}
           >
-            <Trophy
-              className={['w-3.5 h-3.5', isAttacker ? 'text-[#FB7185]' : 'text-[#38BDF8]'].join(
-                ' '
-              )}
-              weight="bold"
-            />
-            <span className="font-medium text-zinc-200">{rankInfo.rank}</span>
-            <span className="text-zinc-400">·</span>
-            <AnimatedTicker
-              value={stats?.totalScore || 0}
-              suffix=" pts"
-              className={[
-                'font-semibold',
-                isAttacker ? 'text-[#FB7185]' : 'text-[#38BDF8]',
-              ].join(' ')}
-            />
-            <span className="text-zinc-400">·</span>
-            <span className="font-mono tabular-nums text-zinc-200">
+            <AnimatedTicker value={stats?.totalScore || 0} suffix=" XP" />
+          </span>
+          <div className="hidden xl:flex items-center gap-1.5">
+            <div className="w-14 h-2 rounded-full bg-[#111317]/12 overflow-hidden">
+              <div
+                className={[
+                  'h-full transition-all duration-300',
+                  isAttacker ? 'bg-[#C81E1E]' : 'bg-[#1D4ED8]',
+                ].join(' ')}
+                style={{ width: `${rankInfo.pct}%` }}
+              />
+            </div>
+            <span className="text-xs font-mono font-semibold tabular-nums text-[#4B5260]">
               {completedCount}/{challenges.length}
             </span>
           </div>
-
-          <Button variant="secondary" size="sm" onClick={onOpenCatalog}>
-            <span>All Labs</span>
-          </Button>
-
-          <button
-            type="button"
-            onClick={onNextTarget}
-            disabled={challenges.length === 0}
-            className={[
-              'h-8 px-3 rounded-md text-xs font-semibold inline-flex items-center gap-1.5 transition-colors disabled:opacity-50',
-              'focus-visible:outline-none focus-visible:ring-1',
-              isAttacker
-                ? 'bg-[#F43F5E] hover:bg-[#E11D48] text-white focus-visible:ring-[#FB7185]'
-                : 'bg-[#38BDF8] hover:bg-[#0EA5E9] text-[#04101B] focus-visible:ring-[#38BDF8]',
-            ].join(' ')}
-          >
-            {isAttacker ? (
-              <Crosshair className="w-3.5 h-3.5" weight="bold" />
-            ) : (
-              <ShieldCheck className="w-3.5 h-3.5" weight="bold" />
-            )}
-            <span>Next Mission</span>
-          </button>
-
-          {extraActions}
-
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={onRefresh}
-            loading={refreshing}
-            aria-label="Refresh telemetry"
-          >
-            <ArrowsClockwise className="w-3.5 h-3.5" weight="regular" />
-          </Button>
         </div>
+
+        <Button variant="secondary" size="sm" onClick={onOpenCatalog}>
+          <span>All Labs</span>
+        </Button>
+
+        {typeof onOpenTour === 'function' && (
+          <Button variant="secondary" size="sm" onClick={onOpenTour} className="hidden sm:inline-flex">
+            <Compass className="w-3.5 h-3.5 text-[#4B5260]" weight="regular" />
+            <span>3D Hub</span>
+          </Button>
+        )}
+
+        {extraActions}
+
+        <Button
+          variant={isAttacker ? 'attacker' : 'defender'}
+          size="sm"
+          onClick={onNextTarget}
+          disabled={challenges.length === 0}
+        >
+          {isAttacker ? (
+            <Crosshair className="w-3.5 h-3.5" weight="bold" />
+          ) : (
+            <ShieldCheck className="w-3.5 h-3.5" weight="bold" />
+          )}
+          <span>Next Target</span>
+          <ArrowRight className="w-3.5 h-3.5" weight="bold" />
+        </Button>
+
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={onRefresh}
+          loading={refreshing}
+          aria-label="Refresh telemetry"
+        >
+          <ArrowsClockwise className="w-3.5 h-3.5" weight="regular" />
+        </Button>
       </div>
-
-      {/* Defender Slim Inline Security-Tier Strip */}
-      {!isAttacker && stats?.tierCounts && (
-        <div className="mt-2 pt-2 border-t border-white/[0.06] flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono text-zinc-400">
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-            <span>Tier Posture:</span>
-            {DEFENDER_TIER_META.map((tier) => (
-              <span key={tier.key} className="inline-flex items-center gap-1.5">
-                <span className={['w-1.5 h-1.5 rounded-full', tier.dotClass].join(' ')} />
-                <span>
-                  {tier.label}:{' '}
-                  <span className="text-zinc-200 tabular-nums">
-                    {stats.tierCounts[tier.key] || 0}
-                  </span>
-                </span>
-              </span>
-            ))}
-          </div>
-          <span className="tabular-nums text-zinc-300">
-            {stats.pctVerified || 0}% verified
-          </span>
-        </div>
-      )}
-    </SpotlightSurface>
+    </section>
   );
 }
 
@@ -269,56 +261,95 @@ export function SinkCodeViewer({
   code,
   sinkPattern,
   title = 'Vulnerable Source (low.php)',
-  maxHeightClass = 'max-h-72',
   emptyMessage = 'Source preview unavailable for this target.',
-  highlightTone = 'rose',
+  highlightTone = 'crimson',
   headerExtra = null,
+  selectedLine = null,
+  onSelectLine = null,
+  vulnerableLines = [],
+  className = '',
 }) {
-  const highlightBg =
-    highlightTone === 'amber' ? 'bg-[#F59E0B]/15 text-zinc-100' : 'bg-[#F43F5E]/15 text-zinc-100';
+  const isInteractive = typeof onSelectLine === 'function';
+  const sinkHighlight =
+    highlightTone === 'amber'
+      ? 'bg-[#B45309]/25 text-[#FEF3C7]'
+      : 'bg-[#C81E1E]/25 text-[#FFE4E6]';
 
   return (
-    <div className="rounded-lg bg-[#07080B]/85 border border-white/[0.06] overflow-hidden">
-      <div className="px-3 py-2 border-b border-white/[0.06] flex flex-wrap items-center justify-between gap-2">
+    <div
+      className={[
+        'cf-darkroom rounded-lg bg-[#0E1014] text-[#ECEFF4] border border-[#111317] flex flex-col overflow-hidden',
+        className,
+      ]
+        .filter(Boolean)
+        .join(' ')}
+    >
+      <div className="px-4 py-2.5 border-b border-white/[0.1] bg-[#14171D] flex flex-wrap items-center justify-between gap-2 shrink-0">
         <div className="flex items-center gap-2 min-w-0">
           <Code
             className={[
-              'w-3.5 h-3.5 shrink-0',
-              highlightTone === 'amber' ? 'text-[#38BDF8]' : 'text-[#FB7185]',
+              'w-4 h-4 shrink-0',
+              highlightTone === 'amber' ? 'text-[#60A5FA]' : 'text-[#F87171]',
             ].join(' ')}
-            weight="regular"
+            weight="bold"
           />
-          <span className="text-xs font-semibold text-zinc-200 truncate">{title}</span>
+          <span className="text-[13px] font-bold text-[#ECEFF4] truncate">{title}</span>
           {sinkPattern && (
-            <Badge variant={highlightTone === 'amber' ? 'amber' : 'red'}>
+            <span className="px-2 py-0.5 rounded bg-[#C81E1E]/25 border border-[#F87171]/40 text-xs font-mono font-semibold text-[#FECACA]">
               Sink: {sinkPattern}
-            </Badge>
+            </span>
           )}
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-2 flex-wrap">
           {headerExtra}
-          {code && <CopyChip value={code} label="Copy source" />}
+          {code && <DarkroomCopyButton value={code} label="Copy PHP" />}
         </div>
       </div>
 
       {!code ? (
-        <div className="p-4 text-xs text-zinc-400">{emptyMessage}</div>
+        <div className="flex-1 p-5 text-[14px] text-[#C8CFD8]">{emptyMessage}</div>
       ) : (
-        <div className={[maxHeightClass, 'overflow-auto font-mono text-xs'].join(' ')}>
+        <div className="flex-1 min-h-0 overflow-y-auto overflow-x-auto font-mono text-[13.5px] leading-[1.6] py-1.5">
           {String(code)
             .split('\n')
             .map((line, idx) => {
-              const isSink = matchesSinkPattern(line, sinkPattern);
+              const lineNum = idx + 1;
+              const isSelected = selectedLine === lineNum;
+              const isVulnLine = vulnerableLines.includes(lineNum);
+              const isSink = isVulnLine || matchesSinkPattern(line, sinkPattern);
+              const rowClass = isSelected
+                ? 'bg-[#1D4ED8]/35 text-[#FAF8F3]'
+                : isSink
+                  ? sinkHighlight
+                  : 'text-[#E5E9F0]';
+
+              if (isInteractive) {
+                return (
+                  <button
+                    key={`${lineNum}-${line.slice(0, 12)}`}
+                    type="button"
+                    onClick={() => onSelectLine(lineNum)}
+                    aria-pressed={isSelected}
+                    className={[
+                      'w-full text-left flex items-start px-3.5 py-0.5 hover:bg-white/[0.06] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#60A5FA]',
+                      rowClass,
+                    ].join(' ')}
+                  >
+                    <span className="w-9 shrink-0 pr-3 text-right select-none tabular-nums text-xs leading-6 text-[#8E96A4]">
+                      {lineNum}
+                    </span>
+                    <span className="whitespace-pre">{line || ' '}</span>
+                  </button>
+                );
+              }
+
               return (
                 <div
-                  key={`${idx + 1}-${line.slice(0, 12)}`}
-                  className={[
-                    'flex items-start px-3 py-0.5 leading-5',
-                    isSink ? highlightBg : 'text-zinc-300',
-                  ].join(' ')}
+                  key={`${lineNum}-${line.slice(0, 12)}`}
+                  className={['flex items-start px-3.5 py-0.5', rowClass].join(' ')}
                 >
-                  <span className="w-8 shrink-0 pr-3 text-right select-none tabular-nums text-zinc-400">
-                    {idx + 1}
+                  <span className="w-9 shrink-0 pr-3 text-right select-none tabular-nums text-xs leading-6 text-[#8E96A4]">
+                    {lineNum}
                   </span>
                   <span className="whitespace-pre">{line || ' '}</span>
                 </div>
@@ -345,6 +376,8 @@ function resolveModuleKey(moduleKey, pageRef, vulnerabilityType) {
   if (ref.includes('brute')) return 'brute';
   if (ref.includes('weak_id')) return 'weak_id';
   if (ref.includes('csp')) return 'csp';
+  if (ref.includes('captcha')) return 'captcha';
+  if (ref.includes('javascript')) return 'javascript';
   const vuln = String(vulnerabilityType || '').toLowerCase();
   if (vuln.includes('blind')) return 'sqli_blind';
   if (vuln.includes('sql')) return 'sqli';
@@ -358,65 +391,77 @@ function resolveModuleKey(moduleKey, pageRef, vulnerabilityType) {
   if (vuln.includes('brute')) return 'brute';
   if (vuln.includes('session') || vuln.includes('weak')) return 'weak_id';
   if (vuln.includes('csp')) return 'csp';
+  if (vuln.includes('captcha') || vuln.includes('workflow')) return 'captcha';
+  if (vuln.includes('javascript') || vuln.includes('client-side')) return 'javascript';
   return 'default';
 }
 
 function getBreakoutBadge(mod, payload) {
   const p = String(payload || '');
-  if (!p.trim()) return { label: 'Awaiting Input', variant: 'neutral' };
+  if (!p.trim()) return { label: 'Awaiting Input', tone: 'neutral' };
   const lower = p.toLowerCase();
 
   switch (mod) {
     case 'sqli':
     case 'sqli_blind':
       if (/'|union\s+select|--|#|\/\*|\bor\b\s+1\s*=\s*1|\band\b\s+1\s*=\s*1/i.test(p)) {
-        return { label: 'SQL Quote Breakout', variant: 'red' };
+        return { label: 'SQL Quote Breakout', tone: 'red' };
       }
-      return { label: 'Literal ID Lookup', variant: 'neutral' };
+      return { label: 'Literal ID Lookup', tone: 'neutral' };
     case 'xss_r':
     case 'xss_s':
     case 'xss_d':
       if (/<script|onerror=|onload=|onfocus=|javascript:|alert\(|<svg|<img/i.test(lower)) {
-        return { label: 'DOM / Tag Breakout', variant: 'red' };
+        return { label: 'DOM / Tag Breakout', tone: 'red' };
       }
-      return { label: 'Plain Text Node', variant: 'neutral' };
+      return { label: 'Plain Text Node', tone: 'neutral' };
     case 'exec':
       if (/[;|&`]|\$\(|>\s*\//.test(p)) {
-        return { label: 'Shell Command Chain', variant: 'red' };
+        return { label: 'Shell Command Chain', tone: 'red' };
       }
-      return { label: 'Single Ping Host', variant: 'neutral' };
+      return { label: 'Single Ping Host', tone: 'neutral' };
     case 'fi':
-      if (/\.\.\/|\.\.\\|\/etc\/|php:\/\/|http:\/\//i.test(p)) {
-        return { label: 'Path Traversal Escape', variant: 'red' };
+      if (/\.\.\/|\.\.\\|\/etc\/|php:\/\/|file:\/\//i.test(p)) {
+        return { label: 'Path Traversal Escape', tone: 'red' };
       }
-      return { label: 'Local Template Ref', variant: 'neutral' };
+      return { label: 'Local Template Ref', tone: 'neutral' };
     case 'upload':
-      if (/\.php|\.phtml|\.phar|%00/i.test(lower)) {
-        return { label: 'Executable Extension', variant: 'red' };
+      if (/\.php|\.phtml|\.phar|%00|gif89/i.test(lower)) {
+        return { label: 'Executable Extension', tone: 'red' };
       }
-      return { label: 'Standard Asset Name', variant: 'neutral' };
+      return { label: 'Standard Asset Name', tone: 'neutral' };
     case 'csrf':
       if (/password_new=|change=change|action=|vulnerabilities\/csrf/i.test(lower)) {
-        return { label: 'Forged State Request', variant: 'red' };
+        return { label: 'Forged State Request', tone: 'red' };
       }
-      return { label: 'Draft Request', variant: 'neutral' };
+      return { label: 'Draft Request', tone: 'neutral' };
     case 'brute':
-      if (/password=|login=|admin|'\s*or/i.test(lower)) {
-        return { label: 'Credential Spray', variant: 'red' };
+      if (/password=|login=|admin|:/i.test(lower)) {
+        return { label: 'Credential Spray', tone: 'red' };
       }
-      return { label: 'Single Auth Probe', variant: 'neutral' };
+      return { label: 'Single Auth Probe', tone: 'neutral' };
     case 'weak_id':
       if (/dvwasession|cookie:|^[0-9]+$/i.test(p.trim())) {
-        return { label: 'Predictable Session ID', variant: 'red' };
+        return { label: 'Predictable Session ID', tone: 'red' };
       }
-      return { label: 'Opaque Token Probe', variant: 'neutral' };
+      return { label: 'Opaque Token Probe', tone: 'neutral' };
     case 'csp':
       if (/http|script|callback=|jsonp|unsafe|eval|nonce/i.test(lower)) {
-        return { label: 'Allowlist / Script Bypass', variant: 'red' };
+        return { label: 'Allowlist / Script Bypass', tone: 'red' };
       }
-      return { label: 'Policy Probe', variant: 'neutral' };
+      return { label: 'Policy Probe', tone: 'neutral' };
+    case 'captcha':
+      if (/step=2|passed_captcha|hidd3n_valu3|recaptcha/i.test(lower)) {
+        return { label: 'Workflow / Header Bypass', tone: 'red' };
+      }
+      return { label: 'Step 1 Draft', tone: 'neutral' };
+    case 'javascript':
+      if (/phrase=success|token=/i.test(lower)) {
+        return { label: 'Client Token Forge', tone: 'red' };
+      }
+      return { label: 'Phrase Probe', tone: 'neutral' };
     default:
-      return { label: 'Active Vector', variant: 'amber' };
+      return { label: 'Active Vector', tone: 'amber' };
   }
 }
 
@@ -427,8 +472,8 @@ function renderAttackContext(mod, payloadText) {
     <span
       className={
         hasInput
-          ? 'text-[#FB7185] bg-[#F43F5E]/15 px-1 rounded font-semibold'
-          : 'text-zinc-400 italic'
+          ? 'text-[#FCA5A5] bg-[#C81E1E]/35 px-1.5 py-0.5 rounded font-semibold'
+          : 'text-[#8E96A4] italic'
       }
     >
       {shown}
@@ -441,11 +486,11 @@ function renderAttackContext(mod, payloadText) {
         sinkLabel: 'MariaDB SQL Query ($id)',
         line: (
           <>
-            <span className="text-zinc-300">
+            <span className="text-[#E5E9F0]">
               SELECT first_name, last_name FROM users WHERE user_id = &apos;
             </span>
             {injected}
-            <span className="text-zinc-300">&apos;;</span>
+            <span className="text-[#E5E9F0]">&apos;;</span>
           </>
         ),
       };
@@ -454,11 +499,11 @@ function renderAttackContext(mod, payloadText) {
         sinkLabel: 'Blind SQL Boolean Branch ($id)',
         line: (
           <>
-            <span className="text-zinc-300">
+            <span className="text-[#E5E9F0]">
               SELECT first_name, last_name FROM users WHERE user_id = &apos;
             </span>
             {injected}
-            <span className="text-zinc-300">&apos;; // exists vs missing</span>
+            <span className="text-[#E5E9F0]">&apos;; // exists vs missing</span>
           </>
         ),
       };
@@ -467,9 +512,9 @@ function renderAttackContext(mod, payloadText) {
         sinkLabel: 'Reflected HTML Sink ($_GET["name"])',
         line: (
           <>
-            <span className="text-zinc-300">&lt;pre&gt;Hello </span>
+            <span className="text-[#E5E9F0]">&lt;pre&gt;Hello </span>
             {injected}
-            <span className="text-zinc-300">&lt;/pre&gt;</span>
+            <span className="text-[#E5E9F0]">&lt;/pre&gt;</span>
           </>
         ),
       };
@@ -478,9 +523,9 @@ function renderAttackContext(mod, payloadText) {
         sinkLabel: 'Stored Guestbook DOM Sink ($mtxMessage)',
         line: (
           <>
-            <span className="text-zinc-300">&lt;div id=&quot;guestbook_comments&quot;&gt;</span>
+            <span className="text-[#E5E9F0]">&lt;div id=&quot;guestbook_comments&quot;&gt;</span>
             {injected}
-            <span className="text-zinc-300">&lt;/div&gt;</span>
+            <span className="text-[#E5E9F0]">&lt;/div&gt;</span>
           </>
         ),
       };
@@ -489,9 +534,9 @@ function renderAttackContext(mod, payloadText) {
         sinkLabel: 'DOM Sink (document.write / ?default=)',
         line: (
           <>
-            <span className="text-zinc-300">document.write(&quot;&lt;option value=&apos;&quot; + </span>
+            <span className="text-[#E5E9F0]">document.write(&quot;&lt;option value=&apos;&quot; + </span>
             {injected}
-            <span className="text-zinc-300"> + &quot;&apos;&gt;&quot;);</span>
+            <span className="text-[#E5E9F0]"> + &quot;&apos;&gt;&quot;);</span>
           </>
         ),
       };
@@ -500,9 +545,9 @@ function renderAttackContext(mod, payloadText) {
         sinkLabel: 'OS Shell Sink (shell_exec)',
         line: (
           <>
-            <span className="text-zinc-300">sh -c &quot;ping -c 4 </span>
+            <span className="text-[#E5E9F0]">sh -c &quot;ping -c 4 </span>
             {injected}
-            <span className="text-zinc-300">&quot;</span>
+            <span className="text-[#E5E9F0]">&quot;</span>
           </>
         ),
       };
@@ -511,9 +556,9 @@ function renderAttackContext(mod, payloadText) {
         sinkLabel: 'PHP File Include Sink (include($file))',
         line: (
           <>
-            <span className="text-zinc-300">include(&apos;</span>
+            <span className="text-[#E5E9F0]">include(&apos;</span>
             {injected}
-            <span className="text-zinc-300">&apos;);</span>
+            <span className="text-[#E5E9F0]">&apos;);</span>
           </>
         ),
       };
@@ -522,9 +567,9 @@ function renderAttackContext(mod, payloadText) {
         sinkLabel: 'Upload Path & MIME Check ($_FILES)',
         line: (
           <>
-            <span className="text-zinc-300">move_uploaded_file($tmp, &quot;hackable/uploads/&quot; . </span>
+            <span className="text-[#E5E9F0]">move_uploaded_file($tmp, &quot;hackable/uploads/&quot; . </span>
             {injected}
-            <span className="text-zinc-300">);</span>
+            <span className="text-[#E5E9F0]">);</span>
           </>
         ),
       };
@@ -533,7 +578,7 @@ function renderAttackContext(mod, payloadText) {
         sinkLabel: 'State-Changing GET Handler',
         line: (
           <>
-            <span className="text-zinc-300">GET /vulnerabilities/csrf/?</span>
+            <span className="text-[#E5E9F0]">GET /vulnerabilities/csrf/?</span>
             {injected}
           </>
         ),
@@ -543,9 +588,9 @@ function renderAttackContext(mod, payloadText) {
         sinkLabel: 'Authentication Handler (users table)',
         line: (
           <>
-            <span className="text-zinc-300">SELECT * FROM users WHERE user = &apos;</span>
+            <span className="text-[#E5E9F0]">SELECT * FROM users WHERE user = &apos;</span>
             {injected}
-            <span className="text-zinc-300">&apos; AND password = md5($pass);</span>
+            <span className="text-[#E5E9F0]">&apos; AND password = md5($pass);</span>
           </>
         ),
       };
@@ -554,9 +599,9 @@ function renderAttackContext(mod, payloadText) {
         sinkLabel: 'HTTP Cookie Session Tracker',
         line: (
           <>
-            <span className="text-zinc-300">Cookie: </span>
+            <span className="text-[#E5E9F0]">Cookie: </span>
             {injected}
-            <span className="text-zinc-300">; security=low</span>
+            <span className="text-[#E5E9F0]">; security=low</span>
           </>
         ),
       };
@@ -565,11 +610,32 @@ function renderAttackContext(mod, payloadText) {
         sinkLabel: 'CSP Header & Script Tag Sink',
         line: (
           <>
-            <span className="text-zinc-300">
+            <span className="text-[#E5E9F0]">
               Content-Security-Policy: script-src &apos;self&apos; ... | &lt;script src=&quot;
             </span>
             {injected}
-            <span className="text-zinc-300">&quot;&gt;&lt;/script&gt;</span>
+            <span className="text-[#E5E9F0]">&quot;&gt;&lt;/script&gt;</span>
+          </>
+        ),
+      };
+    case 'captcha':
+      return {
+        sinkLabel: '2-Step CAPTCHA Gate ($_POST["step"])',
+        line: (
+          <>
+            <span className="text-[#E5E9F0]">POST /vulnerabilities/captcha/ :: </span>
+            {injected}
+          </>
+        ),
+      };
+    case 'javascript':
+      return {
+        sinkLabel: 'Client-Side Token Validator ($_POST["token"])',
+        line: (
+          <>
+            <span className="text-[#E5E9F0]">validateToken(</span>
+            {injected}
+            <span className="text-[#E5E9F0]">);</span>
           </>
         ),
       };
@@ -578,9 +644,9 @@ function renderAttackContext(mod, payloadText) {
         sinkLabel: 'Target Execution Sink',
         line: (
           <>
-            <span className="text-zinc-300">dispatch(</span>
+            <span className="text-[#E5E9F0]">dispatch(</span>
             {injected}
-            <span className="text-zinc-300">);</span>
+            <span className="text-[#E5E9F0]">);</span>
           </>
         ),
       };
@@ -589,23 +655,23 @@ function renderAttackContext(mod, payloadText) {
 
 const DEFEND_TIER_PREVIEW = {
   low: {
-    badge: 'red',
     label: 'Low · Direct Pass-Through',
+    pillClass: 'bg-[#C81E1E]/25 border-[#F87171]/40 text-[#FECACA]',
     effect: 'Input reaches the execution sink without escaping, parameterization, or token checks.',
   },
   medium: {
-    badge: 'amber',
     label: 'Medium · Blocklist / Partial Filter',
+    pillClass: 'bg-[#B45309]/25 border-[#FBBF24]/40 text-[#FDE68A]',
     effect: 'Applies targeted string filtering or basic escaping; edge encodings may still probe through.',
   },
   high: {
-    badge: 'teal',
     label: 'High · Strict Validation Boundary',
+    pillClass: 'bg-[#1D4ED8]/25 border-[#60A5FA]/40 text-[#BFDBFE]',
     effect: 'Enforces strict type/format checks, tighter allowlists, and session token verification.',
   },
   impossible: {
-    badge: 'green',
     label: 'Impossible · Parameterized & Hardened',
+    pillClass: 'bg-[#047857]/25 border-[#34D399]/40 text-[#A7F3D0]',
     effect: 'Separates code from data via prepared APIs, context-aware encoding, and strict allowlists.',
   },
 };
@@ -620,46 +686,53 @@ export function LiveSinkVisualizer({
   selectedPatchLabel = '',
   selectedPatchSnippet = '',
   securityLevel = 'low',
+  stageGuide = null,
 }) {
   const mod = resolveModuleKey(moduleKey, pageRef, vulnerabilityType);
 
   if (mode === 'defend') {
     const tierCfg = DEFEND_TIER_PREVIEW[securityLevel] || DEFEND_TIER_PREVIEW.low;
     return (
-      <div className="rounded-lg bg-[#07080B]/85 border border-white/[0.06] p-3.5 space-y-2.5">
+      <div className="cf-darkroom rounded-lg bg-[#14171D] border border-white/[0.1] p-4 space-y-3 text-[#ECEFF4]">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <ShieldCheck className="w-4 h-4 text-[#38BDF8]" weight="regular" />
-            <h3 className="text-xs font-semibold text-zinc-200">Live Remediation Pipeline</h3>
+            <ShieldCheck className="w-4 h-4 text-[#60A5FA]" weight="bold" />
+            <h3 className="text-[14px] font-bold text-[#ECEFF4]">Live Remediation Pipeline</h3>
           </div>
-          <Badge variant={tierCfg.badge}>{tierCfg.label}</Badge>
+          <span
+            className={['px-2.5 py-0.5 rounded border text-xs font-mono font-semibold', tierCfg.pillClass].join(
+              ' '
+            )}
+          >
+            {tierCfg.label}
+          </span>
         </div>
 
-        <div className="space-y-2 text-xs">
-          <div className="p-2.5 rounded bg-[#050608] border border-white/[0.06] space-y-1">
-            <div className="text-[11px] font-mono text-zinc-400">Replayed Probe Vector</div>
-            <div className="font-mono text-zinc-200 break-all">
+        <div className="space-y-2.5 text-[13.5px]">
+          <div className="p-3 rounded bg-[#0E1014] border border-white/[0.08] space-y-1">
+            <div className="text-xs font-mono text-[#9CA3AF]">Replayed Probe Vector</div>
+            <div className="font-mono text-[13.5px] text-[#ECEFF4] break-all">
               {referencePayload || 'No reference vector defined'}
             </div>
           </div>
 
-          <div className="flex items-center gap-2 text-[11px] font-mono text-zinc-400 px-1">
-            <ArrowRight className="w-3.5 h-3.5 text-[#38BDF8] shrink-0" weight="bold" />
+          <div className="flex items-center gap-2 text-xs font-mono text-[#C8CFD8] px-1">
+            <ArrowRight className="w-4 h-4 text-[#60A5FA] shrink-0" weight="bold" />
             <span>
               Selected Fix:{' '}
-              <span className="text-zinc-200">
-                {selectedPatchLabel || 'Choose an option in Step 1'}
+              <span className="text-[#FAF8F3] font-semibold">
+                {selectedPatchLabel || 'Choose an option in Patch Audit Quiz'}
               </span>
             </span>
           </div>
 
           {selectedPatchSnippet && (
-            <pre className="p-2.5 rounded bg-[#050608] border border-white/[0.06] font-mono text-[11px] text-[#38BDF8] whitespace-pre-wrap break-all">
+            <pre className="p-3 rounded bg-[#0E1014] border border-white/[0.08] font-mono text-[13px] text-[#93C5FD] whitespace-pre-wrap break-all">
               {selectedPatchSnippet}
             </pre>
           )}
 
-          <div className="p-2.5 rounded bg-white/[0.02] border border-white/[0.06] text-xs text-zinc-300 leading-relaxed">
+          <div className="p-3 rounded bg-white/[0.04] border border-white/[0.08] text-[14px] text-[#E5E9F0] leading-relaxed">
             {tierCfg.effect}
           </div>
         </div>
@@ -669,28 +742,163 @@ export function LiveSinkVisualizer({
 
   const breakout = getBreakoutBadge(mod, payload);
   const ctx = renderAttackContext(mod, payload);
+  const badgeClass =
+    breakout.tone === 'red'
+      ? 'bg-[#C81E1E]/25 border-[#F87171]/40 text-[#FECACA]'
+      : breakout.tone === 'amber'
+        ? 'bg-[#B45309]/25 border-[#FBBF24]/40 text-[#FDE68A]'
+        : 'bg-white/[0.08] border-white/[0.14] text-[#D1D5DB]';
 
   return (
-    <div className="rounded-lg bg-[#07080B]/85 border border-white/[0.06] p-3.5 space-y-2.5">
+    <div className="cf-darkroom rounded-lg bg-[#14171D] border border-white/[0.1] p-4 space-y-3 text-[#ECEFF4]">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <Lightning className="w-4 h-4 text-[#FB7185]" weight="bold" />
-          <h3 className="text-xs font-semibold text-zinc-200">Live Execution Sink Preview</h3>
+          <Lightning className="w-4 h-4 text-[#F87171]" weight="bold" />
+          <h3 className="text-[14px] font-bold text-[#ECEFF4]">Live Execution Sink Preview</h3>
         </div>
-        <Badge variant={breakout.variant}>{breakout.label}</Badge>
+        <span
+          className={['px-2.5 py-0.5 rounded border text-xs font-mono font-semibold', badgeClass].join(
+            ' '
+          )}
+        >
+          {breakout.label}
+        </span>
       </div>
 
-      <div className="p-2.5 rounded bg-[#050608] border border-white/[0.06] space-y-1.5">
-        <div className="flex items-center justify-between gap-2 text-[11px] font-mono text-zinc-400">
-          <span className="inline-flex items-center gap-1.5">
-            <TerminalWindow className="w-3.5 h-3.5 text-[#FB7185]" weight="regular" />
+      <div className="p-3.5 rounded bg-[#0E1014] border border-white/[0.08] space-y-2">
+        <div className="flex items-center justify-between gap-2 text-xs font-mono text-[#9CA3AF]">
+          <span className="inline-flex items-center gap-1.5 text-[#C8CFD8]">
+            <TerminalWindow className="w-3.5 h-3.5 text-[#F87171]" weight="regular" />
             {ctx.sinkLabel}
           </span>
-          <span>{mod}</span>
+          <span>module: {mod}</span>
         </div>
-        <pre className="font-mono text-xs whitespace-pre-wrap break-all leading-relaxed">
+        <pre className="font-mono text-[13.5px] whitespace-pre-wrap break-all leading-relaxed">
           {ctx.line}
         </pre>
+      </div>
+
+      {stageGuide && (
+        <div className="p-3 rounded bg-white/[0.04] border border-white/[0.08] space-y-1 text-[13.5px]">
+          <div className="font-mono text-xs font-semibold text-[#FCD34D]">{stageGuide.label}</div>
+          <div className="text-[#E5E9F0] leading-relaxed">{stageGuide.objective}</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function HttpWireInspector({ wireTrace, role = 'attacker' }) {
+  const isAttacker = role === 'attacker';
+
+  if (!wireTrace) {
+    return (
+      <div className="cf-darkroom h-full p-5 flex items-center justify-center bg-[#0E1014] text-[#ECEFF4]">
+        <div className="max-w-md w-full p-5 rounded-lg bg-[#14171D] border border-white/[0.1] space-y-2">
+          <div className="flex items-center gap-2 font-bold text-[15px] text-[#ECEFF4]">
+            <Globe
+              className={['w-4 h-4', isAttacker ? 'text-[#F87171]' : 'text-[#60A5FA]'].join(' ')}
+              weight="bold"
+            />
+            <span>Live HTTP Wire Inspector</span>
+          </div>
+          <p className="text-[14px] text-[#C8CFD8] leading-relaxed">
+            {isAttacker
+              ? 'Submit an exploit payload in Execute to inspect live DVWA request headers, cookies, HTTP status codes, and response body snippets.'
+              : 'Run a live replay in Remediate to inspect the HTTP wire request, DVWA security cookies, and blocked/breached response telemetry.'}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const reqHeaders = Object.entries(wireTrace.request_headers || {});
+  const respHeaders = Object.entries(wireTrace.response_headers || {});
+  const setCookies = Array.isArray(wireTrace.set_cookies) ? wireTrace.set_cookies : [];
+  const statusOk = (wireTrace.response_status || 200) < 400;
+
+  return (
+    <div className="cf-darkroom h-full flex flex-col bg-[#0E1014] text-[#ECEFF4] overflow-hidden">
+      <div className="px-4 py-2.5 border-b border-white/[0.1] bg-[#14171D] flex flex-wrap items-center justify-between gap-2 shrink-0">
+        <div className="flex items-center gap-2">
+          <Globe
+            className={['w-4 h-4', isAttacker ? 'text-[#F87171]' : 'text-[#60A5FA]'].join(' ')}
+            weight="bold"
+          />
+          <h3 className="text-[14px] font-bold text-[#ECEFF4]">HTTP Wire Trace</h3>
+        </div>
+        <div className="flex items-center gap-2">
+          <span
+            className={[
+              'px-2.5 py-0.5 rounded border text-xs font-mono font-semibold',
+              statusOk
+                ? 'bg-[#047857]/25 border-[#34D399]/40 text-[#A7F3D0]'
+                : 'bg-[#C81E1E]/25 border-[#F87171]/40 text-[#FECACA]',
+            ].join(' ')}
+          >
+            HTTP {wireTrace.response_status || 200}
+          </span>
+          {wireTrace.latency_ms !== undefined && (
+            <span className="px-2.5 py-0.5 rounded border border-white/[0.14] bg-white/[0.06] text-xs font-mono text-[#E5E9F0]">
+              {wireTrace.latency_ms} ms
+            </span>
+          )}
+        </div>
+      </div>
+
+      <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-3.5 font-mono text-[13.5px]">
+        <div className="p-3.5 rounded-lg bg-[#14171D] border border-white/[0.1] space-y-2.5">
+          <div className="text-xs font-bold uppercase tracking-wider text-[#9CA3AF]">
+            Outbound Request Wire
+          </div>
+          <div className="p-2.5 rounded bg-[#0B0D11] border border-white/[0.08] text-[#ECEFF4] break-all">
+            <span className="text-[#FCD34D] font-bold">{wireTrace.request_method || 'GET'}</span>{' '}
+            {wireTrace.request_url}
+          </div>
+          {reqHeaders.length > 0 && (
+            <div className="space-y-1 text-[13px] text-[#D1D5DB]">
+              {reqHeaders.map(([k, v]) => (
+                <div key={k} className="break-all">
+                  <span className="text-[#9CA3AF]">{k}:</span> {v}
+                </div>
+              ))}
+            </div>
+          )}
+          {wireTrace.request_body_preview && (
+            <pre className="p-2.5 rounded bg-[#0B0D11] border border-[#F87171]/25 text-[13px] text-[#FECACA] whitespace-pre-wrap break-all">
+              {wireTrace.request_body_preview}
+            </pre>
+          )}
+        </div>
+
+        <div className="p-3.5 rounded-lg bg-[#14171D] border border-white/[0.1] space-y-2.5">
+          <div className="text-xs font-bold uppercase tracking-wider text-[#9CA3AF]">
+            Inbound Response Wire
+          </div>
+          {respHeaders.length > 0 && (
+            <div className="space-y-1 text-[13px] text-[#D1D5DB]">
+              {respHeaders.map(([k, v]) => (
+                <div key={k} className="break-all">
+                  <span className="text-[#9CA3AF]">{k}:</span> {v}
+                </div>
+              ))}
+            </div>
+          )}
+          {setCookies.length > 0 && (
+            <div className="space-y-1 text-[13px] text-[#34D399]">
+              {setCookies.map((sc, i) => (
+                <div key={i} className="break-all">
+                  <span className="text-[#9CA3AF]">set-cookie:</span> {sc}
+                </div>
+              ))}
+            </div>
+          )}
+          {wireTrace.body_snippet && (
+            <pre className="p-2.5 rounded bg-[#0B0D11] border border-white/[0.08] text-[13px] text-[#ECEFF4] whitespace-pre-wrap break-words max-h-52 overflow-y-auto">
+              {wireTrace.body_snippet}
+            </pre>
+          )}
+        </div>
       </div>
     </div>
   );

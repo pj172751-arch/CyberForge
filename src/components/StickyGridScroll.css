@@ -118,10 +118,10 @@
 /* ---------------- Gallery & Grid (In FRONT of content, reveals content upon zoom) ---------------- */
 .gallery {
   position: absolute;
-  top: 50%;
+  top: calc(50% + 28px);
   left: 50%;
   transform: translate3d(-50%, -50%, 0);
-  width: min(840px, 90vw);
+  width: min(960px, 94vw);
   z-index: 2;
   pointer-events: none;
 }
@@ -129,8 +129,8 @@
 .gallery__grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  column-gap: 24px;
-  row-gap: 24px;
+  column-gap: 16px;
+  row-gap: 10px;
   will-change: transform;
   list-style: none;
   margin: 0;
@@ -140,65 +140,65 @@
 
 .gallery__item {
   width: 100%;
-  aspect-ratio: 1;
-  min-height: 190px;
+  aspect-ratio: auto;
+  height: 126px;
+  min-height: 126px;
   will-change: transform;
   pointer-events: none;
 }
 
-/* ---------------- Task Cards (replacing flower image, NO "More ->" inside cards) ---------------- */
+/* ---------------- Task Cards (NO "More ->" inside cards) ---------------- */
 .gallery__task-box {
   width: 100%;
   height: 100%;
-  border-radius: 18px;
+  border-radius: 12px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  padding: 1.15rem;
+  padding: 0.75rem;
   background-color: #0c0f18;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.14);
   position: relative;
   overflow: hidden;
   pointer-events: none;
-  transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+  transition: transform 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
 }
 
 .gallery__task-box--attacker {
-  border-color: rgba(239, 68, 68, 0.35);
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.8), 0 0 18px rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.4);
 }
 
 .gallery__task-box--attacker:hover {
-  border-color: rgba(255, 42, 61, 0.85);
-  box-shadow: 0 0 25px rgba(255, 42, 61, 0.35);
+  border-color: rgba(255, 42, 61, 0.9);
+  background-color: #150b10;
   transform: translateY(-2px);
 }
 
 .gallery__task-box--defender {
-  border-color: rgba(42, 183, 255, 0.35);
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.8), 0 0 18px rgba(42, 183, 255, 0.12);
+  border-color: rgba(42, 183, 255, 0.4);
 }
 
 .gallery__task-box--defender:hover {
-  border-color: rgba(42, 183, 255, 0.85);
-  box-shadow: 0 0 25px rgba(42, 183, 255, 0.35);
+  border-color: rgba(42, 183, 255, 0.9);
+  background-color: #0a1424;
   transform: translateY(-2px);
 }
 
-@media (max-width: 768px) {
+@media (max-width: 639px) {
   .gallery {
     width: 94vw;
   }
   .gallery__grid {
-    column-gap: 12px;
-    row-gap: 12px;
+    grid-template-columns: repeat(2, 1fr);
+    column-gap: 8px;
+    row-gap: 8px;
   }
   .gallery__item {
-    min-height: 140px;
+    height: 96px;
+    min-height: 96px;
   }
   .gallery__task-box {
-    padding: 0.75rem;
-    border-radius: 12px;
+    padding: 0.625rem;
+    border-radius: 10px;
   }
 }

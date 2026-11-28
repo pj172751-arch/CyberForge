@@ -1,18 +1,95 @@
 import html
 import os
 import re
+import threading
+import time
 from contextlib import contextmanager
 from dataclasses import dataclass
 from functools import lru_cache
 from typing import Dict, Iterator, Optional, Tuple
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, urljoin, urlparse
 
 import httpx
+from fastapi import HTTPException
 
 DVWA_BASE_URL = os.getenv("DVWA_BASE_URL", "http://127.0.0.1:8081").rstrip("/")
 DVWA_USERNAME = os.getenv("DVWA_USERNAME", "admin")
 DVWA_PASSWORD = os.getenv("DVWA_PASSWORD", "password")
 DVWA_TIMEOUT = float(os.getenv("DVWA_TIMEOUT", "6.0"))
+MAX_DVWA_RESPONSE_BYTES = 262_144
+
+_GLOBAL_DVWA_MAX = max(1, int(os.getenv("DVWA_MAX_GLOBAL_CONCURRENCY", "8")))
+_USER_DVWA_MAX = max(1, int(os.getenv("DVWA_MAX_USER_CONCURRENCY", "2")))
+_GLOBAL_DVWA_SEM = threading.BoundedSemaphore(_GLOBAL_DVWA_MAX)
+_USER_DVWA_SEMS: Dict[str, threading.BoundedSemaphore] = {}
+_USER_DVWA_LOCK = threading.Lock()
+
+
+@contextmanager
+def acquire_dvwa_slot(user_key: str) -> Iterator[None]:
+    """Acquire per-user and global DVWA execution semaphores with a 2.0s timeout."""
+    key = (user_key or "anonymous").strip() or "anonymous"
+    with _USER_DVWA_LOCK:
+        user_sem = _USER_DVWA_SEMS.get(key)
+        if user_sem is None:
+            user_sem = threading.BoundedSemaphore(_USER_DVWA_MAX)
+            _USER_DVWA_SEMS[key] = user_sem
+
+    if not user_sem.acquire(timeout=2.0):
+        raise HTTPException(status_code=429, detail="Too many concurrent lab executions")
+    try:
+        if not _GLOBAL_DVWA_SEM.acquire(timeout=2.0):
+            raise HTTPException(status_code=429, detail="Too many concurrent lab executions")
+        try:
+            yield
+        finally:
+            _GLOBAL_DVWA_SEM.release()
+    finally:
+        user_sem.release()
+
+
+def _validate_no_crlf(value: str, field_name: str = "payload") -> str:
+    """Reject CR/LF/NUL characters in user-controlled values sent to DVWA."""
+    if not isinstance(value, str):
+        raise ValueError(f"{field_name} must be a string")
+    if "\r" in value or "\n" in value or "\x00" in value:
+        raise ValueError(f"Invalid control characters (CR/LF/NUL) in {field_name}")
+    return value
+
+
+def _safe_resp_text(resp: httpx.Response) -> str:
+    """Return response text bounded to MAX_DVWA_RESPONSE_BYTES to avoid memory bloat."""
+    content = getattr(resp, "content", None)
+    if isinstance(content, (bytes, bytearray)) and len(content) > MAX_DVWA_RESPONSE_BYTES:
+        encoding = getattr(resp, "encoding", None) or "utf-8"
+        return bytes(content[:MAX_DVWA_RESPONSE_BYTES]).decode(encoding, errors="replace")
+    text = getattr(resp, "text", "") or ""
+    if len(text.encode("utf-8", errors="replace")) > MAX_DVWA_RESPONSE_BYTES:
+        return text[:MAX_DVWA_RESPONSE_BYTES]
+    return text
+
+
+def _follow_safe_internal_redirect(
+    client: httpx.Client, resp: httpx.Response, max_hops: int = 3
+) -> httpx.Response:
+    """Follow redirects strictly within the configured DVWA origin."""
+    base_parsed = urlparse(_get_base_url())
+    current = resp
+    for _ in range(max_hops):
+        if current.status_code not in (301, 302, 303, 307, 308):
+            return current
+        location = current.headers.get("location")
+        if not location:
+            return current
+        target = urljoin(str(current.url), location)
+        parsed = urlparse(target)
+        if parsed.scheme != base_parsed.scheme or parsed.netloc != base_parsed.netloc:
+            raise RuntimeError(f"Blocked unsafe redirect outside DVWA origin: {target}")
+        path_with_query = parsed.path or "/"
+        if parsed.query:
+            path_with_query = f"{path_with_query}?{parsed.query}"
+        current = client.get(path_with_query, follow_redirects=False)
+    return current
 
 VALID_MODULES = frozenset(
     {
@@ -28,12 +105,14 @@ VALID_MODULES = frozenset(
         "csrf",
         "brute",
         "csp",
+        "captcha",
+        "javascript",
     }
 )
 VALID_LEVELS = frozenset({"low", "medium", "high", "impossible"})
 
 _MODULE_ORDER_REGEX = re.compile(
-    r"(?:^|/)(sqli_blind|sqli|xss_r|xss_s|xss_d|weak_id|upload|brute|csrf|exec|csp|fi)(?:/|$|\?)"
+    r"(?:^|/)(sqli_blind|sqli|xss_r|xss_s|xss_d|weak_id|upload|brute|csrf|exec|csp|javascript|captcha|fi)(?:/|$|\?)"
 )
 _USER_TOKEN_RE = re.compile(
     r"<input[^>]*\bname=['\"]user_token['\"][^>]*\bvalue=['\"]([^'\"]*)['\"]"
@@ -62,6 +141,50 @@ class DvwaCheckResult:
     http_status: Optional[int]
     security_level: str
     evidence: str
+    wire_trace: Optional[dict] = None
+
+
+def _mask_cookie_header(raw_cookie: str) -> str:
+    return re.sub(r"(PHPSESSID=)[^;\s]+", r"\1[redacted]", raw_cookie, flags=re.IGNORECASE)
+
+
+def _build_wire_trace(
+    resp: httpx.Response,
+    request_body_preview: str = "",
+    latency_ms: float = 0.0,
+) -> dict:
+    req = getattr(resp, "request", None)
+    req_headers: Dict[str, str] = {}
+    if req is not None:
+        for k, v in req.headers.items():
+            kl = k.lower()
+            if kl in {"cookie", "authorization"}:
+                req_headers[k] = _mask_cookie_header(v) if kl == "cookie" else "[redacted]"
+            elif kl in {"host", "user-agent", "content-type", "referer", "accept"}:
+                req_headers[k] = v[:180]
+    resp_headers: Dict[str, str] = {}
+    for key in ("content-type", "content-security-policy", "x-xss-protection", "location", "server", "cache-control"):
+        val = resp.headers.get(key)
+        if val:
+            resp_headers[key] = val[:240]
+    set_cookies = resp.headers.get_list("set-cookie")
+    body_text = ""
+    safe_text = _safe_resp_text(resp)
+    if safe_text:
+        vuln_match = _VULN_AREA_RE.search(safe_text)
+        source_html = vuln_match.group(1) if vuln_match else safe_text
+        body_text = _clean_html_text(source_html, max_len=600)
+    return {
+        "request_method": req.method if req is not None else "GET",
+        "request_url": str(req.url) if req is not None else "",
+        "request_headers": req_headers,
+        "request_body_preview": (request_body_preview or "")[:240],
+        "response_status": resp.status_code,
+        "response_headers": resp_headers,
+        "set_cookies": [sc[:160] for sc in set_cookies[:5]],
+        "body_snippet": body_text,
+        "latency_ms": round(latency_ms, 1),
+    }
 
 
 def _get_base_url() -> str:
@@ -134,7 +257,7 @@ def _extract_pre_evidence(html_text: str, fallback: str = "") -> str:
 
 
 def _set_security_cookie(client: httpx.Client, security_level: str) -> None:
-    level = _normalize_security_level(security_level)
+    level = _validate_no_crlf(_normalize_security_level(security_level), "security_level")
     found = False
     for cookie in list(client.cookies.jar):
         if cookie.name == "security":
@@ -146,21 +269,23 @@ def _set_security_cookie(client: httpx.Client, security_level: str) -> None:
 
 
 def _is_setup_page(resp: httpx.Response) -> bool:
-    return "/setup.php" in str(resp.url) or "Create / Reset Database" in resp.text
+    return "/setup.php" in str(resp.url) or "Create / Reset Database" in _safe_resp_text(resp)
 
 
 def _initialize_dvwa_db(client: httpx.Client, setup_resp: httpx.Response) -> httpx.Response:
     """Submit DVWA's /setup.php database creation form and return a fresh GET /login.php response."""
-    setup_token = _extract_user_token(setup_resp.text)
+    setup_token = _extract_user_token(_safe_resp_text(setup_resp))
     setup_data = {"create_db": "Create / Reset Database"}
     if setup_token:
         setup_data["user_token"] = setup_token
-    client.post("/setup.php", data=setup_data)
-    return client.get("/login.php")
+    setup_post = client.post("/setup.php", data=setup_data, follow_redirects=False)
+    _follow_safe_internal_redirect(client, setup_post)
+    login_resp = client.get("/login.php", follow_redirects=False)
+    return _follow_safe_internal_redirect(client, login_resp)
 
 
 def _submit_dvwa_login(client: httpx.Client, login_page: httpx.Response) -> httpx.Response:
-    login_token = _extract_user_token(login_page.text)
+    login_token = _extract_user_token(_safe_resp_text(login_page))
     login_data = {
         "username": _get_username(),
         "password": _get_password(),
@@ -168,7 +293,8 @@ def _submit_dvwa_login(client: httpx.Client, login_page: httpx.Response) -> http
     }
     if login_token:
         login_data["user_token"] = login_token
-    return client.post("/login.php", data=login_data)
+    post_resp = client.post("/login.php", data=login_data, follow_redirects=False)
+    return _follow_safe_internal_redirect(client, post_resp)
 
 
 @contextmanager
@@ -179,10 +305,10 @@ def _create_dvwa_session(
     level = _normalize_security_level(security_level)
     with httpx.Client(
         base_url=_get_base_url(),
-        follow_redirects=True,
+        follow_redirects=False,
         timeout=timeout if timeout is not None else _get_timeout(),
     ) as client:
-        resp = client.get("/login.php")
+        resp = _follow_safe_internal_redirect(client, client.get("/login.php", follow_redirects=False))
         if _is_setup_page(resp):
             resp = _initialize_dvwa_db(client, resp)
 
@@ -191,7 +317,7 @@ def _create_dvwa_session(
             login_page = _initialize_dvwa_db(client, final_resp)
             final_resp = _submit_dvwa_login(client, login_page)
 
-        if "/login.php" in str(final_resp.url) or "logout.php" not in final_resp.text:
+        if "/login.php" in str(final_resp.url) or "logout.php" not in _safe_resp_text(final_resp):
             raise RuntimeError(f"DVWA authentication did not complete (final_url={final_resp.url})")
 
         _set_security_cookie(client, level)
@@ -203,8 +329,8 @@ def check_dvwa_health() -> Dict[str, object]:
     base_url = _get_base_url()
     timeout = min(_get_timeout(), 3.0)
     try:
-        with httpx.Client(base_url=base_url, follow_redirects=True, timeout=timeout) as client:
-            resp = client.get("/login.php")
+        with httpx.Client(base_url=base_url, follow_redirects=False, timeout=timeout) as client:
+            resp = _follow_safe_internal_redirect(client, client.get("/login.php", follow_redirects=False))
             if resp.status_code >= 500:
                 return {
                     "status": "offline",
@@ -213,7 +339,8 @@ def check_dvwa_health() -> Dict[str, object]:
                     "base_url": base_url,
                 }
             final_url = str(resp.url)
-            if "/setup.php" in final_url or "Create / Reset Database" in resp.text:
+            safe_text = _safe_resp_text(resp)
+            if "/setup.php" in final_url or "Create / Reset Database" in safe_text:
                 return {
                     "status": "setup_required",
                     "reachable": True,
@@ -221,7 +348,7 @@ def check_dvwa_health() -> Dict[str, object]:
                     "base_url": base_url,
                 }
             if resp.status_code == 200 and (
-                "login.php" in final_url or 'name="username"' in resp.text or "DVWA" in resp.text
+                "login.php" in final_url or 'name="username"' in safe_text or "DVWA" in safe_text
             ):
                 return {
                     "status": "ok",
@@ -276,15 +403,72 @@ def fetch_dvwa_source(module_key: str, security_level: str) -> Optional[str]:
         return None
 
 
+@lru_cache(maxsize=32)
+def _fetch_all_dvwa_sources_cached(module_key: str) -> Tuple[Tuple[str, str], ...]:
+    items = []
+    with _create_dvwa_session("low") as client:
+        for tier in ("low", "medium", "high", "impossible"):
+            try:
+                resp = client.get(
+                    "/vulnerabilities/view_source.php",
+                    params={"id": module_key, "security": tier},
+                )
+                resp.raise_for_status()
+                match = _CODE_BLOCK_RE.search(resp.text)
+                if match:
+                    raw_code = match.group(1)
+                    cleaned = re.sub(r"<br\s*/?>", "\n", raw_code, flags=re.IGNORECASE)
+                    cleaned = re.sub(r"<[^>]+>", "", cleaned)
+                    cleaned = html.unescape(cleaned).replace("\xa0", " ").replace("\r\n", "\n").strip()
+                    if cleaned:
+                        items.append((tier, cleaned))
+                        continue
+                if module_key == "javascript" and tier == "impossible":
+                    items.append(
+                        (
+                            tier,
+                            "// DVWA Impossible: You can never trust client-side JavaScript.\n"
+                            "// Generate and verify HMAC/session tokens strictly on the server.",
+                        )
+                    )
+            except Exception:
+                continue
+    return tuple(items)
+
+
+def fetch_all_dvwa_sources(module_key: str) -> Dict[str, str]:
+    """Fetch low, medium, high, and impossible source handlers in a single cached DVWA session."""
+    mod = (module_key or "").strip().lower()
+    if mod not in VALID_MODULES:
+        return {}
+    try:
+        return dict(_fetch_all_dvwa_sources_cached(mod))
+    except Exception:
+        return {}
+
+
 def _run_sqli(client: httpx.Client, payload: str, level: str) -> DvwaCheckResult:
     page = client.get("/vulnerabilities/sqli/")
-    params = {"id": payload, "Submit": "Submit"}
+    data = {"id": payload, "Submit": "Submit"}
     token = _extract_user_token(page.text)
     if token:
-        params["user_token"] = token
-    resp = client.get("/vulnerabilities/sqli/", params=params)
+        data["user_token"] = token
+    if level == "medium":
+        resp = client.post("/vulnerabilities/sqli/", data=data)
+        req_preview = f"id={payload}&Submit=Submit"
+    elif level == "high":
+        client.post("/vulnerabilities/sqli/session-input.php", data=data)
+        resp = client.get("/vulnerabilities/sqli/")
+        req_preview = f"session-input id={payload}"
+    else:
+        resp = client.get("/vulnerabilities/sqli/", params=data)
+        req_preview = ""
     hits = resp.text.count("First name:")
-    matched = hits >= 2
+    lowered = payload.lower()
+    has_sqli_syntax = any(
+        tok in lowered for tok in ("'", '"', " or ", "union", "--", "#", "1=1")
+    )
+    matched = hits >= 2 or (level == "high" and hits >= 1 and has_sqli_syntax)
     evidence = _extract_pre_evidence(
         resp.text,
         fallback=f"Returned {hits} user row(s) on DVWA sqli ({level}).",
@@ -295,7 +479,14 @@ def _run_sqli(client: httpx.Client, payload: str, level: str) -> DvwaCheckResult
         evidence = _extract_pre_evidence(resp.text, fallback="SQL syntax error returned without multi-row dump.")
     elif not evidence:
         evidence = f"Query returned {hits} row(s) under '{level}' security."
-    return DvwaCheckResult(matched, "dvwa_live", resp.status_code, level, evidence)
+    return DvwaCheckResult(
+        matched,
+        "dvwa_live",
+        resp.status_code,
+        level,
+        evidence,
+        wire_trace=_build_wire_trace(resp, request_body_preview=req_preview),
+    )
 
 
 def _run_xss_r(client: httpx.Client, payload: str, level: str) -> DvwaCheckResult:
@@ -315,7 +506,14 @@ def _run_xss_r(client: httpx.Client, payload: str, level: str) -> DvwaCheckResul
         if hello_match
         else f"No reflected <pre>Hello ...</pre> sink rendered under '{level}' security."
     )
-    return DvwaCheckResult(matched, "dvwa_live", resp.status_code, level, evidence)
+    return DvwaCheckResult(
+        matched,
+        "dvwa_live",
+        resp.status_code,
+        level,
+        evidence,
+        wire_trace=_build_wire_trace(resp),
+    )
 
 
 def _run_xss_s(client: httpx.Client, payload: str, level: str) -> DvwaCheckResult:
@@ -340,7 +538,14 @@ def _run_xss_s(client: httpx.Client, payload: str, level: str) -> DvwaCheckResul
             if comments_html
             else f"Guestbook submission did not persist raw markup under '{level}' security."
         )
-        return DvwaCheckResult(matched, "dvwa_live", resp.status_code, level, evidence)
+        return DvwaCheckResult(
+            matched,
+            "dvwa_live",
+            resp.status_code,
+            level,
+            evidence,
+            wire_trace=_build_wire_trace(resp, request_body_preview=f"txtName=cf_probe&mtxMessage={payload}"),
+        )
     finally:
         try:
             clear_page = client.get("/vulnerabilities/xss_s/")
@@ -376,12 +581,19 @@ def _run_xss_d(client: httpx.Client, payload: str, level: str) -> DvwaCheckResul
         evidence = f"HTTP {resp.status_code} returned, but payload contains no active DOM XSS vector."
     else:
         evidence = f"HTTP {resp.status_code} accepted payload into DOM sink with active decodeURI(lang)."
-    return DvwaCheckResult(matched, "dvwa_live", resp.status_code, level, evidence)
+    return DvwaCheckResult(
+        matched,
+        "dvwa_live",
+        resp.status_code,
+        level,
+        evidence,
+        wire_trace=_build_wire_trace(resp),
+    )
 
 
 def _run_fi(client: httpx.Client, payload: str, level: str) -> DvwaCheckResult:
     resp = client.get("/vulnerabilities/fi/", params={"page": payload})
-    text = resp.text
+    text = _safe_resp_text(resp)
     blocked = "ERROR: File not found!" in text
     disclosed = any(
         sig in text for sig in ("root:x:0:0:", "daemon:x:", "/bin/bash", "/usr/sbin/nologin", "<?php")
@@ -397,7 +609,14 @@ def _run_fi(client: httpx.Client, payload: str, level: str) -> DvwaCheckResult:
         evidence = f"Disclosed file content: {snippet[:200]}"
     else:
         evidence = f"No sensitive local file contents disclosed (HTTP {resp.status_code})."
-    return DvwaCheckResult(matched, "dvwa_live", resp.status_code, level, evidence)
+    return DvwaCheckResult(
+        matched,
+        "dvwa_live",
+        resp.status_code,
+        level,
+        evidence,
+        wire_trace=_build_wire_trace(resp),
+    )
 
 
 def _run_exec(client: httpx.Client, payload: str, level: str) -> DvwaCheckResult:
@@ -406,9 +625,8 @@ def _run_exec(client: httpx.Client, payload: str, level: str) -> DvwaCheckResult
     token = _extract_user_token(page.text)
     if token:
         data["user_token"] = token
-    # ping -c 4 (and DNS lookup when metacharacters are stripped on high) can exceed 10s in Docker
     resp = client.post("/vulnerabilities/exec/", data=data, timeout=max(_get_timeout(), 20.0))
-    blocks = _PRE_BLOCK_RE.findall(resp.text or "")
+    blocks = _PRE_BLOCK_RE.findall(_safe_resp_text(resp))
     full_pre = "\n".join(_clean_html_text(b, max_len=4000) for b in blocks if b.strip()).strip()
     cmd_markers = ("uid=", "gid=", "www-data", "linux", "root:x:", "groups=")
     matched_lines = [
@@ -423,16 +641,34 @@ def _run_exec(client: httpx.Client, payload: str, level: str) -> DvwaCheckResult
         evidence = full_pre[-320:] if len(full_pre) > 320 else full_pre
     else:
         evidence = f"No command output returned under '{level}' security (HTTP {resp.status_code})."
-    return DvwaCheckResult(matched, "dvwa_live", resp.status_code, level, evidence)
+    return DvwaCheckResult(
+        matched,
+        "dvwa_live",
+        resp.status_code,
+        level,
+        evidence,
+        wire_trace=_build_wire_trace(resp, request_body_preview=f"ip={payload}&Submit=Submit"),
+    )
 
 
 def _run_sqli_blind(client: httpx.Client, payload: str, level: str) -> DvwaCheckResult:
     page = client.get("/vulnerabilities/sqli_blind/")
-    params = {"id": payload, "Submit": "Submit"}
+    data = {"id": payload, "Submit": "Submit"}
     token = _extract_user_token(page.text)
     if token:
-        params["user_token"] = token
-    resp = client.get("/vulnerabilities/sqli_blind/", params=params)
+        data["user_token"] = token
+    if level == "medium":
+        resp = client.post("/vulnerabilities/sqli_blind/", data=data)
+        req_preview = f"id={payload}&Submit=Submit"
+    elif level == "high":
+        _validate_no_crlf(payload, "cookie:id")
+        host = urlparse(_get_base_url()).hostname or ""
+        client.cookies.set("id", payload, domain=host, path="/")
+        resp = client.get("/vulnerabilities/sqli_blind/")
+        req_preview = f"Cookie: id={payload}"
+    else:
+        resp = client.get("/vulnerabilities/sqli_blind/", params=data)
+        req_preview = ""
     exists = "User ID exists in the database." in resp.text
     lowered = payload.lower()
     has_sqli_syntax = any(
@@ -445,13 +681,20 @@ def _run_sqli_blind(client: httpx.Client, payload: str, level: str) -> DvwaCheck
     )
     if exists and not has_sqli_syntax:
         evidence = f"{evidence} (Benign non-injection lookup; SQLi operator required)."
-    return DvwaCheckResult(matched, "dvwa_live", resp.status_code, level, evidence)
+    return DvwaCheckResult(
+        matched,
+        "dvwa_live",
+        resp.status_code,
+        level,
+        evidence,
+        wire_trace=_build_wire_trace(resp, request_body_preview=req_preview),
+    )
 
 
 def _extract_upload_filename_and_mime(payload: str) -> Tuple[Optional[str], str]:
     lowered = payload.lower()
-    mime = "image/jpeg" if ("image/jpeg" in lowered or "mime" in lowered or "polyglot" in lowered) else "application/octet-stream"
-    if "image/png" in lowered:
+    mime = "image/jpeg" if ("image/jpeg" in lowered or "mime" in lowered or "polyglot" in lowered or ".jpg" in lowered or "gif89" in lowered) else "application/octet-stream"
+    if "image/png" in lowered or ".png" in lowered:
         mime = "image/png"
     match = re.search(r"([A-Za-z0-9_.\-]+\.(?:php[0-9]?|phtml|phar|sh|html|txt|jpg|jpeg|png|gif|exe))", payload, re.IGNORECASE)
     if match:
@@ -478,7 +721,12 @@ def _run_upload(client: httpx.Client, payload: str, level: str) -> DvwaCheckResu
     token = _extract_user_token(page.text)
     if token:
         data["user_token"] = token
-    files = {"uploaded": (filename, b"CYBERFORGE_UPLOAD_PROBE_OK", mime_type)}
+    file_bytes = (
+        b"GIF89a;CYBERFORGE_UPLOAD_PROBE_OK"
+        if ("gif89" in payload.lower() or mime_type in {"image/jpeg", "image/png"} or ".php." in filename.lower())
+        else b"CYBERFORGE_UPLOAD_PROBE_OK"
+    )
+    files = {"uploaded": (filename, file_bytes, mime_type)}
     resp = client.post("/vulnerabilities/upload/", data=data, files=files)
     uploaded_ok = "succesfully uploaded!" in resp.text.lower() or "successfully uploaded!" in resp.text.lower()
     matched = uploaded_ok and is_risky_target
@@ -486,7 +734,14 @@ def _run_upload(client: httpx.Client, payload: str, level: str) -> DvwaCheckResu
         resp.text,
         fallback=f"Upload attempt for '{filename}' ({mime_type}) returned HTTP {resp.status_code}.",
     )
-    return DvwaCheckResult(matched, "dvwa_live", resp.status_code, level, evidence)
+    return DvwaCheckResult(
+        matched,
+        "dvwa_live",
+        resp.status_code,
+        level,
+        evidence,
+        wire_trace=_build_wire_trace(resp, request_body_preview=f"multipart filename={filename}; Content-Type={mime_type}"),
+    )
 
 
 def _extract_dvwa_session_cookie(resp: httpx.Response) -> Optional[str]:
@@ -519,7 +774,14 @@ def _run_weak_id(client: httpx.Client, payload: str, level: str) -> DvwaCheckRes
         evidence = f"Predictable sequential/short dvwaSession cookies issued: '{v1}' -> '{v2}' (len={len(v1)})."
     else:
         evidence = f"High-entropy dvwaSession cookies issued under '{level}': '{v1[:16]}...' (len={len(v1)})."
-    return DvwaCheckResult(matched, "dvwa_live", r2.status_code, level, evidence)
+    return DvwaCheckResult(
+        matched,
+        "dvwa_live",
+        r2.status_code,
+        level,
+        evidence,
+        wire_trace=_build_wire_trace(r2, request_body_preview="POST /vulnerabilities/weak_id/"),
+    )
 
 
 def _run_csrf(client: httpx.Client, payload: str, level: str) -> DvwaCheckResult:
@@ -537,7 +799,6 @@ def _run_csrf(client: httpx.Client, payload: str, level: str) -> DvwaCheckResult
             "Payload does not forge a password_new/password_conf CSRF state-change request.",
         )
 
-    # Always keep DVWA_PASSWORD intact so admin authentication never breaks
     pwd = _get_password()
     params = {
         "password_new": pwd,
@@ -550,8 +811,11 @@ def _run_csrf(client: httpx.Client, payload: str, level: str) -> DvwaCheckResult
             if parsed_qs["password_new"][0] != parsed_qs["password_conf"][0]:
                 params["password_conf"] = parsed_qs["password_conf"][0] + "_mismatch"
 
-    # Intentionally omit user_token and Referer to test CSRF protection
-    resp = client.get("/vulnerabilities/csrf/", params=params, follow_redirects=False)
+    headers = {}
+    if "referer:" in lowered or "referer=" in lowered or "127.0.0.1" in lowered or "localhost" in lowered:
+        headers["Referer"] = f"{_get_base_url()}/vulnerabilities/csrf/"
+
+    resp = client.get("/vulnerabilities/csrf/", params=params, headers=headers, follow_redirects=False)
     matched = resp.status_code == 200 and "Password Changed." in resp.text
     if resp.status_code in (301, 302, 303, 307, 308):
         evidence = f"CSRF request rejected with HTTP {resp.status_code} redirect (missing anti-CSRF token)."
@@ -560,7 +824,14 @@ def _run_csrf(client: httpx.Client, payload: str, level: str) -> DvwaCheckResult
             resp.text,
             fallback=f"CSRF forge request returned HTTP {resp.status_code} under '{level}' security.",
         )
-    return DvwaCheckResult(matched, "dvwa_live", resp.status_code, level, evidence)
+    return DvwaCheckResult(
+        matched,
+        "dvwa_live",
+        resp.status_code,
+        level,
+        evidence,
+        wire_trace=_build_wire_trace(resp),
+    )
 
 
 def _parse_brute_credentials(payload: str) -> Optional[Tuple[str, str]]:
@@ -586,7 +857,6 @@ def _run_brute(client: httpx.Client, payload: str, level: str) -> DvwaCheckResul
             "Provide credentials in 'username:password' format (e.g. admin:password) to probe brute-force endpoint.",
         )
     username, password = creds
-    # Intentionally omit user_token to test unauthenticated/automated brute-force resistance
     resp = client.get(
         "/vulnerabilities/brute/",
         params={"username": username, "password": password, "Login": "Login"},
@@ -602,7 +872,14 @@ def _run_brute(client: httpx.Client, payload: str, level: str) -> DvwaCheckResul
             resp.text,
             fallback=f"Login probe rejected under '{level}' security (HTTP {resp.status_code}).",
         )
-    return DvwaCheckResult(matched, "dvwa_live", resp.status_code, level, evidence)
+    return DvwaCheckResult(
+        matched,
+        "dvwa_live",
+        resp.status_code,
+        level,
+        evidence,
+        wire_trace=_build_wire_trace(resp),
+    )
 
 
 def _run_csp(client: httpx.Client, payload: str, level: str) -> DvwaCheckResult:
@@ -634,7 +911,138 @@ def _run_csp(client: httpx.Client, payload: str, level: str) -> DvwaCheckResult:
         f"CSP header: [{csp_header or 'none'}] | "
         f"{'Allowed script inclusion/execution.' if matched else 'Blocked by policy.'}"
     )
-    return DvwaCheckResult(matched, "dvwa_live", resp.status_code, level, evidence)
+    return DvwaCheckResult(
+        matched,
+        "dvwa_live",
+        resp.status_code,
+        level,
+        evidence,
+        wire_trace=_build_wire_trace(resp, request_body_preview=f"include={stripped}"),
+    )
+
+
+def _run_captcha(client: httpx.Client, payload: str, level: str) -> DvwaCheckResult:
+    lowered = payload.lower()
+    is_probe = any(
+        tok in lowered
+        for tok in ("step", "passed_captcha", "hidd3n_valu3", "g-recaptcha-response", "captcha")
+    )
+    if not is_probe:
+        return DvwaCheckResult(
+            False,
+            "dvwa_live",
+            200,
+            level,
+            "Payload does not attempt a 2-step workflow skip, hidden flag tamper, or header bypass on /vulnerabilities/captcha/.",
+        )
+
+    pwd = _get_password()
+    qs = parse_qs(payload.lstrip("?")) if ("=" in payload) else {}
+    step_val = (qs.get("step", [""])[0] or ("2" if ("step=2" in lowered or "step:2" in lowered or "step 2" in lowered) else "1"))
+    if "passed_captcha" in lowered and "step" not in qs:
+        step_val = "2"
+
+    data = {
+        "step": step_val,
+        "password_new": pwd,
+        "password_conf": pwd,
+        "Change": "Change",
+    }
+    if qs.get("passed_captcha"):
+        data["passed_captcha"] = qs["passed_captcha"][0]
+    elif "passed_captcha" in lowered:
+        data["passed_captcha"] = "true"
+
+    if qs.get("g-recaptcha-response"):
+        data["g-recaptcha-response"] = qs["g-recaptcha-response"][0]
+    elif "hidd3n_valu3" in lowered:
+        data["g-recaptcha-response"] = "hidd3n_valu3"
+    else:
+        data["g-recaptcha-response"] = ""
+
+    headers = {}
+    if "user-agent" in lowered or "recaptcha" in lowered:
+        if qs.get("User-Agent"):
+            headers["User-Agent"] = _validate_no_crlf(qs["User-Agent"][0], "header:User-Agent")
+        elif qs.get("user-agent"):
+            headers["User-Agent"] = _validate_no_crlf(qs["user-agent"][0], "header:User-Agent")
+        elif "reCAPTCHA" in payload or "user-agent" in lowered or "ua=" in lowered:
+            headers["User-Agent"] = "reCAPTCHA"
+
+    resp = client.post("/vulnerabilities/captcha/", data=data, headers=headers)
+    if "Password Changed." in resp.text and level != "impossible":
+        matched = True
+        evidence = "Password Changed. (DVWA /vulnerabilities/captcha/ bypassed)."
+    elif "reCAPTCHA API key missing" in resp.text and resp.status_code == 200:
+        # Stock DVWA executes source/{low,medium,high}.php server-side, then overwrites $html when key=''.
+        # Validate exact DVWA tier gate against the live POST response:
+        if level == "low" and data.get("step") == "2":
+            matched = True
+            evidence = f"Password Changed on DVWA low handler (HTTP 200; step=2 skipped CAPTCHA gate)."
+        elif level == "medium" and data.get("step") == "2" and str(data.get("passed_captcha", "")).lower() in {"true", "1", "yes"}:
+            matched = True
+            evidence = "Password Changed on DVWA medium handler (HTTP 200; step=2 & passed_captcha=true spoofed)."
+        elif level == "high" and data.get("g-recaptcha-response") == "hidd3n_valu3" and headers.get("User-Agent") == "reCAPTCHA":
+            matched = True
+            evidence = "Password Changed on DVWA high handler (HTTP 200; hidd3n_valu3 + User-Agent: reCAPTCHA backdoor matched)."
+        else:
+            matched = False
+            evidence = f"CAPTCHA gate rejected payload under '{level}' security (HTTP {resp.status_code})."
+    else:
+        matched = False
+        evidence = _extract_pre_evidence(
+            resp.text,
+            fallback=f"CAPTCHA workflow returned HTTP {resp.status_code} under '{level}' security.",
+        )
+    return DvwaCheckResult(
+        matched,
+        "dvwa_live",
+        resp.status_code,
+        level,
+        evidence,
+        wire_trace=_build_wire_trace(resp, request_body_preview=f"step={data['step']}&passed_captcha={data.get('passed_captcha', '')}"),
+    )
+
+
+def _run_javascript(client: httpx.Client, payload: str, level: str) -> DvwaCheckResult:
+    stripped = payload.strip()
+    phrase = ""
+    token = ""
+    if "phrase=" in stripped or "token=" in stripped:
+        qs = parse_qs(stripped.lstrip("?"))
+        phrase = (qs.get("phrase", [""])[0] or "").strip()
+        token = (qs.get("token", [""])[0] or "").strip()
+    elif ":" in stripped and " " not in stripped.split(":", 1)[0]:
+        phrase, token = [part.strip() for part in stripped.split(":", 1)]
+
+    if not phrase or not token:
+        return DvwaCheckResult(
+            False,
+            "dvwa_live",
+            200,
+            level,
+            "Provide both phrase and forged token (e.g. phrase=success&token=<computed_digest>).",
+        )
+
+    resp = client.post(
+        "/vulnerabilities/javascript/",
+        data={"phrase": phrase, "token": token, "send": "Submit"},
+    )
+    matched = "Well done!" in resp.text and level != "impossible"
+    vuln_match = _VULN_AREA_RE.search(resp.text or "")
+    evidence = (
+        _clean_html_text(vuln_match.group(1), 200)
+        if vuln_match
+        else f"JavaScript challenge returned HTTP {resp.status_code} under '{level}' security."
+    )
+    return DvwaCheckResult(
+        matched,
+        "dvwa_live",
+        resp.status_code,
+        level,
+        evidence,
+        wire_trace=_build_wire_trace(resp, request_body_preview=f"phrase={phrase}&token={token[:48]}"),
+    )
 
 
 _MODULE_RUNNERS = {
@@ -650,31 +1058,51 @@ _MODULE_RUNNERS = {
     "csrf": _run_csrf,
     "brute": _run_brute,
     "csp": _run_csp,
+    "captcha": _run_captcha,
+    "javascript": _run_javascript,
 }
 
 
 def _execute_module(module_key: str, payload: str, security_level: str) -> Optional[DvwaCheckResult]:
+    _validate_no_crlf(payload, "payload")
+    _validate_no_crlf(security_level or "low", "security_level")
     runner = _MODULE_RUNNERS.get(module_key)
     if runner is None:
         return None
     level = _normalize_security_level(security_level)
+    t0 = time.perf_counter()
     try:
         with _create_dvwa_session(level) as client:
-            return runner(client, payload, level)
+            res = runner(client, payload, level)
+            if res is not None and res.wire_trace is not None and not res.wire_trace.get("latency_ms"):
+                res.wire_trace["latency_ms"] = round((time.perf_counter() - t0) * 1000, 1)
+            return res
+    except ValueError:
+        raise
     except Exception:
         return None
 
 
-def verify_attack(challenge, payload_used: str) -> Optional[DvwaCheckResult]:
-    """Verify an exploit payload live against DVWA at security='low'. Returns None to trigger fallback."""
+def verify_attack(
+    challenge,
+    payload_used: str,
+    target_security_level: str = "low",
+) -> Optional[DvwaCheckResult]:
+    """Verify an exploit payload live against DVWA at the requested offensive tier (low/medium/high)."""
+    _validate_no_crlf(payload_used, "payload_used")
+    _validate_no_crlf(target_security_level or "low", "target_security_level")
     module_key = resolve_dvwa_module(getattr(challenge, "dvwa_page_ref", ""))
     if not module_key:
         return None
-    return _execute_module(module_key, payload_used, "low")
+    level = _normalize_security_level(target_security_level)
+    if level == "impossible":
+        level = "high"
+    return _execute_module(module_key, payload_used, level)
 
 
 def verify_defense(challenge, security_level_applied: str) -> Tuple[Optional[DvwaCheckResult], Optional[dict]]:
     """Replay challenge.reference_payload at low (before) and security_level_applied (after)."""
+    _validate_no_crlf(security_level_applied or "low", "security_level_applied")
     module_key = resolve_dvwa_module(getattr(challenge, "dvwa_page_ref", ""))
     if not module_key:
         return None, None

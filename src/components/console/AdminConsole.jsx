@@ -21,14 +21,16 @@ import { API_BASE, apiFetch } from '../../utils/api';
 import { AlertBanner, Badge, Button, EmptyState, Field, Input, SkeletonRows } from '../ui/primitives';
 import {
   AnimatedTicker,
-  BorderSweep,
   CopyChip,
+  PaginationBar,
   SlideOverInspector,
   SpotlightSurface,
   TactileToast,
 } from '../ui/spells';
 import CommandDeckShell from './CommandDeckShell';
 import { ProfileView, SettingsView } from './AccountViews';
+
+const PAGE_SIZE = 8;
 
 const INITIAL_CREATE_FORM = {
   username: '',
@@ -80,22 +82,22 @@ function IdentityDistributionBar({ moderatorsCount, attackersCount, defendersCou
         key: 'moderators',
         label: 'Moderators',
         count: moderatorsCount,
-        color: '#F59E0B',
-        dotClass: 'bg-[#F59E0B]',
+        color: '#B45309',
+        dotClass: 'bg-[#B45309]',
       },
       {
         key: 'attackers',
         label: 'Attackers',
         count: attackersCount,
-        color: '#F43F5E',
-        dotClass: 'bg-[#F43F5E]',
+        color: '#C81E1E',
+        dotClass: 'bg-[#C81E1E]',
       },
       {
         key: 'defenders',
         label: 'Defenders',
         count: defendersCount,
-        color: '#10B981',
-        dotClass: 'bg-[#10B981]',
+        color: '#047857',
+        dotClass: 'bg-[#047857]',
       },
     ],
     [moderatorsCount, attackersCount, defendersCount]
@@ -103,7 +105,7 @@ function IdentityDistributionBar({ moderatorsCount, attackersCount, defendersCou
 
   const total = moderatorsCount + attackersCount + defendersCount;
   const widthTotal = 600;
-  const barHeight = 14;
+  const barHeight = 16;
 
   const computedRects = useMemo(() => {
     if (total <= 0) return [];
@@ -115,7 +117,7 @@ function IdentityDistributionBar({ moderatorsCount, attackersCount, defendersCou
         const rect = {
           ...seg,
           x: cursor,
-          width: Math.max(w, 4),
+          width: Math.max(w, 6),
           pct: Math.round((seg.count / total) * 100),
         };
         cursor += w;
@@ -124,22 +126,23 @@ function IdentityDistributionBar({ moderatorsCount, attackersCount, defendersCou
   }, [segments, total]);
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between text-xs text-zinc-400">
+    <div className="space-y-2.5">
+      <div className="flex items-center justify-between text-[13px] font-semibold text-[#4B5260]">
         <span>Operational Cohort Distribution</span>
-        <span className="font-mono tabular-nums text-zinc-300">
+        <span className="font-mono tabular-nums text-[#111317]">
           {total.toLocaleString()} active seats
         </span>
       </div>
 
-      <div className="rounded-lg bg-[#07080B] border border-white/[0.08] p-2">
+      <div className="rounded-md bg-[#EAE4D7] border border-[#111317]/15 p-1.5">
         <svg
           viewBox={`0 0 ${widthTotal} ${barHeight}`}
-          className="w-full h-3.5 rounded overflow-hidden block"
+          preserveAspectRatio="none"
+          className="w-full h-4 rounded-sm overflow-hidden block"
           role="img"
           aria-label={`Cohort distribution: ${moderatorsCount} moderators, ${attackersCount} attackers, ${defendersCount} defenders`}
         >
-          <rect x="0" y="0" width={widthTotal} height={barHeight} fill="#141821" rx="4" />
+          <rect x="0" y="0" width={widthTotal} height={barHeight} fill="#FAF8F3" rx="2" />
           {computedRects.map((rect) => {
             const dimmed = hoveredKey && hoveredKey !== rect.key;
             return (
@@ -150,7 +153,7 @@ function IdentityDistributionBar({ moderatorsCount, attackersCount, defendersCou
                 width={rect.width}
                 height={barHeight}
                 fill={rect.color}
-                opacity={dimmed ? 0.35 : 0.92}
+                opacity={dimmed ? 0.35 : 0.95}
                 className="transition-opacity duration-150 cursor-pointer"
                 onMouseEnter={() => setHoveredKey(rect.key)}
                 onMouseLeave={() => setHoveredKey(null)}
@@ -162,7 +165,7 @@ function IdentityDistributionBar({ moderatorsCount, attackersCount, defendersCou
         </svg>
       </div>
 
-      <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
         {segments.map((seg) => {
           const pct = total > 0 ? Math.round((seg.count / total) * 100) : 0;
           const active = hoveredKey === seg.key;
@@ -175,18 +178,16 @@ function IdentityDistributionBar({ moderatorsCount, attackersCount, defendersCou
               onFocus={() => setHoveredKey(seg.key)}
               onBlur={() => setHoveredKey(null)}
               className={[
-                'inline-flex items-center gap-2 text-xs rounded-md px-1.5 py-0.5 transition-colors',
-                active ? 'bg-white/[0.06] text-zinc-100' : 'text-zinc-300',
+                'inline-flex items-center gap-2 text-xs font-medium rounded px-2 py-1 border transition-colors',
+                active
+                  ? 'bg-[#EAE4D7] border-[#111317]/30 text-[#111317]'
+                  : 'bg-[#F3EFE6] border-[#111317]/10 text-[#1C1F26]',
               ].join(' ')}
             >
-              <span className={['w-2 h-2 rounded-sm shrink-0', seg.dotClass].join(' ')} />
-              <span className="text-zinc-400">{seg.label}</span>
-              <span className="font-mono tabular-nums font-medium text-zinc-100">
-                {seg.count}
-              </span>
-              <span className="font-mono tabular-nums text-[11px] text-zinc-500">
-                ({pct}%)
-              </span>
+              <span className={['w-2.5 h-2.5 rounded-sm shrink-0', seg.dotClass].join(' ')} />
+              <span className="text-[#4B5260]">{seg.label}</span>
+              <span className="font-mono tabular-nums font-bold text-[#111317]">{seg.count}</span>
+              <span className="font-mono tabular-nums text-xs text-[#4B5260]">({pct}%)</span>
             </button>
           );
         })}
@@ -200,65 +201,46 @@ function InfrastructureTopologySvg({ dbConnected, dbChecking }) {
   const pgLabel = dbConnected ? 'CONNECTED' : dbChecking ? 'CHECKING' : 'DEGRADED';
 
   return (
-    <div className="rounded-xl bg-[#07080B]/90 border border-white/[0.07] p-3">
+    <div className="cf-darkroom rounded-lg bg-[#0E1014] border border-[#111317]/25 p-3">
       <svg
-        viewBox="0 0 420 206"
+        viewBox="0 0 420 198"
         className="w-full h-auto block"
         role="img"
         aria-label="CyberForge infrastructure topology linking Console 5173, FastAPI 8000, Postgres 5433, and DVWA 8081"
       >
         {/* Orthogonal Routing Bus */}
+        <path d="M 118 99 L 164 99" stroke="#F59E0B" strokeWidth="1.75" fill="none" />
         <path
-          d="M 118 103 L 166 103"
-          stroke="#F59E0B"
-          strokeWidth="1.5"
-          strokeOpacity="0.65"
-          fill="none"
-        />
-        <path
-          d="M 272 90 L 302 90 L 302 52 L 322 52"
+          d="M 274 86 L 302 86 L 302 50 L 320 50"
           stroke={pgColor}
-          strokeWidth="1.5"
-          strokeOpacity="0.75"
+          strokeWidth="1.75"
           strokeDasharray={dbConnected ? 'none' : '4 3'}
           fill="none"
         />
-        <path
-          d="M 272 116 L 302 116 L 302 154 L 322 154"
-          stroke="#00E5CC"
-          strokeWidth="1.5"
-          strokeOpacity="0.6"
-          fill="none"
-        />
+        <path d="M 274 112 L 302 112 L 302 148 L 320 148" stroke="#60A5FA" strokeWidth="1.75" fill="none" />
 
         {/* Junction Nodes */}
-        <circle cx="142" cy="103" r="2.5" fill="#F59E0B" />
-        <circle cx="302" cy="52" r="2.5" fill={pgColor} />
-        <circle cx="302" cy="154" r="2.5" fill="#00E5CC" />
+        <circle cx="141" cy="99" r="3" fill="#F59E0B" />
+        <circle cx="302" cy="50" r="3" fill={pgColor} />
+        <circle cx="302" cy="148" r="3" fill="#60A5FA" />
 
         {/* Node 1: Console :5173 */}
         <g>
           <rect
-            x="10"
-            y="74"
-            width="108"
-            height="58"
-            rx="8"
-            fill="#0E1016"
-            stroke="rgba(245,158,11,0.35)"
+            x="8"
+            y="68"
+            width="110"
+            height="62"
+            rx="6"
+            fill="#151820"
+            stroke="rgba(245,158,11,0.55)"
             strokeWidth="1"
           />
-          <circle cx="23" cy="90" r="3" fill="#F59E0B" />
-          <text x="32" y="94" fill="#F4F4F5" fontSize="11" fontWeight="600">
+          <circle cx="22" cy="86" r="3.5" fill="#F59E0B" />
+          <text x="32" y="90" fill="#ECEFF4" fontSize="12" fontWeight="700">
             Console
           </text>
-          <text
-            x="23"
-            y="112"
-            fill="#A1A1AA"
-            fontSize="10"
-            fontFamily="JetBrains Mono, monospace"
-          >
+          <text x="22" y="112" fill="#CBD5E1" fontSize="12" fontFamily="JetBrains Mono, monospace">
             Vite :5173
           </text>
         </g>
@@ -266,109 +248,73 @@ function InfrastructureTopologySvg({ dbConnected, dbChecking }) {
         {/* Node 2: FastAPI :8000 */}
         <g>
           <rect
-            x="166"
-            y="68"
-            width="106"
-            height="70"
-            rx="8"
-            fill="#0E1016"
-            stroke="rgba(255,255,255,0.16)"
+            x="164"
+            y="62"
+            width="110"
+            height="74"
+            rx="6"
+            fill="#151820"
+            stroke="rgba(236,239,244,0.28)"
             strokeWidth="1"
           />
-          <circle cx="179" cy="86" r="3" fill="#10B981" />
-          <text x="188" y="90" fill="#F4F4F5" fontSize="11" fontWeight="600">
+          <circle cx="178" cy="82" r="3.5" fill="#10B981" />
+          <text x="188" y="86" fill="#ECEFF4" fontSize="12" fontWeight="700">
             FastAPI
           </text>
-          <text
-            x="179"
-            y="108"
-            fill="#A1A1AA"
-            fontSize="10"
-            fontFamily="JetBrains Mono, monospace"
-          >
+          <text x="178" y="106" fill="#CBD5E1" fontSize="12" fontFamily="JetBrains Mono, monospace">
             API :8000
           </text>
-          <text
-            x="179"
-            y="124"
-            fill="#71717A"
-            fontSize="9"
-            fontFamily="JetBrains Mono, monospace"
-          >
-            bcrypt auth
+          <text x="178" y="124" fill="#94A3B8" fontSize="12" fontFamily="JetBrains Mono, monospace">
+            7-ring auth
           </text>
         </g>
 
-        {/* Node 3: Postgres app_db :5433 */}
+        {/* Node 3: Postgres :5433 */}
         <g>
           <rect
-            x="322"
-            y="20"
-            width="88"
-            height="64"
-            rx="8"
-            fill="#0E1016"
+            x="320"
+            y="16"
+            width="92"
+            height="68"
+            rx="6"
+            fill="#151820"
             stroke={pgColor}
-            strokeOpacity="0.55"
+            strokeOpacity="0.65"
             strokeWidth="1"
           />
-          <circle cx="334" cy="36" r="3" fill={pgColor} />
-          <text x="342" y="40" fill="#F4F4F5" fontSize="10.5" fontWeight="600">
+          <circle cx="332" cy="34" r="3.5" fill={pgColor} />
+          <text x="341" y="38" fill="#ECEFF4" fontSize="12" fontWeight="700">
             Postgres
           </text>
-          <text
-            x="334"
-            y="56"
-            fill="#A1A1AA"
-            fontSize="9.5"
-            fontFamily="JetBrains Mono, monospace"
-          >
-            app_db:5433
+          <text x="332" y="56" fill="#CBD5E1" fontSize="12" fontFamily="JetBrains Mono, monospace">
+            db :5433
           </text>
-          <text
-            x="334"
-            y="71"
-            fill={pgColor}
-            fontSize="8.5"
-            fontFamily="JetBrains Mono, monospace"
-          >
+          <text x="332" y="74" fill={pgColor} fontSize="12" fontFamily="JetBrains Mono, monospace">
             {pgLabel}
           </text>
         </g>
 
-        {/* Node 4: DVWA Target :8081 */}
+        {/* Node 4: DVWA :8081 */}
         <g>
           <rect
-            x="322"
-            y="122"
-            width="88"
-            height="64"
-            rx="8"
-            fill="#0E1016"
-            stroke="rgba(0,229,204,0.38)"
+            x="320"
+            y="114"
+            width="92"
+            height="68"
+            rx="6"
+            fill="#151820"
+            stroke="rgba(96,165,250,0.55)"
             strokeWidth="1"
           />
-          <circle cx="334" cy="138" r="3" fill="#00E5CC" />
-          <text x="342" y="142" fill="#F4F4F5" fontSize="10.5" fontWeight="600">
+          <circle cx="332" cy="132" r="3.5" fill="#60A5FA" />
+          <text x="341" y="136" fill="#ECEFF4" fontSize="12" fontWeight="700">
             DVWA
           </text>
-          <text
-            x="334"
-            y="158"
-            fill="#A1A1AA"
-            fontSize="9.5"
-            fontFamily="JetBrains Mono, monospace"
-          >
-            Target:8081
+          <text x="332" y="154" fill="#CBD5E1" fontSize="12" fontFamily="JetBrains Mono, monospace">
+            web :8081
           </text>
-          <text
-            x="334"
-            y="173"
-            fill="#71717A"
-            fontSize="8.5"
-            fontFamily="JetBrains Mono, monospace"
-          >
-            MariaDB:3306
+          <text x="332" y="172" fill="#94A3B8" fontSize="12" fontFamily="JetBrains Mono, monospace">
+            isolated
           </text>
         </g>
       </svg>
@@ -380,6 +326,7 @@ export default function AdminConsole({ user, onSignOut, onOpenOverview }) {
   const [activeTab, setActiveTab] = useState('overview');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('newest');
+  const [moderatorsPage, setModeratorsPage] = useState(1);
 
   const [stats, setStats] = useState(null);
   const [moderators, setModerators] = useState([]);
@@ -501,6 +448,22 @@ export default function AdminConsole({ user, onSignOut, onOpenOverview }) {
     };
   }, [fetchDashboardData]);
 
+  const handleSearchChange = useCallback(
+    (val) => {
+      setSearchQuery(val);
+      setModeratorsPage(1);
+      if (val.trim() && activeTab !== 'moderators') {
+        setActiveTab('moderators');
+      }
+    },
+    [activeTab]
+  );
+
+  const handleSortChange = useCallback((nextSort) => {
+    setSortBy(nextSort);
+    setModeratorsPage(1);
+  }, []);
+
   const totalIdentities = useMemo(() => {
     if (!stats) return 0;
     return (
@@ -569,6 +532,13 @@ export default function AdminConsole({ user, onSignOut, onOpenOverview }) {
     return list;
   }, [moderators, searchQuery, sortBy]);
 
+  const moderatorsTotalPages = Math.max(1, Math.ceil(filteredAndSortedModerators.length / PAGE_SIZE));
+  const safeModeratorsPage = Math.min(moderatorsPage, moderatorsTotalPages);
+  const paginatedModerators = useMemo(() => {
+    const start = (safeModeratorsPage - 1) * PAGE_SIZE;
+    return filteredAndSortedModerators.slice(start, start + PAGE_SIZE);
+  }, [filteredAndSortedModerators, safeModeratorsPage]);
+
   const oversightModerators = useMemo(() => {
     return [...moderators]
       .sort(
@@ -627,8 +597,8 @@ export default function AdminConsole({ user, onSignOut, onOpenOverview }) {
     }
 
     if (inspectorMode === 'create') {
-      if (password.length < 8) {
-        setFormError('Password must be at least 8 characters.');
+      if (password.length < 10) {
+        setFormError('Password must be at least 10 characters with a letter and number/symbol.');
         return;
       }
       if (utf8ByteLength(password) > 72) {
@@ -636,8 +606,8 @@ export default function AdminConsole({ user, onSignOut, onOpenOverview }) {
         return;
       }
     } else if (password) {
-      if (password.length < 8) {
-        setFormError('New password must be at least 8 characters.');
+      if (password.length < 10) {
+        setFormError('New password must be at least 10 characters with a letter and number/symbol.');
         return;
       }
       if (utf8ByteLength(password) > 72) {
@@ -731,24 +701,32 @@ export default function AdminConsole({ user, onSignOut, onOpenOverview }) {
 
   const navItems = useMemo(
     () => [
-      { id: 'overview', label: 'Command', icon: Gauge },
+      { id: 'overview', label: 'Overview', icon: Gauge },
       { id: 'moderators', label: 'Moderators', icon: UsersThree, badge: moderators.length },
-      { id: 'ledger', label: 'Topology & DB', icon: Database },
-      { id: 'profile', label: 'Profile', icon: UserCircle },
+      { id: 'infrastructure', label: 'Infrastructure', icon: Database },
       { id: 'settings', label: 'Settings', icon: Gear },
     ],
     [moderators.length]
   );
 
   const commandGroups = useMemo(() => {
-    const viewItems = navItems.map((item, idx) => ({
-      id: `view-${item.id}`,
-      label: item.label,
-      hint: `Switch to ${item.label} view`,
-      shortcut: String(idx + 1),
-      icon: item.icon,
-      onSelect: () => setActiveTab(item.id),
-    }));
+    const viewItems = [
+      ...navItems.map((item, idx) => ({
+        id: `view-${item.id}`,
+        label: item.label,
+        hint: `Switch to ${item.label} view`,
+        shortcut: String(idx + 1),
+        icon: item.icon,
+        onSelect: () => setActiveTab(item.id),
+      })),
+      {
+        id: 'view-profile',
+        label: 'Profile',
+        hint: 'Inspect operator identity & password settings',
+        icon: UserCircle,
+        onSelect: () => setActiveTab('profile'),
+      },
+    ];
 
     const actionItems = [
       {
@@ -812,10 +790,10 @@ export default function AdminConsole({ user, onSignOut, onOpenOverview }) {
         value: totalIdentities,
         detail: `${stats?.attackers_count ?? 0} attackers, ${stats?.defenders_count ?? 0} defenders`,
         icon: ShieldCheck,
-        accent: 'teal',
+        accent: 'blue',
       },
       {
-        label: 'Challenges Published',
+        label: 'Published Labs',
         value: stats?.challenges_count ?? 0,
         detail: 'DVWA training modules',
         icon: ChartBar,
@@ -837,7 +815,7 @@ export default function AdminConsole({ user, onSignOut, onOpenOverview }) {
       {
         table: 'admin',
         domain: 'Governance',
-        barColor: 'bg-[#F59E0B]',
+        barColor: 'bg-[#B45309]',
         badgeVariant: 'amber',
         count: stats?.admins_count ?? 0,
         purpose: 'Top-level root governance administrators',
@@ -845,7 +823,7 @@ export default function AdminConsole({ user, onSignOut, onOpenOverview }) {
       {
         table: 'moderator',
         domain: 'Governance',
-        barColor: 'bg-[#F59E0B]',
+        barColor: 'bg-[#B45309]',
         badgeVariant: 'amber',
         count: stats?.moderators_count ?? 0,
         purpose: 'Challenge authoring and trainee oversight operators',
@@ -853,7 +831,7 @@ export default function AdminConsole({ user, onSignOut, onOpenOverview }) {
       {
         table: 'attacker',
         domain: 'Red Team',
-        barColor: 'bg-[#F43F5E]',
+        barColor: 'bg-[#C81E1E]',
         badgeVariant: 'red',
         count: stats?.attackers_count ?? 0,
         purpose: 'Offensive security trainee accounts',
@@ -861,23 +839,23 @@ export default function AdminConsole({ user, onSignOut, onOpenOverview }) {
       {
         table: 'defender',
         domain: 'Blue Team',
-        barColor: 'bg-[#10B981]',
-        badgeVariant: 'green',
+        barColor: 'bg-[#1D4ED8]',
+        badgeVariant: 'blue',
         count: stats?.defenders_count ?? 0,
         purpose: 'Defensive remediation trainee accounts',
       },
       {
         table: 'challenges',
         domain: 'Training',
-        barColor: 'bg-[#00E5CC]',
-        badgeVariant: 'teal',
+        barColor: 'bg-[#047857]',
+        badgeVariant: 'green',
         count: stats?.challenges_count ?? 0,
         purpose: 'Published DVWA vulnerability scenarios',
       },
       {
         table: 'attempts',
         domain: 'Telemetry',
-        barColor: 'bg-[#F43F5E]',
+        barColor: 'bg-[#C81E1E]',
         badgeVariant: 'red',
         count: stats?.total_attempts ?? 0,
         purpose: 'Recorded attacker exploit payload submissions',
@@ -885,7 +863,7 @@ export default function AdminConsole({ user, onSignOut, onOpenOverview }) {
       {
         table: 'defenses',
         domain: 'Telemetry',
-        barColor: 'bg-[#10B981]',
+        barColor: 'bg-[#047857]',
         badgeVariant: 'green',
         count: stats?.total_defenses ?? 0,
         purpose: 'Verified defender security-level remediations',
@@ -893,7 +871,7 @@ export default function AdminConsole({ user, onSignOut, onOpenOverview }) {
       {
         table: 'alerts',
         domain: 'Telemetry',
-        barColor: 'bg-[#F59E0B]',
+        barColor: 'bg-[#B45309]',
         badgeVariant: 'amber',
         count: stats?.total_alerts ?? 0,
         purpose: 'Platform-wide security audit alerts',
@@ -913,10 +891,10 @@ export default function AdminConsole({ user, onSignOut, onOpenOverview }) {
       disabled={refreshing}
       aria-label="Refresh telemetry"
       title="Refresh telemetry"
-      className="hidden sm:inline-flex h-9 w-9 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] items-center justify-center text-zinc-300 hover:text-zinc-100 transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#F59E0B]"
+      className="hidden sm:inline-flex h-9 w-9 rounded-md bg-[#F3EFE6] hover:bg-[#EAE4D7] border border-[#111317]/20 items-center justify-center text-[#111317] transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B45309]"
     >
       <ArrowsClockwise
-        className={['w-4 h-4', refreshing ? 'animate-spin text-[#F59E0B]' : ''].join(' ')}
+        className={['w-4 h-4', refreshing ? 'animate-spin text-[#B45309]' : ''].join(' ')}
         weight="bold"
       />
     </button>
@@ -931,13 +909,8 @@ export default function AdminConsole({ user, onSignOut, onOpenOverview }) {
       activeTab={activeTab}
       onTabChange={setActiveTab}
       searchQuery={searchQuery}
-      onSearchChange={(val) => {
-        setSearchQuery(val);
-        if (val.trim() && activeTab !== 'moderators') {
-          setActiveTab('moderators');
-        }
-      }}
-      searchPlaceholder="Filter moderators or Ctrl+K..."
+      onSearchChange={activeTab === 'moderators' ? handleSearchChange : undefined}
+      searchPlaceholder="Filter moderators..."
       commandGroups={commandGroups}
       headerActions={headerActions}
       onSignOut={onSignOut}
@@ -947,158 +920,221 @@ export default function AdminConsole({ user, onSignOut, onOpenOverview }) {
           variant="error"
           message={error}
           onDismiss={() => setError('')}
-          className="mb-5"
+          className="mb-3 shrink-0"
         />
       )}
 
+      {/* 1. OVERVIEW (SINGLE-FRAME GOVERNANCE SHEET) */}
       {activeTab === 'overview' && (
-        <div className="space-y-5">
-          {/* Asymmetric 12-Column Bento */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
-            {/* Left 7 Cols: Platform Command Hero */}
+        <div className="lg:h-full lg:min-h-0 flex flex-col gap-3">
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 shrink-0">
+            <div className="min-w-0">
+              <h1 className="text-2xl sm:text-[26px] font-bold text-[#111317] tracking-tight leading-tight">
+                Root Governance Control Plane
+              </h1>
+              <p className="text-[14px] text-[#4B5260] mt-0.5">
+                Oversee CyberForge identity distribution, delegate moderator authority, and monitor live DVWA infrastructure.
+              </p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <Button variant="secondary" size="sm" loading={refreshing} onClick={() => loadData({ notify: true })}>
+                <ArrowsClockwise className="w-4 h-4" weight="bold" />
+                <span>Refresh</span>
+              </Button>
+              <Button variant="primary" size="sm" onClick={openProvisionInspector}>
+                <Plus className="w-4 h-4" weight="bold" />
+                <span>Provision Moderator</span>
+              </Button>
+            </div>
+          </div>
+
+          {/* 4 Crisp KPI Figures */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 shrink-0">
+            <SpotlightSurface accent="brass" padding="px-4 py-3">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[13px] font-semibold text-[#4B5260]">Total Identities</span>
+                <UsersThree className="w-4 h-4 text-[#B45309]" weight="bold" />
+              </div>
+              <div className="font-display text-[36px] sm:text-[40px] font-extrabold text-[#111317] leading-none mt-1">
+                <AnimatedTicker value={totalIdentities} />
+              </div>
+              <div className="text-xs font-medium text-[#4B5260] mt-1 font-mono tabular-nums">
+                {stats?.admins_count ?? 0} root · {stats?.moderators_count ?? moderators.length} moderators
+              </div>
+            </SpotlightSurface>
+
+            <SpotlightSurface accent="crimson" padding="px-4 py-3">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[13px] font-semibold text-[#4B5260]">Red Team Seats</span>
+                <ShieldCheck className="w-4 h-4 text-[#C81E1E]" weight="bold" />
+              </div>
+              <div className="font-display text-[36px] sm:text-[40px] font-extrabold text-[#C81E1E] leading-none mt-1">
+                <AnimatedTicker value={stats?.attackers_count ?? 0} />
+              </div>
+              <div className="text-xs font-medium text-[#4B5260] mt-1 font-mono tabular-nums">
+                {stats?.total_attempts ?? 0} exploit attempts
+              </div>
+            </SpotlightSurface>
+
+            <SpotlightSurface accent="emerald" padding="px-4 py-3">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[13px] font-semibold text-[#4B5260]">Blue Team Seats</span>
+                <ShieldCheck className="w-4 h-4 text-[#047857]" weight="bold" />
+              </div>
+              <div className="font-display text-[36px] sm:text-[40px] font-extrabold text-[#047857] leading-none mt-1">
+                <AnimatedTicker value={stats?.defenders_count ?? 0} />
+              </div>
+              <div className="text-xs font-medium text-[#4B5260] mt-1 font-mono tabular-nums">
+                {stats?.total_defenses ?? 0} defense checks
+              </div>
+            </SpotlightSurface>
+
+            <SpotlightSurface accent="cobalt" padding="px-4 py-3">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[13px] font-semibold text-[#4B5260]">Published Labs</span>
+                <ChartBar className="w-4 h-4 text-[#1D4ED8]" weight="bold" />
+              </div>
+              <div className="font-display text-[36px] sm:text-[40px] font-extrabold text-[#1D4ED8] leading-none mt-1">
+                <AnimatedTicker value={stats?.challenges_count ?? 0} />
+              </div>
+              <div className="text-xs font-medium text-[#4B5260] mt-1 font-mono tabular-nums">
+                {totalActivity} recorded events
+              </div>
+            </SpotlightSurface>
+          </div>
+
+          {/* 12-Col Governance Split */}
+          <div className="flex-1 lg:min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-4">
             <SpotlightSurface
-              accent="amber"
-              padding="p-5 sm:p-6"
-              className="lg:col-span-7 flex flex-col justify-between gap-6"
+              accent="brass"
+              padding="p-4"
+              className="lg:col-span-7 flex flex-col lg:min-h-0 justify-between gap-3"
             >
-              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-                <div className="space-y-1.5 min-w-0">
-                  <h1 className="text-2xl sm:text-[26px] font-semibold text-zinc-100 tracking-[-0.025em] leading-tight">
-                    Root Governance Control Plane
-                  </h1>
-                  <p className="text-sm text-zinc-400 max-w-xl leading-relaxed">
-                    Oversee CyberForge identity distribution, delegate moderator authority, and audit live DVWA range health.
-                  </p>
-                </div>
-
-                <div className="flex items-center gap-2 shrink-0">
-                  <button
-                    type="button"
-                    onClick={openProvisionInspector}
-                    className="h-9 px-3.5 rounded-lg bg-[#F59E0B] hover:bg-[#D97706] text-[#07080B] text-xs font-semibold inline-flex items-center gap-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F59E0B]"
-                  >
-                    <Plus className="w-3.5 h-3.5" weight="bold" />
-                    <span>Provision Moderator</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Hero Ticker + Dual Operational Pulse Counters */}
-              <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-end">
-                <div className="sm:col-span-6 rounded-xl bg-[#07080B]/85 border border-white/[0.07] p-4">
-                  <div className="flex items-center justify-between gap-2 text-xs text-zinc-400">
-                    <span>Total Identities</span>
-                    <span className="font-mono tabular-nums text-[11px] text-[#F59E0B]">
-                      {stats?.admins_count ?? 0} root
-                    </span>
-                  </div>
-                  {loading ? (
-                    <div className="h-10 w-28 rounded bg-white/[0.06] animate-pulse mt-2" />
-                  ) : (
-                    <div className="mt-1.5">
-                      <AnimatedTicker
-                        value={totalIdentities}
-                        className="text-4xl font-bold tracking-tight text-zinc-100"
-                      />
-                    </div>
-                  )}
-                  <p className="text-xs text-zinc-500 mt-2">
-                    Admins, moderators, attackers, and defenders
-                  </p>
-                </div>
-
-                <div className="sm:col-span-3 rounded-xl bg-[#07080B]/85 border border-white/[0.07] p-4">
-                  <div className="text-xs text-zinc-400 truncate">Published Challenges</div>
-                  {loading ? (
-                    <div className="h-8 w-16 rounded bg-white/[0.06] animate-pulse mt-2" />
-                  ) : (
-                    <div className="mt-1.5">
-                      <AnimatedTicker
-                        value={stats?.challenges_count ?? 0}
-                        className="text-2xl font-semibold text-[#00E5CC]"
-                      />
-                    </div>
-                  )}
-                  <div className="text-[11px] text-zinc-500 mt-1.5 truncate">DVWA modules</div>
-                </div>
-
-                <div className="sm:col-span-3 rounded-xl bg-[#07080B]/85 border border-white/[0.07] p-4">
-                  <div className="text-xs text-zinc-400 truncate">Recorded Events</div>
-                  {loading ? (
-                    <div className="h-8 w-16 rounded bg-white/[0.06] animate-pulse mt-2" />
-                  ) : (
-                    <div className="mt-1.5">
-                      <AnimatedTicker
-                        value={totalActivity}
-                        className="text-2xl font-semibold text-[#F59E0B]"
-                      />
-                    </div>
-                  )}
-                  <div className="text-[11px] font-mono tabular-nums text-zinc-500 mt-1.5 truncate">
-                    {stats?.total_alerts ?? 0} alerts
-                  </div>
-                </div>
-              </div>
-
-              {/* Custom SVG Stacked Distribution Bar */}
               <IdentityDistributionBar
                 moderatorsCount={stats?.moderators_count ?? moderators.length}
                 attackersCount={stats?.attackers_count ?? 0}
                 defendersCount={stats?.defenders_count ?? 0}
               />
+
+              <div className="pt-2 border-t border-[#111317]/15 flex-1 flex flex-col justify-between gap-2.5">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-base font-bold text-[#111317]">Moderator Oversight</h2>
+                    <Badge variant="amber" className="font-mono tabular-nums">
+                      {moderators.length} active
+                    </Badge>
+                  </div>
+                  <Button variant="secondary" size="sm" onClick={() => setActiveTab('moderators')}>
+                    <UsersThree className="w-4 h-4" weight="regular" />
+                    <span>Full Directory</span>
+                  </Button>
+                </div>
+
+                {loading ? (
+                  <SkeletonRows rows={3} columns={3} />
+                ) : oversightModerators.length === 0 ? (
+                  <EmptyState
+                    icon={UsersThree}
+                    title="No moderators provisioned"
+                    description="Provision a moderator account to delegate challenge authoring and trainee oversight."
+                    action={
+                      <Button variant="primary" size="sm" onClick={openProvisionInspector}>
+                        <Plus className="w-4 h-4" weight="bold" />
+                        <span>Provision Moderator</span>
+                      </Button>
+                    }
+                  />
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2.5">
+                    {oversightModerators.map((mod) => {
+                      const chCount = mod.challenges_count || 0;
+                      const trCount = mod.accounts_managed || 0;
+                      const challengePct = Math.round((chCount / maxWorkload) * 100);
+                      const traineePct = Math.round((trCount / maxWorkload) * 100);
+
+                      return (
+                        <button
+                          key={mod.moderator_id}
+                          type="button"
+                          onClick={() => openModeratorInspector(mod)}
+                          className="text-left rounded-md bg-[#F3EFE6] hover:bg-[#EAE4D7] border border-[#111317]/15 hover:border-[#111317]/35 p-3 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#111317]"
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <div className="w-8 h-8 rounded bg-[#B45309]/12 border border-[#B45309]/35 flex items-center justify-center text-xs font-mono font-bold text-[#92400E] shrink-0">
+                                {getInitials(mod.username)}
+                              </div>
+                              <div className="min-w-0">
+                                <div className="text-[14px] font-bold text-[#111317] truncate">
+                                  {mod.username}
+                                </div>
+                                <div className="text-xs text-[#4B5260] truncate">{mod.email}</div>
+                              </div>
+                            </div>
+                            <span className="text-xs font-mono tabular-nums text-[#4B5260] shrink-0">
+                              #{mod.moderator_id}
+                            </span>
+                          </div>
+
+                          <div className="mt-2.5 space-y-1">
+                            <div className="h-1.5 w-full rounded-full bg-[#111317]/10 overflow-hidden flex">
+                              {chCount > 0 && (
+                                <div
+                                  className="h-full bg-[#B45309]"
+                                  style={{ width: `${Math.max(challengePct, 5)}%` }}
+                                />
+                              )}
+                              {trCount > 0 && (
+                                <div
+                                  className="h-full bg-[#1D4ED8]"
+                                  style={{ width: `${Math.max(traineePct, 5)}%` }}
+                                />
+                              )}
+                            </div>
+                            <div className="flex items-center justify-between text-xs font-mono tabular-nums text-[#4B5260]">
+                              <span>{chCount} labs</span>
+                              <span>{trCount} trainees</span>
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             </SpotlightSurface>
 
-            {/* Right 5 Cols: Live Infrastructure Topology SVG */}
             <SpotlightSurface
-              accent="teal"
-              padding="p-5 sm:p-6"
-              className="lg:col-span-5 flex flex-col justify-between gap-4"
+              accent="cobalt"
+              padding="p-4"
+              className="lg:col-span-5 flex flex-col lg:min-h-0 justify-between gap-3"
             >
-              <BorderSweep color="#F59E0B" secondary="#00E5CC" duration={9} />
-
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <h2 className="text-base font-semibold text-zinc-100 tracking-[-0.015em]">
-                    Infrastructure Topology
-                  </h2>
-                  <p className="text-xs text-zinc-400 mt-0.5">
-                    Live plane routing and database heartbeat
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <h2 className="text-base font-bold text-[#111317]">Live System Topology</h2>
+                  <p className="text-xs text-[#4B5260] mt-0.5">
+                    Split Docker planes and Postgres heartbeat
                   </p>
                 </div>
-
-                <div
-                  className={[
-                    'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-[11px] font-mono shrink-0',
-                    dbConnected
-                      ? 'bg-[#10B981]/10 border-[#10B981]/30 text-[#10B981]'
-                      : dbChecking
-                        ? 'bg-[#F59E0B]/10 border-[#F59E0B]/30 text-[#F59E0B]'
-                        : 'bg-[#EF4444]/10 border-[#EF4444]/30 text-[#EF4444]',
-                  ].join(' ')}
-                >
-                  <span
-                    className={[
-                      'w-1.5 h-1.5 rounded-full',
-                      dbConnected
-                        ? 'bg-[#10B981] animate-pulse'
-                        : dbChecking
-                          ? 'bg-[#F59E0B]'
-                          : 'bg-[#EF4444]',
-                    ].join(' ')}
-                  />
-                  <span>{dbConnected ? 'CONNECTED' : dbChecking ? 'CHECKING' : 'DEGRADED'}</span>
-                </div>
+                <Badge variant={dbConnected ? 'green' : dbChecking ? 'amber' : 'red'}>
+                  {dbConnected ? 'CONNECTED' : dbChecking ? 'CHECKING' : 'DEGRADED'}
+                </Badge>
               </div>
 
               <InfrastructureTopologySvg dbConnected={dbConnected} dbChecking={dbChecking} />
 
               <div className="space-y-2 pt-1">
-                <div className="flex items-center justify-between gap-2 text-xs">
-                  <span className="text-zinc-400 shrink-0">FastAPI Control Plane</span>
+                <div className="flex items-center justify-between gap-2 text-[13px]">
+                  <span className="font-semibold text-[#4B5260] shrink-0">FastAPI :8000</span>
                   <CopyChip value={API_BASE} label={API_BASE} />
                 </div>
-                <div className="flex items-center justify-between gap-2 text-xs">
-                  <span className="text-zinc-400 shrink-0">DVWA Vulnerable Target</span>
+                <div className="flex items-center justify-between gap-2 text-[13px]">
+                  <span className="font-semibold text-[#4B5260] shrink-0">PostgreSQL :5433</span>
+                  <CopyChip value="127.0.0.1:5433" label="127.0.0.1:5433" />
+                </div>
+                <div className="flex items-center justify-between gap-2 text-[13px]">
+                  <span className="font-semibold text-[#4B5260] shrink-0">DVWA Target :8081</span>
                   <div className="flex items-center gap-1.5 min-w-0">
                     <CopyChip value={DVWA_URL} label={DVWA_URL} />
                     <a
@@ -1106,140 +1142,37 @@ export default function AdminConsole({ user, onSignOut, onOpenOverview }) {
                       target="_blank"
                       rel="noreferrer"
                       aria-label="Open DVWA target in new tab"
-                      className="h-7 w-7 rounded-md bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] inline-flex items-center justify-center text-zinc-300 hover:text-[#00E5CC] transition-colors shrink-0"
+                      className="h-7 w-7 rounded bg-[#F3EFE6] hover:bg-[#EAE4D7] border border-[#111317]/20 inline-flex items-center justify-center text-[#111317] transition-colors shrink-0"
                     >
                       <ArrowSquareOut className="w-3.5 h-3.5" weight="regular" />
                     </a>
                   </div>
                 </div>
               </div>
-            </SpotlightSurface>
-          </div>
 
-          {/* Compact Moderator Oversight Strip */}
-          <SpotlightSurface accent="amber" padding="p-5">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-white/[0.08]">
-              <div className="min-w-0">
-                <div className="flex items-center gap-2.5">
-                  <h2 className="text-base font-semibold text-zinc-100 tracking-[-0.015em]">
-                    Moderator Oversight
-                  </h2>
-                  <Badge variant="amber" className="font-mono tabular-nums">
-                    {moderators.length} active
-                  </Badge>
-                </div>
-                <p className="text-xs text-zinc-400 mt-0.5">
-                  Proportional challenge and trainee load per operator. Select any operator to inspect or rotate credentials.
-                </p>
-              </div>
-
-              <div className="flex items-center gap-2 shrink-0">
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => setActiveTab('moderators')}
-                >
-                  <UsersThree className="w-3.5 h-3.5" weight="regular" />
-                  <span>Full Directory</span>
+              <div className="pt-2 border-t border-[#111317]/15 flex items-center justify-between gap-2">
+                <span className="text-xs font-mono text-[#4B5260]">
+                  8 frozen PostgreSQL tables
+                </span>
+                <Button variant="primary" size="sm" onClick={() => setActiveTab('infrastructure')}>
+                  <Database className="w-4 h-4" weight="regular" />
+                  <span>Open Infrastructure</span>
                 </Button>
               </div>
-            </div>
-
-            {loading ? (
-              <div className="pt-4">
-                <SkeletonRows rows={3} columns={4} />
-              </div>
-            ) : oversightModerators.length === 0 ? (
-              <div className="pt-4">
-                <EmptyState
-                  icon={UsersThree}
-                  title="No moderators provisioned"
-                  description="Provision a moderator account to delegate challenge authoring and trainee oversight."
-                  action={
-                    <button
-                      type="button"
-                      onClick={openProvisionInspector}
-                      className="h-8 px-3 rounded-lg bg-[#F59E0B] hover:bg-[#D97706] text-[#07080B] text-xs font-semibold inline-flex items-center gap-1.5 transition-colors"
-                    >
-                      <Plus className="w-3.5 h-3.5" weight="bold" />
-                      <span>Provision Moderator</span>
-                    </button>
-                  }
-                />
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 pt-4">
-                {oversightModerators.map((mod) => {
-                  const challenges = mod.challenges_count || 0;
-                  const trainees = mod.accounts_managed || 0;
-                  const totalLoad = challenges + trainees;
-                  const challengePct = Math.round((challenges / maxWorkload) * 100);
-                  const traineePct = Math.round((trainees / maxWorkload) * 100);
-
-                  return (
-                    <button
-                      key={mod.moderator_id}
-                      type="button"
-                      onClick={() => openModeratorInspector(mod)}
-                      className="text-left rounded-xl bg-[#07080B]/80 hover:bg-white/[0.04] border border-white/[0.08] hover:border-[#F59E0B]/40 p-3.5 transition-colors duration-150 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#F59E0B]"
-                    >
-                      <div className="flex items-center justify-between gap-2.5">
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <div className="w-8 h-8 rounded-lg bg-[#F59E0B]/10 border border-[#F59E0B]/25 flex items-center justify-center text-xs font-mono font-semibold text-[#F59E0B] shrink-0">
-                            {getInitials(mod.username)}
-                          </div>
-                          <div className="min-w-0">
-                            <div className="text-sm font-medium text-zinc-100 truncate">
-                              {mod.username}
-                            </div>
-                            <div className="text-[11px] text-zinc-500 truncate">
-                              {mod.email}
-                            </div>
-                          </div>
-                        </div>
-                        <span className="text-[11px] font-mono tabular-nums text-zinc-400 shrink-0">
-                          #{mod.moderator_id}
-                        </span>
-                      </div>
-
-                      <div className="mt-3 space-y-1.5">
-                        <div className="h-1.5 w-full rounded-full bg-white/[0.06] overflow-hidden flex">
-                          {challenges > 0 && (
-                            <div
-                              className="h-full bg-[#F59E0B]"
-                              style={{ width: `${Math.max(challengePct, 4)}%` }}
-                            />
-                          )}
-                          {trainees > 0 && (
-                            <div
-                              className="h-full bg-[#00E5CC]"
-                              style={{ width: `${Math.max(traineePct, 4)}%` }}
-                            />
-                          )}
-                        </div>
-                        <div className="flex items-center justify-between text-[11px] font-mono tabular-nums text-zinc-400">
-                          <span>{challenges} challenges</span>
-                          <span>{trainees} trainees</span>
-                          <span className="text-zinc-500">{totalLoad} load</span>
-                        </div>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </SpotlightSurface>
+            </SpotlightSurface>
+          </div>
         </div>
       )}
 
+      {/* 2. MODERATORS DIRECTORY (PAGINATED 8/PAGE) */}
       {activeTab === 'moderators' && (
-        <div className="space-y-5">
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div className="lg:h-full lg:min-h-0 flex flex-col gap-3">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-2.5 shrink-0">
             <div className="min-w-0">
-              <h1 className="text-2xl font-semibold text-zinc-100 tracking-[-0.02em]">
+              <h1 className="text-2xl sm:text-[26px] font-bold text-[#111317] tracking-tight leading-tight">
                 Moderators Directory
               </h1>
-              <p className="text-sm text-zinc-400 mt-1">
+              <p className="text-[14px] text-[#4B5260] mt-0.5">
                 Showing {filteredAndSortedModerators.length} of {moderators.length} provisioned moderator operators.
               </p>
             </div>
@@ -1248,21 +1181,21 @@ export default function AdminConsole({ user, onSignOut, onOpenOverview }) {
               <div
                 role="group"
                 aria-label="Sort moderators"
-                className="inline-flex items-center rounded-xl bg-[#0D0F14]/90 border border-white/[0.08] p-1 gap-0.5"
+                className="inline-flex items-center rounded-md bg-[#FAF8F3] border border-[#111317]/20 p-0.5 gap-0.5"
               >
-                <SlidersHorizontal className="w-3.5 h-3.5 text-zinc-500 mx-1.5" weight="regular" />
+                <SlidersHorizontal className="w-4 h-4 text-[#4B5260] mx-1.5" weight="regular" />
                 {SORT_OPTIONS.map((opt) => {
                   const active = sortBy === opt.id;
                   return (
                     <button
                       key={opt.id}
                       type="button"
-                      onClick={() => setSortBy(opt.id)}
+                      onClick={() => handleSortChange(opt.id)}
                       className={[
-                        'px-2.5 py-1 rounded-lg text-xs font-medium transition-colors whitespace-nowrap',
+                        'px-2.5 py-1 rounded text-xs font-semibold transition-colors whitespace-nowrap',
                         active
-                          ? 'bg-[#F59E0B]/15 text-[#F59E0B] border border-[#F59E0B]/30'
-                          : 'text-zinc-400 hover:text-zinc-200 border border-transparent',
+                          ? 'bg-[#111317] text-[#FAF8F3]'
+                          : 'text-[#4B5260] hover:text-[#111317]',
                       ].join(' ')}
                     >
                       {opt.label}
@@ -1277,147 +1210,165 @@ export default function AdminConsole({ user, onSignOut, onOpenOverview }) {
                 loading={refreshing}
                 onClick={() => loadData({ notify: true })}
               >
-                <ArrowsClockwise className="w-3.5 h-3.5" weight="bold" />
+                <ArrowsClockwise className="w-4 h-4" weight="bold" />
                 <span>Refresh</span>
               </Button>
 
-              <button
-                type="button"
-                onClick={openProvisionInspector}
-                className="h-8 px-3 rounded-lg bg-[#F59E0B] hover:bg-[#D97706] text-[#07080B] text-xs font-semibold inline-flex items-center gap-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F59E0B]"
-              >
-                <Plus className="w-3.5 h-3.5" weight="bold" />
+              <Button variant="primary" size="sm" onClick={openProvisionInspector}>
+                <Plus className="w-4 h-4" weight="bold" />
                 <span>Provision Moderator</span>
-              </button>
+              </Button>
             </div>
           </div>
 
-          {loading ? (
-            <SkeletonRows rows={5} columns={5} />
-          ) : filteredAndSortedModerators.length === 0 ? (
-            <EmptyState
-              icon={UsersThree}
-              title={searchQuery ? 'No matching moderators' : 'No moderators configured'}
-              description={
-                searchQuery
-                  ? `No moderator accounts match "${searchQuery}".`
-                  : 'Provision a moderator account to delegate challenge authoring and trainee oversight.'
-              }
-              action={
-                searchQuery ? (
-                  <Button variant="secondary" size="sm" onClick={() => setSearchQuery('')}>
-                    Clear Search
-                  </Button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={openProvisionInspector}
-                    className="h-8 px-3 rounded-lg bg-[#F59E0B] hover:bg-[#D97706] text-[#07080B] text-xs font-semibold inline-flex items-center gap-1.5 transition-colors"
-                  >
-                    <Plus className="w-3.5 h-3.5" weight="bold" />
-                    <span>Provision Moderator</span>
-                  </button>
-                )
-              }
-            />
-          ) : (
-            <SpotlightSurface accent="amber" className="divide-y divide-white/[0.07]">
-              {filteredAndSortedModerators.map((mod) => {
-                const challenges = mod.challenges_count || 0;
-                const trainees = mod.accounts_managed || 0;
-                const challengePct = Math.round((challenges / maxWorkload) * 100);
-                const traineePct = Math.round((trainees / maxWorkload) * 100);
+          <div className="flex-1 lg:min-h-0 flex flex-col justify-between gap-2.5">
+            {loading ? (
+              <SkeletonRows rows={6} columns={5} />
+            ) : filteredAndSortedModerators.length === 0 ? (
+              <EmptyState
+                icon={UsersThree}
+                title={searchQuery ? 'No matching moderators' : 'No moderators configured'}
+                description={
+                  searchQuery
+                    ? `No moderator accounts match "${searchQuery}".`
+                    : 'Provision a moderator account to delegate challenge authoring and trainee oversight.'
+                }
+                action={
+                  searchQuery ? (
+                    <Button variant="secondary" size="sm" onClick={() => handleSearchChange('')}>
+                      Clear Search
+                    </Button>
+                  ) : (
+                    <Button variant="primary" size="sm" onClick={openProvisionInspector}>
+                      <Plus className="w-4 h-4" weight="bold" />
+                      <span>Provision Moderator</span>
+                    </Button>
+                  )
+                }
+              />
+            ) : (
+              <div className="bg-[#FAF8F3] border border-[#111317]/15 rounded-lg overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-[#111317]/15 bg-[#EAE4D7]/55 text-xs font-bold text-[#4B5260]">
+                      <th className="py-2.5 px-4">Moderator</th>
+                      <th className="py-2.5 px-4">Email</th>
+                      <th className="py-2.5 px-4">Owner</th>
+                      <th className="py-2.5 px-4">Workload Split</th>
+                      <th className="py-2.5 px-4">Joined</th>
+                      <th className="py-2.5 px-4 text-right">Inspector</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#111317]/10 text-[14px]">
+                    {paginatedModerators.map((mod) => {
+                      const chCount = mod.challenges_count || 0;
+                      const trCount = mod.accounts_managed || 0;
+                      const challengePct = Math.round((chCount / maxWorkload) * 100);
+                      const traineePct = Math.round((trCount / maxWorkload) * 100);
 
-                return (
-                  <div
-                    key={mod.moderator_id}
-                    className="p-4 sm:px-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4 hover:bg-white/[0.025] transition-colors"
-                  >
-                    <div className="flex items-start sm:items-center gap-3.5 min-w-0 flex-1">
-                      <div className="w-10 h-10 rounded-xl bg-[#F59E0B]/10 border border-[#F59E0B]/25 flex items-center justify-center text-sm font-mono font-semibold text-[#F59E0B] shrink-0">
-                        {getInitials(mod.username)}
-                      </div>
+                      return (
+                        <tr key={mod.moderator_id} className="hover:bg-[#EAE4D7]/45 transition-colors">
+                          <td className="py-2 px-4">
+                            <div className="flex items-center gap-2.5">
+                              <div className="w-8 h-8 rounded bg-[#B45309]/12 border border-[#B45309]/35 flex items-center justify-center text-xs font-mono font-bold text-[#92400E] shrink-0">
+                                {getInitials(mod.username)}
+                              </div>
+                              <div className="min-w-0 flex items-center gap-2">
+                                <span className="font-bold text-[#111317] truncate">
+                                  {mod.username}
+                                </span>
+                                <span className="text-xs font-mono tabular-nums text-[#4B5260]">
+                                  #{mod.moderator_id}
+                                </span>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="py-2 px-4">
+                            <CopyChip value={mod.email} label={mod.email} />
+                          </td>
+                          <td className="py-2 px-4 whitespace-nowrap">
+                            {mod.admin_id !== null && mod.admin_id !== undefined ? (
+                              <Badge variant="neutral" className="font-mono tabular-nums">
+                                Admin #{mod.admin_id}
+                              </Badge>
+                            ) : (
+                              <span className="text-xs text-[#4B5260]">Unassigned</span>
+                            )}
+                          </td>
+                          <td className="py-2 px-4 w-52">
+                            <div className="space-y-1">
+                              <div className="flex items-center justify-between text-xs font-mono tabular-nums text-[#4B5260]">
+                                <span>{chCount} labs</span>
+                                <span>{trCount} trainees</span>
+                              </div>
+                              <div className="h-1.5 w-full rounded-full bg-[#111317]/10 overflow-hidden flex">
+                                {chCount > 0 && (
+                                  <div
+                                    className="h-full bg-[#B45309]"
+                                    style={{ width: `${Math.max(challengePct, 5)}%` }}
+                                  />
+                                )}
+                                {trCount > 0 && (
+                                  <div
+                                    className="h-full bg-[#1D4ED8]"
+                                    style={{ width: `${Math.max(traineePct, 5)}%` }}
+                                  />
+                                )}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="py-2 px-4 font-mono tabular-nums text-xs text-[#4B5260] whitespace-nowrap">
+                            {formatShortDate(mod.created_at)}
+                          </td>
+                          <td className="py-2 px-4 text-right whitespace-nowrap">
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => openModeratorInspector(mod)}
+                              aria-label={`Inspect ${mod.username}`}
+                            >
+                              <TerminalWindow className="w-3.5 h-3.5 text-[#B45309]" weight="regular" />
+                              <span>Inspect</span>
+                            </Button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
 
-                      <div className="min-w-0 flex-1 space-y-1">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-sm font-semibold text-zinc-100 truncate">
-                            {mod.username}
-                          </span>
-                          <span className="text-[11px] font-mono tabular-nums text-zinc-500">
-                            #{mod.moderator_id}
-                          </span>
-                          {mod.admin_id !== null && mod.admin_id !== undefined && (
-                            <Badge variant="neutral" className="font-mono tabular-nums">
-                              Admin #{mod.admin_id}
-                            </Badge>
-                          )}
-                        </div>
-
-                        <div className="flex flex-wrap items-center gap-2">
-                          <CopyChip value={mod.email} label={mod.email} />
-                          <span className="text-xs font-mono tabular-nums text-zinc-500">
-                            Joined {formatShortDate(mod.created_at)}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-5 shrink-0">
-                      <div className="w-full sm:w-48 space-y-1">
-                        <div className="flex items-center justify-between text-[11px] font-mono tabular-nums text-zinc-400">
-                          <span>{challenges} labs</span>
-                          <span>{trainees} trainees</span>
-                        </div>
-                        <div className="h-1.5 w-full rounded-full bg-white/[0.06] overflow-hidden flex">
-                          {challenges > 0 && (
-                            <div
-                              className="h-full bg-[#F59E0B]"
-                              style={{ width: `${Math.max(challengePct, 4)}%` }}
-                            />
-                          )}
-                          {trainees > 0 && (
-                            <div
-                              className="h-full bg-[#00E5CC]"
-                              style={{ width: `${Math.max(traineePct, 4)}%` }}
-                            />
-                          )}
-                        </div>
-                      </div>
-
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => openModeratorInspector(mod)}
-                        aria-label={`Inspect ${mod.username}`}
-                        className="self-start sm:self-auto"
-                      >
-                        <TerminalWindow className="w-3.5 h-3.5 text-[#F59E0B]" weight="regular" />
-                        <span>Inspect</span>
-                      </Button>
-                    </div>
-                  </div>
-                );
-              })}
-            </SpotlightSurface>
-          )}
+            {filteredAndSortedModerators.length > 0 && (
+              <PaginationBar
+                page={safeModeratorsPage}
+                totalPages={moderatorsTotalPages}
+                totalItems={filteredAndSortedModerators.length}
+                pageSize={PAGE_SIZE}
+                onPageChange={setModeratorsPage}
+                itemLabel="moderators"
+              />
+            )}
+          </div>
         </div>
       )}
 
-      {activeTab === 'ledger' && (
-        <div className="space-y-5">
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+      {/* 3. INFRASTRUCTURE (POSTGRES :5433, FASTAPI :8000, DVWA :8081 + DARKROOM ENDPOINT SHEET) */}
+      {activeTab === 'infrastructure' && (
+        <div className="lg:h-full lg:min-h-0 flex flex-col gap-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 shrink-0">
             <div className="min-w-0">
-              <h1 className="text-2xl font-semibold text-zinc-100 tracking-[-0.02em]">
-                Topology & Database Ledger
+              <h1 className="text-2xl sm:text-[26px] font-bold text-[#111317] tracking-tight leading-tight">
+                Infrastructure &amp; Schema Ledger
               </h1>
-              <p className="text-sm text-zinc-400 mt-1">
-                Live row telemetry across all 8 PostgreSQL tables and runtime service endpoints.
+              <p className="text-[14px] text-[#4B5260] mt-0.5">
+                Live telemetry across PostgreSQL :5433, FastAPI :8000, DVWA :8081, and the 8 frozen relational tables.
               </p>
             </div>
 
             <div className="flex items-center gap-3 shrink-0">
               {lastSyncedAt && (
-                <span className="hidden md:inline text-xs font-mono tabular-nums text-zinc-500">
+                <span className="hidden md:inline text-xs font-mono tabular-nums text-[#4B5260]">
                   Synced {formatTimestamp(lastSyncedAt)}
                 </span>
               )}
@@ -1427,18 +1378,19 @@ export default function AdminConsole({ user, onSignOut, onOpenOverview }) {
                 loading={refreshing}
                 onClick={() => loadData({ notify: true })}
               >
-                <ArrowsClockwise className="w-3.5 h-3.5" weight="bold" />
+                <ArrowsClockwise className="w-4 h-4" weight="bold" />
                 <span>Refresh Ledger</span>
               </Button>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <SpotlightSurface accent="teal" padding="p-4" className="flex items-center justify-between gap-3">
+          {/* 3 Service Telemetry Cards */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 shrink-0">
+            <SpotlightSurface accent="emerald" padding="p-3.5" className="flex items-center justify-between gap-3">
               <div className="min-w-0 space-y-1">
-                <div className="text-xs text-zinc-400">PostgreSQL Health (/health/db)</div>
-                <div className="text-sm font-semibold font-mono text-zinc-100 truncate">
-                  {dbHealth?.database || 'unknown'}
+                <div className="text-xs font-bold text-[#4B5260]">PostgreSQL :5433 (/health/db)</div>
+                <div className="text-[15px] font-bold font-mono text-[#111317] truncate">
+                  {dbHealth?.database || 'unknown'} · app_internal
                 </div>
                 <CopyChip value="127.0.0.1:5433" label="127.0.0.1:5433" />
               </div>
@@ -1447,22 +1399,22 @@ export default function AdminConsole({ user, onSignOut, onOpenOverview }) {
               </Badge>
             </SpotlightSurface>
 
-            <SpotlightSurface accent="amber" padding="p-4" className="flex items-center justify-between gap-3">
+            <SpotlightSurface accent="brass" padding="p-3.5" className="flex items-center justify-between gap-3">
               <div className="min-w-0 space-y-1">
-                <div className="text-xs text-zinc-400">FastAPI Control Plane</div>
-                <div className="text-xs font-mono text-zinc-300 truncate">
-                  8 core tables, bcrypt auth
+                <div className="text-xs font-bold text-[#4B5260]">FastAPI :8000</div>
+                <div className="text-[15px] font-bold font-mono text-[#111317] truncate">
+                  8 core tables · 7 security rings
                 </div>
                 <CopyChip value={API_BASE} label={API_BASE} />
               </div>
-              <Badge variant="amber">v1.0.0</Badge>
+              <Badge variant="amber">ACTIVE</Badge>
             </SpotlightSurface>
 
-            <SpotlightSurface accent="teal" padding="p-4" className="flex items-center justify-between gap-3">
+            <SpotlightSurface accent="cobalt" padding="p-3.5" className="flex items-center justify-between gap-3">
               <div className="min-w-0 space-y-1">
-                <div className="text-xs text-zinc-400">DVWA Vulnerable Target</div>
-                <div className="text-xs font-mono text-zinc-300 truncate">
-                  MariaDB 10.4 internal :3306
+                <div className="text-xs font-bold text-[#4B5260]">DVWA :8081</div>
+                <div className="text-[15px] font-bold font-mono text-[#111317] truncate">
+                  MariaDB 10.4 · range_isolated
                 </div>
                 <CopyChip value={DVWA_URL} label={DVWA_URL} />
               </div>
@@ -1470,7 +1422,7 @@ export default function AdminConsole({ user, onSignOut, onOpenOverview }) {
                 href={DVWA_URL}
                 target="_blank"
                 rel="noreferrer"
-                className="h-8 px-2.5 rounded-lg border border-white/[0.08] bg-white/[0.04] hover:bg-white/[0.08] hover:border-[#00E5CC]/50 text-xs font-medium text-zinc-200 hover:text-[#00E5CC] inline-flex items-center gap-1.5 transition-colors shrink-0"
+                className="h-9 px-3 rounded-md border border-[#111317]/20 bg-[#F3EFE6] hover:bg-[#EAE4D7] text-xs font-semibold text-[#111317] inline-flex items-center gap-1.5 transition-colors shrink-0"
               >
                 <LinkSimple className="w-3.5 h-3.5" weight="regular" />
                 <span>Open</span>
@@ -1478,62 +1430,113 @@ export default function AdminConsole({ user, onSignOut, onOpenOverview }) {
             </SpotlightSurface>
           </div>
 
-          {loading ? (
-            <SkeletonRows rows={8} columns={4} />
-          ) : (
-            <SpotlightSurface accent="amber">
-              <div className="px-5 py-3.5 border-b border-white/[0.08] flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                  <Database className="w-4 h-4 text-[#F59E0B]" weight="regular" />
-                  <h2 className="text-sm font-semibold text-zinc-100">
-                    Core PostgreSQL 8-Table Ledger
-                  </h2>
-                </div>
-                <span className="text-xs font-mono tabular-nums text-zinc-400">
-                  8 tables tracked
-                </span>
-              </div>
-
-              <div className="divide-y divide-white/[0.07]">
-                {schemaLedger.map((row) => (
-                  <div
-                    key={row.table}
-                    className="px-5 py-3.5 grid grid-cols-1 md:grid-cols-12 gap-3 items-center hover:bg-white/[0.02] transition-colors"
-                  >
-                    <div className="md:col-span-3 flex items-center gap-2.5 min-w-0">
-                      <span className="font-mono text-xs font-semibold text-[#00E5CC] truncate">
-                        {row.table}
-                      </span>
-                      <Badge variant={row.badgeVariant}>{row.domain}</Badge>
+          {/* 8-Table Ledger + Embedded Darkroom Endpoint Sheet */}
+          <div className="flex-1 lg:min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-4">
+            <div className="lg:col-span-7 flex flex-col lg:min-h-0">
+              {loading ? (
+                <SkeletonRows rows={8} columns={4} />
+              ) : (
+                <SpotlightSurface accent="brass" className="flex-1 flex flex-col justify-between">
+                  <div className="px-4 py-2.5 border-b border-[#111317]/15 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                      <Database className="w-4 h-4 text-[#B45309]" weight="bold" />
+                      <h2 className="text-base font-bold text-[#111317]">
+                        Core PostgreSQL 8-Table Ledger
+                      </h2>
                     </div>
-
-                    <div className="md:col-span-4 text-xs text-zinc-400 truncate">
-                      {row.purpose}
-                    </div>
-
-                    <div className="md:col-span-4 flex items-center gap-3">
-                      <div className="flex-1 h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
-                        <div
-                          className={['h-full rounded-full transition-all duration-300', row.barColor].join(' ')}
-                          style={{ width: `${row.count > 0 ? Math.max(row.pct, 4) : 0}%` }}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="md:col-span-1 text-left md:text-right">
-                      <AnimatedTicker
-                        value={row.count}
-                        className="text-sm font-semibold text-zinc-100"
-                      />
-                    </div>
+                    <span className="text-xs font-mono tabular-nums text-[#4B5260]">
+                      8 frozen tables
+                    </span>
                   </div>
-                ))}
+
+                  <div className="divide-y divide-[#111317]/10 flex-1 flex flex-col justify-between">
+                    {schemaLedger.map((row) => (
+                      <div
+                        key={row.table}
+                        className="px-4 py-2 grid grid-cols-1 md:grid-cols-12 gap-2 items-center hover:bg-[#EAE4D7]/45 transition-colors"
+                      >
+                        <div className="md:col-span-4 flex items-center gap-2 min-w-0">
+                          <span className="font-mono text-[13px] font-bold text-[#111317] truncate">
+                            {row.table}
+                          </span>
+                          <Badge variant={row.badgeVariant}>{row.domain}</Badge>
+                        </div>
+
+                        <div className="md:col-span-4 text-xs text-[#4B5260] truncate">
+                          {row.purpose}
+                        </div>
+
+                        <div className="md:col-span-3 flex items-center gap-2">
+                          <div className="flex-1 h-2 rounded-full bg-[#EAE4D7] overflow-hidden">
+                            <div
+                              className={['h-full rounded-full transition-all duration-300', row.barColor].join(' ')}
+                              style={{ width: `${row.count > 0 ? Math.max(row.pct, 6) : 0}%` }}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="md:col-span-1 text-left md:text-right">
+                          <AnimatedTicker
+                            value={row.count}
+                            className="text-[14px] font-bold text-[#111317]"
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </SpotlightSurface>
+              )}
+            </div>
+
+            <div className="cf-darkroom lg:col-span-5 rounded-lg bg-[#0E1014] text-[#ECEFF4] border border-[#111317]/25 p-4 flex flex-col justify-between gap-3">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-white/15">
+                  <div className="flex items-center gap-2">
+                    <TerminalWindow className="w-4 h-4 text-[#F59E0B]" weight="bold" />
+                    <h2 className="text-base font-bold text-[#ECEFF4]">Darkroom Endpoint Sheet</h2>
+                  </div>
+                  <span className="text-xs font-mono text-[#94A3B8]">docker-compose</span>
+                </div>
+
+                <div className="space-y-2 font-mono text-[13px]">
+                  <div className="p-2.5 rounded bg-[#161922] border border-white/10 flex items-center justify-between gap-2">
+                    <span className="text-[#94A3B8]">API Plane</span>
+                    <span className="text-[#ECEFF4] truncate">{API_BASE}</span>
+                  </div>
+                  <div className="p-2.5 rounded bg-[#161922] border border-white/10 flex items-center justify-between gap-2">
+                    <span className="text-[#94A3B8]">Postgres Host</span>
+                    <span className="text-[#34D399]">127.0.0.1:5433 (app_internal)</span>
+                  </div>
+                  <div className="p-2.5 rounded bg-[#161922] border border-white/10 flex items-center justify-between gap-2">
+                    <span className="text-[#94A3B8]">DVWA Target</span>
+                    <span className="text-[#60A5FA]">127.0.0.1:8081 (range_isolated)</span>
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <div className="text-xs font-mono font-semibold text-[#94A3B8]">
+                    Control &amp; Health Probes
+                  </div>
+                  <pre className="p-3 rounded bg-[#07080B] border border-white/10 font-mono text-xs text-[#CBD5E1] leading-relaxed overflow-x-auto">
+{`GET  ${API_BASE}/health/db
+GET  ${API_BASE}/health/dvwa
+GET  ${API_BASE}/api/admin/stats
+GET  ${API_BASE}/api/moderators
+POST ${API_BASE}/api/auth/refresh`}
+                  </pre>
+                </div>
               </div>
-            </SpotlightSurface>
-          )}
+
+              <div className="pt-2.5 border-t border-white/15 flex items-center justify-between gap-2 text-xs font-mono text-[#94A3B8]">
+                <span>no-new-privileges · pids_limit=128</span>
+                <span className="text-[#34D399]">ISOLATED</span>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
+      {/* 4. PROFILE & SETTINGS */}
       {activeTab === 'profile' && <ProfileView user={user} stats={profileStats} />}
 
       {activeTab === 'settings' && (
@@ -1566,46 +1569,40 @@ export default function AdminConsole({ user, onSignOut, onOpenOverview }) {
             <Button variant="secondary" onClick={closeInspector} disabled={submitting}>
               Cancel
             </Button>
-            <button
+            <Button
               type="submit"
               form="cf-admin-inspector-form"
-              disabled={submitting}
-              className="h-9 px-3.5 rounded-lg bg-[#F59E0B] hover:bg-[#D97706] disabled:opacity-50 text-[#07080B] text-xs font-semibold inline-flex items-center gap-1.5 transition-colors"
+              variant="primary"
+              loading={submitting}
             >
-              <span>
-                {submitting
-                  ? 'Saving...'
-                  : inspectorMode === 'create'
-                    ? 'Create Moderator'
-                    : 'Save Changes'}
-              </span>
-            </button>
+              {inspectorMode === 'create' ? 'Create Moderator' : 'Save Changes'}
+            </Button>
           </div>
         }
       >
-        <div className="space-y-5">
+        <div className="space-y-4">
           {inspectorMode === 'inspect' && selectedModerator && (
-            <div className="space-y-3 rounded-xl bg-[#07080B]/80 border border-white/[0.08] p-3.5">
+            <div className="space-y-3 rounded-lg bg-[#F3EFE6] border border-[#111317]/15 p-3.5">
               <div className="flex items-center justify-between gap-2">
-                <span className="text-xs text-zinc-400">Operator Email</span>
+                <span className="text-xs font-semibold text-[#4B5260]">Operator Email</span>
                 <CopyChip value={selectedModerator.email} label={selectedModerator.email} />
               </div>
-              <div className="grid grid-cols-3 gap-2 pt-2 border-t border-white/[0.07] text-center">
+              <div className="grid grid-cols-3 gap-2 pt-2.5 border-t border-[#111317]/15 text-center">
                 <div>
-                  <div className="text-[11px] text-zinc-500">Challenges</div>
-                  <div className="text-sm font-mono tabular-nums font-semibold text-[#F59E0B] mt-0.5">
+                  <div className="text-xs font-semibold text-[#4B5260]">Challenges</div>
+                  <div className="font-display text-2xl font-extrabold tabular-nums text-[#B45309] mt-0.5">
                     {selectedModerator.challenges_count ?? 0}
                   </div>
                 </div>
                 <div>
-                  <div className="text-[11px] text-zinc-500">Trainees</div>
-                  <div className="text-sm font-mono tabular-nums font-semibold text-[#00E5CC] mt-0.5">
+                  <div className="text-xs font-semibold text-[#4B5260]">Trainees</div>
+                  <div className="font-display text-2xl font-extrabold tabular-nums text-[#1D4ED8] mt-0.5">
                     {selectedModerator.accounts_managed ?? 0}
                   </div>
                 </div>
                 <div>
-                  <div className="text-[11px] text-zinc-500">Admin Owner</div>
-                  <div className="text-sm font-mono tabular-nums font-semibold text-zinc-200 mt-0.5">
+                  <div className="text-xs font-semibold text-[#4B5260]">Admin Owner</div>
+                  <div className="font-display text-2xl font-extrabold tabular-nums text-[#111317] mt-0.5">
                     {selectedModerator.admin_id !== null && selectedModerator.admin_id !== undefined
                       ? `#${selectedModerator.admin_id}`
                       : 'None'}
@@ -1652,8 +1649,8 @@ export default function AdminConsole({ user, onSignOut, onOpenOverview }) {
               htmlFor="cf-inspector-mod-password"
               hint={
                 inspectorMode === 'inspect'
-                  ? 'Leave blank to keep the existing password (8-72 UTF-8 bytes if rotated).'
-                  : '8 to 72 UTF-8 bytes, hashed with bcrypt.'
+                  ? 'Leave blank to keep the existing password (10–72 UTF-8 bytes if rotated).'
+                  : '10 to 72 UTF-8 bytes with a letter and number/symbol, hashed with bcrypt.'
               }
               required={inspectorMode === 'create'}
             >
@@ -1666,14 +1663,14 @@ export default function AdminConsole({ user, onSignOut, onOpenOverview }) {
                   placeholder={
                     inspectorMode === 'inspect'
                       ? 'Leave blank to keep unchanged'
-                      : 'Minimum 8 characters'
+                      : 'Minimum 10 characters'
                   }
                   disabled={submitting}
                   required={inspectorMode === 'create'}
                   className="pr-9"
                 />
                 <Key
-                  className="w-3.5 h-3.5 text-zinc-500 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none"
+                  className="w-4 h-4 text-[#4B5260] absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none"
                   weight="regular"
                 />
               </div>
@@ -1681,15 +1678,15 @@ export default function AdminConsole({ user, onSignOut, onOpenOverview }) {
           </form>
 
           {inspectorMode === 'inspect' && selectedModerator && (
-            <div className="pt-4 border-t border-white/[0.08] space-y-3">
-              <div className="flex items-center gap-2 text-xs font-medium text-[#EF4444]">
+            <div className="pt-4 border-t border-[#111317]/15 space-y-3">
+              <div className="flex items-center gap-2 text-xs font-bold text-[#C81E1E]">
                 <Warning className="w-4 h-4 shrink-0" weight="bold" />
                 <span>Revoke Moderator Access</span>
               </div>
 
               {!confirmingDelete ? (
-                <div className="flex items-center justify-between gap-3 rounded-xl bg-[#EF4444]/5 border border-[#EF4444]/25 p-3">
-                  <p className="text-xs text-zinc-400 leading-relaxed">
+                <div className="flex items-center justify-between gap-3 rounded-lg bg-[#C81E1E]/[0.06] border border-[#C81E1E]/30 p-3">
+                  <p className="text-[13px] text-[#1C1F26] leading-relaxed">
                     Removes only this moderator account; dependent challenges and trainees remain unlinked.
                   </p>
                   <Button
@@ -1699,15 +1696,15 @@ export default function AdminConsole({ user, onSignOut, onOpenOverview }) {
                     disabled={submitting}
                     className="shrink-0"
                   >
-                    <Trash className="w-3.5 h-3.5" weight="regular" />
+                    <Trash className="w-4 h-4" weight="regular" />
                     <span>Remove</span>
                   </Button>
                 </div>
               ) : (
-                <div className="rounded-xl bg-[#EF4444]/10 border border-[#EF4444]/35 p-3.5 space-y-3">
-                  <p className="text-xs text-red-200 leading-relaxed">
+                <div className="rounded-lg bg-[#C81E1E]/[0.08] border border-[#C81E1E]/40 p-3.5 space-y-3">
+                  <p className="text-[13px] text-[#1C1F26] leading-relaxed">
                     Confirm permanent removal of{' '}
-                    <span className="font-semibold text-white">{selectedModerator.username}</span>?
+                    <span className="font-bold text-[#111317]">{selectedModerator.username}</span>?
                     Dependent challenges, attackers, and defenders remain intact.
                   </p>
                   <div className="flex items-center justify-end gap-2">
@@ -1725,7 +1722,7 @@ export default function AdminConsole({ user, onSignOut, onOpenOverview }) {
                       loading={submitting}
                       onClick={handleConfirmDeleteModerator}
                     >
-                      <Trash className="w-3.5 h-3.5" weight="bold" />
+                      <Trash className="w-4 h-4" weight="bold" />
                       <span>Confirm Removal</span>
                     </Button>
                   </div>

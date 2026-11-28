@@ -11,19 +11,23 @@ import {
 
 const BUTTON_VARIANTS = {
   primary:
-    'bg-[#00E5CC] text-[#0A0A0B] border border-[#00E5CC] font-semibold hover:bg-[#00CCA6] hover:border-[#00CCA6]',
+    'bg-[#111317] text-[#FAF8F3] border border-[#111317] font-semibold hover:bg-[#1C1F26] hover:border-[#1C1F26]',
+  attacker:
+    'bg-[#C81E1E] text-[#FAF8F3] border border-[#C81E1E] font-semibold hover:bg-[#A61717] hover:border-[#A61717]',
+  defender:
+    'bg-[#1D4ED8] text-[#FAF8F3] border border-[#1D4ED8] font-semibold hover:bg-[#1740B5] hover:border-[#1740B5]',
   secondary:
-    'bg-[#141416] text-zinc-100 border border-[#232326] font-medium hover:bg-[#1B1B1E] hover:border-[#2E2E33]',
+    'bg-[#FAF8F3] text-[#111317] border border-[#111317]/25 font-medium hover:bg-[#EAE4D7] hover:border-[#111317]/45',
   ghost:
-    'bg-transparent text-zinc-300 border border-transparent font-medium hover:bg-[#1B1B1E] hover:text-zinc-100',
+    'bg-transparent text-[#1C1F26] border border-transparent font-medium hover:bg-[#EAE4D7]/75 hover:text-[#111317]',
   danger:
-    'bg-[#EF4444]/10 text-[#EF4444] border border-[#EF4444]/30 font-medium hover:bg-[#EF4444]/20 hover:border-[#EF4444]/50',
+    'bg-[#C81E1E]/10 text-[#B91C1C] border border-[#C81E1E]/35 font-semibold hover:bg-[#C81E1E]/18 hover:border-[#C81E1E]/60',
 };
 
 const BUTTON_SIZES = {
-  sm: 'h-8 px-2.5 text-xs gap-1.5',
-  md: 'h-9 px-3.5 text-sm gap-2',
-  lg: 'h-10 px-4 text-sm gap-2',
+  sm: 'h-9 px-3 text-[13px] gap-1.5',
+  md: 'h-10 px-4 text-[14px] gap-2',
+  lg: 'h-11 px-5 text-[15px] gap-2',
 };
 
 export function Button({
@@ -42,34 +46,40 @@ export function Button({
       type={type}
       disabled={isDisabled}
       className={[
-        'inline-flex items-center justify-center rounded-[4px] transition-colors duration-150 whitespace-nowrap select-none',
-        'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#00E5CC]',
-        'disabled:opacity-50 disabled:cursor-not-allowed',
+        'inline-flex items-center justify-center rounded-md transition-transform transition-colors duration-150 whitespace-nowrap select-none active:scale-[0.98]',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#111317] focus-visible:ring-offset-1 focus-visible:ring-offset-[#F3EFE6]',
+        'disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100',
         BUTTON_VARIANTS[variant] || BUTTON_VARIANTS.secondary,
         BUTTON_SIZES[size] || BUTTON_SIZES.md,
         className,
       ].join(' ')}
       {...props}
     >
-      {loading && <CircleNotch className="w-3.5 h-3.5 animate-spin shrink-0" weight="bold" />}
+      {loading && <CircleNotch className="w-4 h-4 animate-spin shrink-0" weight="bold" />}
       {children}
     </button>
   );
 }
 
 const BADGE_VARIANTS = {
-  teal: 'bg-[#00E5CC]/10 text-[#00E5CC] border-[#00E5CC]/25',
-  green: 'bg-[#10B981]/10 text-[#10B981] border-[#10B981]/25',
-  amber: 'bg-[#F59E0B]/10 text-[#F59E0B] border-[#F59E0B]/25',
-  red: 'bg-[#EF4444]/10 text-[#EF4444] border-[#EF4444]/25',
-  neutral: 'bg-[#1B1B1E] text-zinc-300 border-[#232326]',
+  teal: 'bg-[#1D4ED8]/10 text-[#1D4ED8] border-[#1D4ED8]/30',
+  blue: 'bg-[#1D4ED8]/10 text-[#1D4ED8] border-[#1D4ED8]/30',
+  cobalt: 'bg-[#1D4ED8]/10 text-[#1D4ED8] border-[#1D4ED8]/30',
+  green: 'bg-[#047857]/10 text-[#047857] border-[#047857]/30',
+  emerald: 'bg-[#047857]/10 text-[#047857] border-[#047857]/30',
+  amber: 'bg-[#B45309]/10 text-[#92400E] border-[#B45309]/35',
+  brass: 'bg-[#B45309]/10 text-[#92400E] border-[#B45309]/35',
+  red: 'bg-[#C81E1E]/10 text-[#B91C1C] border-[#C81E1E]/30',
+  crimson: 'bg-[#C81E1E]/10 text-[#B91C1C] border-[#C81E1E]/30',
+  neutral: 'bg-[#EAE4D7] text-[#1C1F26] border-[#111317]/20',
+  ink: 'bg-[#111317] text-[#FAF8F3] border-[#111317]',
 };
 
 export function Badge({ variant = 'neutral', className = '', children, ...props }) {
   return (
     <span
       className={[
-        'inline-flex items-center gap-1.5 px-2 py-0.5 rounded-[4px] border text-[11px] font-medium leading-4 whitespace-nowrap',
+        'inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded border text-xs font-semibold leading-4 whitespace-nowrap',
         BADGE_VARIANTS[variant] || BADGE_VARIANTS.neutral,
         className,
       ].join(' ')}
@@ -111,7 +121,7 @@ export function Modal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#111317]/55"
       role="dialog"
       aria-modal="true"
       aria-labelledby="cf-modal-title"
@@ -123,31 +133,36 @@ export function Modal({
     >
       <div
         className={[
-          'w-full bg-[#141416] border border-[#232326] rounded-[6px] shadow-2xl overflow-hidden',
+          'w-full bg-[#FAF8F3] border border-[#111317]/30 rounded-lg overflow-hidden text-[#111317]',
           MODAL_SIZES[size] || MODAL_SIZES.md,
         ].join(' ')}
       >
-        <div className="flex items-start justify-between gap-4 px-5 py-4 border-b border-[#232326]">
+        <div className="flex items-start justify-between gap-4 px-5 py-4 border-b border-[#111317]/15">
           <div className="min-w-0">
-            <h2 id="cf-modal-title" className="text-base font-semibold text-zinc-100 leading-6">
+            <h2
+              id="cf-modal-title"
+              className="text-lg font-bold text-[#111317] leading-6 text-balance"
+            >
               {title}
             </h2>
             {description && (
-              <p className="text-xs text-zinc-400 mt-1 leading-relaxed">{description}</p>
+              <p className="text-[14px] text-[#4B5260] mt-1 leading-relaxed text-pretty">
+                {description}
+              </p>
             )}
           </div>
           <button
             type="button"
             onClick={() => onClose?.()}
             aria-label="Close modal"
-            className="p-1.5 rounded-[4px] text-zinc-400 hover:text-zinc-100 hover:bg-[#1B1B1E] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#00E5CC]"
+            className="p-1.5 rounded-md text-[#4B5260] hover:text-[#111317] hover:bg-[#EAE4D7] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#111317]"
           >
             <X className="w-4 h-4" weight="bold" />
           </button>
         </div>
         <div className="p-5 max-h-[75vh] overflow-y-auto">{children}</div>
         {footer && (
-          <div className="px-5 py-3.5 border-t border-[#232326] bg-[#0A0A0B]/40 flex items-center justify-end gap-2">
+          <div className="px-5 py-3.5 border-t border-[#111317]/15 bg-[#EAE4D7]/55 flex items-center justify-end gap-2">
             {footer}
           </div>
         )}
@@ -162,26 +177,26 @@ export function Field({ label, htmlFor, error, hint, required = false, className
       {label && (
         <label
           htmlFor={htmlFor}
-          className="block text-xs font-medium text-zinc-300"
+          className="block text-[14px] font-semibold text-[#111317]"
         >
           {label}
-          {required && <span className="text-[#EF4444] ml-1">*</span>}
+          {required && <span className="text-[#C81E1E] ml-1">*</span>}
         </label>
       )}
       {children}
       {error ? (
-        <p className="text-xs text-[#EF4444]" role="alert">
+        <p className="text-[13px] font-medium text-[#B91C1C]" role="alert">
           {error}
         </p>
       ) : hint ? (
-        <p className="text-xs text-zinc-500">{hint}</p>
+        <p className="text-[13px] text-[#4B5260]">{hint}</p>
       ) : null}
     </div>
   );
 }
 
 const CONTROL_BASE =
-  'w-full bg-[#0A0A0B] border rounded-[4px] text-sm text-zinc-100 placeholder:text-zinc-500 transition-colors duration-150 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed';
+  'w-full bg-[#FAF8F3] border rounded-md text-[15px] text-[#111317] placeholder:text-[#4B5260] transition-colors duration-150 focus:outline-none focus:ring-1 disabled:opacity-50 disabled:cursor-not-allowed';
 
 export const Input = React.forwardRef(function Input(
   { className = '', error = false, type = 'text', ...props },
@@ -193,10 +208,10 @@ export const Input = React.forwardRef(function Input(
       type={type}
       className={[
         CONTROL_BASE,
-        'h-9 px-3',
+        'h-10 px-3.5',
         error
-          ? 'border-[#EF4444] focus:border-[#EF4444]'
-          : 'border-[#232326] focus:border-[#00E5CC]',
+          ? 'border-[#C81E1E] focus:border-[#C81E1E] focus:ring-[#C81E1E]'
+          : 'border-[#111317]/25 focus:border-[#111317] focus:ring-[#111317]',
         className,
       ].join(' ')}
       {...props}
@@ -214,10 +229,10 @@ export const Select = React.forwardRef(function Select(
         ref={ref}
         className={[
           CONTROL_BASE,
-          'h-9 pl-3 pr-8 appearance-none cursor-pointer',
+          'h-10 pl-3.5 pr-9 appearance-none cursor-pointer',
           error
-            ? 'border-[#EF4444] focus:border-[#EF4444]'
-            : 'border-[#232326] focus:border-[#00E5CC]',
+            ? 'border-[#C81E1E] focus:border-[#C81E1E] focus:ring-[#C81E1E]'
+            : 'border-[#111317]/25 focus:border-[#111317] focus:ring-[#111317]',
           className,
         ].join(' ')}
         {...props}
@@ -225,7 +240,7 @@ export const Select = React.forwardRef(function Select(
         {children}
       </select>
       <CaretDown
-        className="w-3.5 h-3.5 text-zinc-400 pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2"
+        className="w-4 h-4 text-[#4B5260] pointer-events-none absolute right-3 top-1/2 -translate-y-1/2"
         weight="bold"
       />
     </div>
@@ -242,10 +257,10 @@ export const Textarea = React.forwardRef(function Textarea(
       rows={rows}
       className={[
         CONTROL_BASE,
-        'p-3 resize-y',
+        'p-3.5 resize-y',
         error
-          ? 'border-[#EF4444] focus:border-[#EF4444]'
-          : 'border-[#232326] focus:border-[#00E5CC]',
+          ? 'border-[#C81E1E] focus:border-[#C81E1E] focus:ring-[#C81E1E]'
+          : 'border-[#111317]/25 focus:border-[#111317] focus:ring-[#111317]',
         className,
       ].join(' ')}
       {...props}
@@ -257,7 +272,7 @@ export function SkeletonRows({ rows = 5, columns = 4, className = '' }) {
   return (
     <div
       className={[
-        'bg-[#141416] border border-[#232326] rounded-[6px] divide-y divide-[#232326] overflow-hidden',
+        'bg-[#FAF8F3] border border-[#111317]/15 rounded-lg divide-y divide-[#111317]/10 overflow-hidden',
         className,
       ].join(' ')}
       aria-busy="true"
@@ -268,7 +283,7 @@ export function SkeletonRows({ rows = 5, columns = 4, className = '' }) {
           {Array.from({ length: columns }).map((__, colIdx) => (
             <div
               key={colIdx}
-              className="h-3.5 rounded-[4px] bg-[#1B1B1E] animate-pulse"
+              className="h-3.5 rounded bg-[#EAE4D7] animate-pulse"
               style={{
                 width: colIdx === 0 ? '28%' : colIdx === columns - 1 ? '14%' : '20%',
               }}
@@ -284,18 +299,20 @@ export function EmptyState({ icon: Icon, title, description, action, className =
   return (
     <div
       className={[
-        'bg-[#141416] border border-[#232326] rounded-[6px] px-6 py-10 text-center flex flex-col items-center justify-center',
+        'bg-[#FAF8F3] border border-[#111317]/15 rounded-lg px-6 py-10 text-center flex flex-col items-center justify-center',
         className,
       ].join(' ')}
     >
       {Icon && (
-        <div className="w-10 h-10 rounded-[6px] bg-[#1B1B1E] border border-[#232326] flex items-center justify-center text-zinc-400 mb-3">
+        <div className="w-11 h-11 rounded-md bg-[#EAE4D7] border border-[#111317]/15 flex items-center justify-center text-[#111317] mb-3">
           <Icon className="w-5 h-5" weight="regular" />
         </div>
       )}
-      <h3 className="text-sm font-semibold text-zinc-100">{title}</h3>
+      <h3 className="text-base font-bold text-[#111317] text-balance">{title}</h3>
       {description && (
-        <p className="text-xs text-zinc-400 mt-1 max-w-md leading-relaxed">{description}</p>
+        <p className="text-[14px] text-[#4B5260] mt-1.5 max-w-md leading-relaxed text-pretty">
+          {description}
+        </p>
       )}
       {action && <div className="mt-4">{action}</div>}
     </div>
@@ -304,23 +321,23 @@ export function EmptyState({ icon: Icon, title, description, action, className =
 
 const ALERT_VARIANTS = {
   error: {
-    container: 'bg-[#EF4444]/10 border-[#EF4444]/30 text-red-200',
-    iconColor: 'text-[#EF4444]',
+    container: 'bg-[#C81E1E]/[0.07] border-[#C81E1E]/35 text-[#1C1F26]',
+    iconColor: 'text-[#C81E1E]',
     Icon: WarningCircle,
   },
   warning: {
-    container: 'bg-[#F59E0B]/10 border-[#F59E0B]/30 text-amber-200',
-    iconColor: 'text-[#F59E0B]',
+    container: 'bg-[#B45309]/[0.08] border-[#B45309]/35 text-[#1C1F26]',
+    iconColor: 'text-[#B45309]',
     Icon: Warning,
   },
   success: {
-    container: 'bg-[#10B981]/10 border-[#10B981]/30 text-emerald-200',
-    iconColor: 'text-[#10B981]',
+    container: 'bg-[#047857]/[0.08] border-[#047857]/35 text-[#1C1F26]',
+    iconColor: 'text-[#047857]',
     Icon: CheckCircle,
   },
   info: {
-    container: 'bg-[#00E5CC]/10 border-[#00E5CC]/30 text-teal-100',
-    iconColor: 'text-[#00E5CC]',
+    container: 'bg-[#1D4ED8]/[0.07] border-[#1D4ED8]/30 text-[#1C1F26]',
+    iconColor: 'text-[#1D4ED8]',
     Icon: Info,
   },
 };
@@ -343,22 +360,22 @@ export function AlertBanner({
     <div
       role={variant === 'error' ? 'alert' : 'status'}
       className={[
-        'border rounded-[6px] px-3.5 py-2.5 flex items-start gap-2.5 text-xs leading-relaxed',
+        'border rounded-md px-3.5 py-2.5 flex items-start gap-2.5 text-[14px] leading-relaxed',
         cfg.container,
         className,
       ].join(' ')}
     >
-      <StatusIcon className={['w-4 h-4 shrink-0 mt-0.5', cfg.iconColor].join(' ')} weight="bold" />
+      <StatusIcon className={['w-4 h-4 shrink-0 mt-1', cfg.iconColor].join(' ')} weight="bold" />
       <div className="flex-1 min-w-0">
-        {title && <div className="font-semibold text-zinc-100 mb-0.5">{title}</div>}
-        {body && <div>{body}</div>}
+        {title && <div className="font-bold text-[#111317] mb-0.5">{title}</div>}
+        {body && <div className="text-[#1C1F26] text-pretty">{body}</div>}
       </div>
       {onDismiss && (
         <button
           type="button"
           onClick={onDismiss}
           aria-label="Dismiss notification"
-          className="text-zinc-400 hover:text-zinc-100 p-0.5 rounded-[4px] transition-colors shrink-0"
+          className="text-[#4B5260] hover:text-[#111317] p-1 rounded transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#111317]"
         >
           <X className="w-3.5 h-3.5" weight="bold" />
         </button>
@@ -368,11 +385,12 @@ export function AlertBanner({
 }
 
 const STAT_ACCENTS = {
-  default: 'text-zinc-400',
-  teal: 'text-[#00E5CC]',
-  green: 'text-[#10B981]',
-  amber: 'text-[#F59E0B]',
-  red: 'text-[#EF4444]',
+  default: 'text-[#4B5260]',
+  teal: 'text-[#1D4ED8]',
+  blue: 'text-[#1D4ED8]',
+  green: 'text-[#047857]',
+  amber: 'text-[#B45309]',
+  red: 'text-[#C81E1E]',
 };
 
 export function StatTile({
@@ -387,12 +405,12 @@ export function StatTile({
   return (
     <div
       className={[
-        'bg-[#141416] border border-[#232326] rounded-[6px] p-4 flex flex-col justify-between',
+        'bg-[#FAF8F3] border border-[#111317]/15 rounded-lg px-4 py-3.5 flex flex-col justify-between',
         className,
       ].join(' ')}
     >
       <div className="flex items-center justify-between gap-2">
-        <span className="text-xs font-medium text-zinc-400 truncate">{label}</span>
+        <span className="text-[13px] font-semibold text-[#4B5260] truncate">{label}</span>
         {Icon && (
           <Icon
             className={['w-4 h-4 shrink-0', STAT_ACCENTS[accent] || STAT_ACCENTS.default].join(' ')}
@@ -401,14 +419,14 @@ export function StatTile({
         )}
       </div>
       {loading ? (
-        <div className="h-7 w-20 bg-[#1B1B1E] rounded-[4px] animate-pulse mt-2.5" />
+        <div className="h-8 w-20 bg-[#EAE4D7] rounded animate-pulse mt-2" />
       ) : (
-        <div className="text-2xl font-semibold font-mono tabular-nums text-zinc-100 mt-2 leading-none">
+        <div className="font-display text-3xl font-extrabold tabular-nums text-[#111317] mt-1.5 leading-none">
           {value ?? 0}
         </div>
       )}
       {detail && (
-        <div className="text-xs text-zinc-500 mt-2 truncate">{detail}</div>
+        <div className="text-xs font-medium text-[#4B5260] mt-2 truncate">{detail}</div>
       )}
     </div>
   );

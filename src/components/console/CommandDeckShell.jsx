@@ -22,12 +22,12 @@ function CyberForgeDeckMark({ accentColor }) {
     >
       <polygon
         points="14,2 25,8.25 25,19.75 14,26 3,19.75 3,8.25"
-        stroke="rgba(255,255,255,0.14)"
+        stroke="#111317"
         strokeWidth="1.5"
-        fill="#0A0B0F"
+        fill="#FAF8F3"
       />
       <polygon
-        points="14,5.5 21.5,9.75 21.5,18.25 14,22.5 6.5,18.25 6.5,9.75"
+        points="14,5.75 21.25,9.9 21.25,18.1 14,22.25 6.75,18.1 6.75,9.9"
         stroke={accentColor}
         strokeWidth="1.5"
         fill="none"
@@ -51,44 +51,48 @@ function getUserInitials(user) {
 
 const ROLE_THEMES = {
   admin: {
-    accentHex: '#F59E0B',
+    accentHex: '#B45309',
     defaultLabel: 'ROOT GOVERNANCE',
-    pillClass: 'bg-[#F59E0B]/10 text-[#F59E0B] border-[#F59E0B]/25',
-    avatarClass: 'bg-[#F59E0B]/10 border-[#F59E0B]/30 text-[#F59E0B] hover:bg-[#F59E0B]/20',
-    dockActiveClass: 'bg-[#F59E0B]/15 text-[#F59E0B] border border-[#F59E0B]/30',
-    dockBadgeClass: 'bg-[#F59E0B]/15 border-[#F59E0B]/30 text-[#F59E0B]',
-    focusRingClass: 'focus-visible:ring-[#F59E0B]',
-    inputFocusClass: 'focus:border-[#F59E0B]/60',
+    pillClass: 'bg-[#B45309]/10 text-[#92400E] border-[#B45309]/35',
+    avatarClass: 'bg-[#B45309]/10 border-[#B45309]/40 text-[#92400E] hover:bg-[#B45309]/20',
+    activeTabRule: 'border-[#B45309] text-[#111317]',
+    activeBadgeClass: 'bg-[#B45309] text-[#FAF8F3] border-[#B45309]',
+    mobileActiveClass: 'bg-[#B45309]/12 text-[#92400E] border-[#B45309]/40',
+    focusRingClass: 'focus-visible:ring-[#B45309]',
+    inputFocusClass: 'focus:border-[#B45309]',
   },
   moderator: {
-    accentHex: '#00E5CC',
+    accentHex: '#B45309',
     defaultLabel: 'RANGE OPERATIONS',
-    pillClass: 'bg-[#00E5CC]/10 text-[#00E5CC] border-[#00E5CC]/25',
-    avatarClass: 'bg-[#00E5CC]/10 border-[#00E5CC]/30 text-[#00E5CC] hover:bg-[#00E5CC]/20',
-    dockActiveClass: 'bg-[#00E5CC]/15 text-[#00E5CC] border border-[#00E5CC]/30',
-    dockBadgeClass: 'bg-[#00E5CC]/15 border-[#00E5CC]/30 text-[#00E5CC]',
-    focusRingClass: 'focus-visible:ring-[#00E5CC]',
-    inputFocusClass: 'focus:border-[#00E5CC]/60',
+    pillClass: 'bg-[#B45309]/10 text-[#92400E] border-[#B45309]/35',
+    avatarClass: 'bg-[#B45309]/10 border-[#B45309]/40 text-[#92400E] hover:bg-[#B45309]/20',
+    activeTabRule: 'border-[#B45309] text-[#111317]',
+    activeBadgeClass: 'bg-[#B45309] text-[#FAF8F3] border-[#B45309]',
+    mobileActiveClass: 'bg-[#B45309]/12 text-[#92400E] border-[#B45309]/40',
+    focusRingClass: 'focus-visible:ring-[#B45309]',
+    inputFocusClass: 'focus:border-[#B45309]',
   },
   attacker: {
-    accentHex: '#F43F5E',
+    accentHex: '#C81E1E',
     defaultLabel: 'RED TEAM OPS',
-    pillClass: 'bg-[#F43F5E]/10 text-[#FB7185] border-[#F43F5E]/30',
-    avatarClass: 'bg-[#F43F5E]/10 border-[#F43F5E]/30 text-[#FB7185] hover:bg-[#F43F5E]/20',
-    dockActiveClass: 'bg-[#F43F5E]/15 text-[#FB7185] border border-[#F43F5E]/35',
-    dockBadgeClass: 'bg-[#F43F5E]/15 border-[#F43F5E]/30 text-[#FB7185]',
-    focusRingClass: 'focus-visible:ring-[#F43F5E]',
-    inputFocusClass: 'focus:border-[#F43F5E]/60',
+    pillClass: 'bg-[#C81E1E]/10 text-[#B91C1C] border-[#C81E1E]/35',
+    avatarClass: 'bg-[#C81E1E]/10 border-[#C81E1E]/40 text-[#B91C1C] hover:bg-[#C81E1E]/18',
+    activeTabRule: 'border-[#C81E1E] text-[#111317]',
+    activeBadgeClass: 'bg-[#C81E1E] text-[#FAF8F3] border-[#C81E1E]',
+    mobileActiveClass: 'bg-[#C81E1E]/10 text-[#B91C1C] border-[#C81E1E]/35',
+    focusRingClass: 'focus-visible:ring-[#C81E1E]',
+    inputFocusClass: 'focus:border-[#C81E1E]',
   },
   defender: {
-    accentHex: '#38BDF8',
+    accentHex: '#1D4ED8',
     defaultLabel: 'BLUE TEAM DEFENSE',
-    pillClass: 'bg-[#38BDF8]/10 text-[#38BDF8] border-[#38BDF8]/30',
-    avatarClass: 'bg-[#38BDF8]/10 border-[#38BDF8]/30 text-[#38BDF8] hover:bg-[#38BDF8]/20',
-    dockActiveClass: 'bg-[#38BDF8]/15 text-[#38BDF8] border border-[#38BDF8]/35',
-    dockBadgeClass: 'bg-[#38BDF8]/15 border-[#38BDF8]/30 text-[#38BDF8]',
-    focusRingClass: 'focus-visible:ring-[#38BDF8]',
-    inputFocusClass: 'focus:border-[#38BDF8]/60',
+    pillClass: 'bg-[#1D4ED8]/10 text-[#1D4ED8] border-[#1D4ED8]/35',
+    avatarClass: 'bg-[#1D4ED8]/10 border-[#1D4ED8]/40 text-[#1D4ED8] hover:bg-[#1D4ED8]/18',
+    activeTabRule: 'border-[#1D4ED8] text-[#111317]',
+    activeBadgeClass: 'bg-[#1D4ED8] text-[#FAF8F3] border-[#1D4ED8]',
+    mobileActiveClass: 'bg-[#1D4ED8]/10 text-[#1D4ED8] border-[#1D4ED8]/35',
+    focusRingClass: 'focus-visible:ring-[#1D4ED8]',
+    inputFocusClass: 'focus:border-[#1D4ED8]',
   },
 };
 
@@ -109,10 +113,13 @@ export default function CommandDeckShell({
 }) {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [telemetryOpen, setTelemetryOpen] = useState(false);
+  const [filterOpen, setFilterOpen] = useState(false);
   const [dbHealth, setDbHealth] = useState('checking'); // 'checking' | 'ok' | 'error'
   const [dvwaHealth, setDvwaHealth] = useState('checking'); // 'checking' | 'ok' | 'setup_required' | 'offline'
   const [dvwaBaseUrl, setDvwaBaseUrl] = useState('http://localhost:8081');
   const telemetryRef = useRef(null);
+  const filterRef = useRef(null);
+  const filterInputRef = useRef(null);
 
   const theme = ROLE_THEMES[roleTheme] || ROLE_THEMES.moderator;
   const accentHex = theme.accentHex;
@@ -161,15 +168,19 @@ export default function CommandDeckShell({
   }, []);
 
   useEffect(() => {
-    if (!telemetryOpen) return undefined;
+    if (!telemetryOpen && !filterOpen) return undefined;
     function handleOutside(event) {
-      if (telemetryRef.current && !telemetryRef.current.contains(event.target)) {
+      if (telemetryOpen && telemetryRef.current && !telemetryRef.current.contains(event.target)) {
         setTelemetryOpen(false);
+      }
+      if (filterOpen && filterRef.current && !filterRef.current.contains(event.target)) {
+        setFilterOpen(false);
       }
     }
     function handleEscape(event) {
       if (event.key === 'Escape') {
         setTelemetryOpen(false);
+        setFilterOpen(false);
       }
     }
     window.addEventListener('mousedown', handleOutside);
@@ -178,7 +189,13 @@ export default function CommandDeckShell({
       window.removeEventListener('mousedown', handleOutside);
       window.removeEventListener('keydown', handleEscape);
     };
-  }, [telemetryOpen]);
+  }, [telemetryOpen, filterOpen]);
+
+  useEffect(() => {
+    if (filterOpen) {
+      filterInputRef.current?.focus();
+    }
+  }, [filterOpen]);
 
   useEffect(() => {
     function handleGlobalKeyDown(event) {
@@ -233,12 +250,12 @@ export default function CommandDeckShell({
 
   const statusDot =
     dbHealth === 'error'
-      ? 'bg-[#EF4444]'
+      ? 'bg-[#C81E1E]'
       : dbHealth === 'checking' || dvwaHealth === 'checking'
-        ? 'bg-[#F59E0B]'
+        ? 'bg-[#B45309]'
         : dbHealth === 'ok' && dvwaHealth === 'ok'
-          ? 'bg-[#10B981]'
-          : 'bg-[#F59E0B]';
+          ? 'bg-[#047857]'
+          : 'bg-[#B45309]';
 
   const statusText =
     dbHealth === 'error'
@@ -262,25 +279,31 @@ export default function CommandDeckShell({
 
   const dvwaStatusClass =
     dvwaHealth === 'ok'
-      ? 'text-[#10B981]'
+      ? 'text-[#047857]'
       : dvwaHealth === 'setup_required' || dvwaHealth === 'checking'
-        ? 'text-[#F59E0B]'
-        : 'text-[#EF4444]';
+        ? 'text-[#B45309]'
+        : 'text-[#C81E1E]';
 
   return (
-    <div className="cf-dot-canvas min-h-screen text-zinc-100 flex flex-col">
-      {/* Floating Top Bar */}
-      <header className="sticky top-3 z-30 w-full mx-auto max-w-[1440px] px-4 sm:px-6">
-        <div className="bg-[#0E1016]/85 backdrop-blur-xl border border-white/[0.08] rounded-2xl px-3 sm:px-4 h-14 flex items-center justify-between gap-2 sm:gap-3 shadow-xl">
-          {/* Brand + Role Posture */}
-          <div className="flex items-center gap-2 sm:gap-2.5 min-w-0 shrink-0">
+    <div className="cf-archival-canvas min-h-[100dvh] lg:h-[100dvh] lg:overflow-hidden bg-[#F3EFE6] text-[#111317] flex flex-col">
+      {/* Unified 60px Top Archival Instrument Bar */}
+      <header className="sticky top-0 lg:static h-[60px] shrink-0 bg-[#FAF8F3] border-b border-[#111317]/15 z-30">
+        <div className="w-full h-full mx-auto max-w-[1440px] px-4 sm:px-6 flex items-center justify-between gap-3">
+          {/* Brand + Role Stamp */}
+          <div className="flex items-center gap-2 min-w-0 shrink-0">
             <CyberForgeDeckMark accentColor={accentHex} />
-            <span className="hidden sm:inline text-xs sm:text-sm font-bold tracking-[0.12em] text-zinc-100 whitespace-nowrap">
+            <span className="font-display text-xl font-extrabold tracking-wide text-[#111317] whitespace-nowrap leading-none">
               CYBERFORGE
             </span>
             <span
+              title={resolvedRoleLabel}
+              aria-label={resolvedRoleLabel}
+              className="2xl:hidden inline-flex items-center justify-center w-2.5 h-2.5 rounded-full shrink-0"
+              style={{ backgroundColor: accentHex }}
+            />
+            <span
               className={[
-                'hidden md:inline-flex items-center px-2 py-0.5 rounded-md border text-[10px] font-mono tracking-[0.08em] whitespace-nowrap',
+                'hidden 2xl:inline-flex items-center px-2 py-0.5 rounded border text-xs font-mono font-semibold tracking-wide whitespace-nowrap',
                 theme.pillClass,
               ].join(' ')}
             >
@@ -288,34 +311,116 @@ export default function CommandDeckShell({
             </span>
           </div>
 
-          {/* Center Filter + Command Bar Trigger */}
-          <div className="flex items-center gap-2 flex-1 max-w-md min-w-0 justify-end sm:justify-center">
-            {onSearchChange && (
-              <div className="relative hidden sm:flex items-center flex-1 min-w-0">
-                <MagnifyingGlass
-                  className="w-3.5 h-3.5 text-zinc-400 absolute left-3 pointer-events-none"
-                  weight="regular"
-                />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => onSearchChange(e.target.value)}
-                  placeholder={searchPlaceholder}
-                  aria-label={searchPlaceholder}
+          {/* Center Page Nav Tabs (Desktop lg+) */}
+          <nav
+            aria-label="Primary console navigation"
+            className="hidden lg:flex items-center h-full gap-0.5 xl:gap-1 min-w-0 overflow-x-auto cf-no-scrollbar"
+          >
+            {navItems.map((item, idx) => {
+              const Icon = item.icon;
+              const isActive = item.id === activeTab;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => onTabChange?.(item.id)}
+                  aria-current={isActive ? 'page' : undefined}
+                  title={idx < 9 ? `${item.label} (Shortcut ${idx + 1})` : item.label}
                   className={[
-                    'w-full h-9 pl-8 pr-7 rounded-xl bg-white/[0.04] border border-white/[0.08] text-xs sm:text-sm text-zinc-100 placeholder:text-zinc-400 focus:outline-none transition-colors',
-                    theme.inputFocusClass,
+                    'h-full px-2.5 xl:px-3 flex items-center gap-1.5 text-[14px] font-semibold whitespace-nowrap border-b-2 transition-colors shrink-0',
+                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset',
+                    theme.focusRingClass,
+                    isActive
+                      ? theme.activeTabRule
+                      : 'border-transparent text-[#4B5260] hover:text-[#111317]',
                   ].join(' ')}
-                />
-                {searchQuery && (
-                  <button
-                    type="button"
-                    onClick={() => onSearchChange('')}
-                    aria-label="Clear filter"
-                    className="absolute right-2 p-0.5 rounded text-zinc-400 hover:text-zinc-100"
-                  >
-                    <X className="w-3.5 h-3.5" weight="bold" />
-                  </button>
+                >
+                  {Icon && (
+                    <Icon
+                      className="hidden 2xl:block w-4 h-4 shrink-0"
+                      weight={isActive ? 'fill' : 'regular'}
+                    />
+                  )}
+                  <span>{item.label}</span>
+                  {item.badge !== undefined && item.badge !== null && (
+                    <span
+                      className={[
+                        'inline-flex items-center px-1.5 py-0.5 rounded text-xs font-mono font-semibold tabular-nums border leading-none',
+                        isActive
+                          ? theme.activeBadgeClass
+                          : 'bg-[#EAE4D7] border-[#111317]/15 text-[#1C1F26]',
+                      ].join(' ')}
+                    >
+                      {item.badge}
+                    </span>
+                  )}
+                  {idx < 9 && (
+                    <span className="hidden 2xl:inline text-xs font-mono tabular-nums text-[#4B5260]">
+                      {idx + 1}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </nav>
+
+          {/* Right Controls: Anchored Filter Popover, Ctrl+K, Telemetry, Actions, Profile, Sign Out */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            {onSearchChange && (
+              <div ref={filterRef} className="relative hidden lg:block">
+                <button
+                  type="button"
+                  onClick={() => setFilterOpen((prev) => !prev)}
+                  aria-expanded={filterOpen}
+                  aria-label="Filter active view"
+                  title={searchQuery ? `Filter: ${searchQuery}` : 'Filter active view'}
+                  className={[
+                    'h-9 px-2.5 rounded-md border flex items-center gap-1.5 text-xs font-semibold transition-colors active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2',
+                    theme.focusRingClass,
+                    searchQuery
+                      ? 'bg-[#111317] text-[#FAF8F3] border-[#111317]'
+                      : 'bg-[#F3EFE6] hover:bg-[#EAE4D7] border-[#111317]/20 text-[#111317]',
+                  ].join(' ')}
+                >
+                  <MagnifyingGlass className="w-4 h-4 shrink-0" weight="regular" />
+                  {searchQuery && (
+                    <span className="hidden 2xl:inline max-w-[72px] truncate">
+                      {searchQuery}
+                    </span>
+                  )}
+                </button>
+
+                {filterOpen && (
+                  <div className="absolute right-0 top-full mt-2 w-80 bg-[#FAF8F3] border border-[#111317]/25 rounded-lg p-3 z-50 text-[#111317]">
+                    <div className="relative flex items-center">
+                      <MagnifyingGlass
+                        className="w-4 h-4 text-[#4B5260] absolute left-3 pointer-events-none"
+                        weight="regular"
+                      />
+                      <input
+                        ref={filterInputRef}
+                        type="text"
+                        value={searchQuery}
+                        onChange={(e) => onSearchChange(e.target.value)}
+                        placeholder={searchPlaceholder}
+                        aria-label={searchPlaceholder}
+                        className={[
+                          'w-full h-10 pl-9 pr-8 rounded-md bg-[#F3EFE6] border border-[#111317]/25 text-[14px] text-[#111317] placeholder:text-[#4B5260] focus:outline-none',
+                          theme.inputFocusClass,
+                        ].join(' ')}
+                      />
+                      {searchQuery && (
+                        <button
+                          type="button"
+                          onClick={() => onSearchChange('')}
+                          aria-label="Clear filter"
+                          className="absolute right-2 p-1 rounded text-[#4B5260] hover:text-[#111317] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#111317]"
+                        >
+                          <X className="w-3.5 h-3.5" weight="bold" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
                 )}
               </div>
             )}
@@ -324,75 +429,76 @@ export default function CommandDeckShell({
               type="button"
               onClick={() => setPaletteOpen(true)}
               aria-label="Open command palette"
+              title="Command Palette (Ctrl+K)"
               className={[
-                'h-9 w-9 sm:w-auto sm:px-3 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] flex items-center justify-center gap-2 text-xs text-zinc-300 hover:text-zinc-100 transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-1',
+                'h-9 px-2.5 rounded-md bg-[#F3EFE6] hover:bg-[#EAE4D7] border border-[#111317]/20 flex items-center justify-center gap-1.5 text-xs font-semibold text-[#111317] transition-colors shrink-0 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2',
                 theme.focusRingClass,
               ].join(' ')}
             >
-              <Command className="w-4 h-4 sm:w-3.5 sm:h-3.5 text-zinc-400" weight="regular" />
-              <span className="hidden lg:inline">Commands</span>
-              <kbd className="hidden sm:inline-flex px-1.5 py-0.5 rounded bg-[#07080B] border border-white/[0.08] text-[10px] font-mono text-zinc-400">
+              <Command className="w-4 h-4 text-[#4B5260]" weight="regular" />
+              <kbd className="hidden xl:inline-flex font-mono text-xs text-[#1C1F26]">
                 Ctrl+K
               </kbd>
             </button>
-          </div>
 
-          {/* Right Controls: Telemetry, Optional Actions, Profile Monogram, Sign Out */}
-          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             <div ref={telemetryRef} className="relative">
               <button
                 type="button"
                 onClick={() => setTelemetryOpen((prev) => !prev)}
                 aria-expanded={telemetryOpen}
                 aria-label="Infrastructure telemetry status"
+                title={`Infrastructure: ${statusText}`}
                 className={[
-                  'h-9 px-2.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] flex items-center gap-2 text-xs font-mono text-zinc-300 transition-colors focus-visible:outline-none focus-visible:ring-1',
+                  'h-9 px-2.5 rounded-md bg-[#F3EFE6] hover:bg-[#EAE4D7] border border-[#111317]/20 flex items-center gap-2 text-xs font-mono font-semibold text-[#111317] transition-colors active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2',
                   theme.focusRingClass,
                 ].join(' ')}
               >
                 <span className={['w-2 h-2 rounded-full shrink-0', statusDot].join(' ')} />
-                <span className="hidden sm:inline">{statusText}</span>
+                <span className="hidden xl:inline">{statusText}</span>
               </button>
 
               {telemetryOpen && (
-                <div className="absolute right-0 top-full mt-2 w-64 bg-[#0E1016]/95 backdrop-blur-xl border border-white/[0.1] rounded-xl p-3 shadow-2xl z-50 space-y-2.5">
-                  <div className="flex items-center justify-between border-b border-white/[0.08] pb-2">
-                    <span className="text-xs font-semibold text-zinc-100 flex items-center gap-1.5">
-                      <Database className="w-3.5 h-3.5 text-[#00E5CC]" weight="regular" />
+                <div className="absolute right-0 top-full mt-2 w-72 bg-[#FAF8F3] border border-[#111317]/25 rounded-lg p-3.5 z-50 space-y-2.5 text-[#111317]">
+                  <div className="flex items-center justify-between border-b border-[#111317]/15 pb-2">
+                    <span className="text-[13px] font-bold text-[#111317] flex items-center gap-1.5">
+                      <Database className="w-4 h-4 text-[#1D4ED8]" weight="regular" />
                       Runtime Endpoints
                     </span>
-                    <span className="text-[10px] font-mono text-zinc-400">v1.0.0</span>
+                    <span className="text-xs font-mono text-[#4B5260]">v1.0.0</span>
                   </div>
-                  <div className="space-y-1.5 text-xs">
+                  <div className="space-y-1.5 text-[13px]">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-zinc-400">FastAPI :8000</span>
-                      <span className="font-mono text-[11px] text-[#10B981]">
+                      <span className="text-[#4B5260]">FastAPI :8000</span>
+                      <span className="font-mono text-xs font-semibold text-[#047857]">
                         {dbHealth === 'error' ? 'CHECK' : 'ACTIVE'}
                       </span>
                     </div>
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-zinc-400">Postgres :5433</span>
+                      <span className="text-[#4B5260]">Postgres :5432</span>
                       <span
                         className={[
-                          'font-mono text-[11px]',
+                          'font-mono text-xs font-semibold',
                           dbHealth === 'ok'
-                            ? 'text-[#10B981]'
+                            ? 'text-[#047857]'
                             : dbHealth === 'checking'
-                              ? 'text-[#F59E0B]'
-                              : 'text-[#EF4444]',
+                              ? 'text-[#B45309]'
+                              : 'text-[#C81E1E]',
                         ].join(' ')}
                       >
                         {dbHealth === 'ok' ? 'CONNECTED' : dbHealth === 'checking' ? 'CHECKING' : 'OFFLINE'}
                       </span>
                     </div>
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-zinc-400">DVWA Target :8081</span>
-                      <span className={['font-mono text-[11px]', dvwaStatusClass].join(' ')}>
+                      <span className="text-[#4B5260]">DVWA Target :8081</span>
+                      <span className={['font-mono text-xs font-semibold', dvwaStatusClass].join(' ')}>
                         {dvwaStatusLabel}
                       </span>
                     </div>
                   </div>
-                  <div className="pt-1.5 border-t border-white/[0.08] text-[10px] font-mono text-zinc-400 truncate" title={`${API_BASE} · ${dvwaBaseUrl}`}>
+                  <div
+                    className="pt-2 border-t border-[#111317]/15 text-xs font-mono text-[#4B5260] truncate"
+                    title={`${API_BASE} · ${dvwaBaseUrl}`}
+                  >
                     {API_BASE}
                   </div>
                 </div>
@@ -407,8 +513,8 @@ export default function CommandDeckShell({
               title={`${user?.username || 'Operator'} — Open Profile`}
               aria-label="Open operator profile"
               className={[
-                'h-9 w-9 rounded-xl border flex items-center justify-center text-xs font-mono font-semibold transition-colors shrink-0',
-                'focus-visible:outline-none focus-visible:ring-1',
+                'h-9 w-9 rounded-md border flex items-center justify-center text-xs font-mono font-bold transition-colors shrink-0 active:scale-[0.98]',
+                'focus-visible:outline-none focus-visible:ring-2',
                 theme.focusRingClass,
                 theme.avatarClass,
               ].join(' ')}
@@ -421,25 +527,26 @@ export default function CommandDeckShell({
                 type="button"
                 onClick={onSignOut}
                 aria-label="Sign out"
+                title="Sign out"
                 className={[
-                  'min-w-[44px] min-h-[44px] sm:min-w-0 sm:min-h-0 sm:h-9 sm:px-3 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] flex items-center justify-center gap-1.5 text-xs font-medium text-zinc-300 hover:text-zinc-100 transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-1',
+                  'h-9 px-2.5 rounded-md bg-[#F3EFE6] hover:bg-[#EAE4D7] border border-[#111317]/20 flex items-center justify-center gap-1.5 text-[13px] font-semibold text-[#111317] transition-colors shrink-0 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2',
                   theme.focusRingClass,
                 ].join(' ')}
               >
-                <SignOut className="w-4 h-4 sm:w-3.5 sm:h-3.5" weight="regular" />
-                <span className="hidden md:inline">Sign Out</span>
+                <SignOut className="w-4 h-4 text-[#4B5260]" weight="regular" />
+                <span className="hidden md:inline lg:hidden 2xl:inline">Sign Out</span>
               </button>
             )}
           </div>
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="flex-1 w-full mx-auto max-w-[1440px] px-4 sm:px-6 pt-5 pb-28">
+      {/* Main Content Chassis — Single-frame bounded on desktop lg+, natural scroll on <lg */}
+      <main className="flex-1 lg:min-h-0 lg:overflow-hidden flex flex-col w-full mx-auto max-w-[1440px] px-4 sm:px-6 py-4">
         {onSearchChange && (
-          <div className="sm:hidden mb-4 relative flex items-center">
+          <div className="lg:hidden mb-3 relative flex items-center shrink-0">
             <MagnifyingGlass
-              className="w-3.5 h-3.5 text-zinc-400 absolute left-3 pointer-events-none"
+              className="w-4 h-4 text-[#4B5260] absolute left-3 pointer-events-none"
               weight="regular"
             />
             <input
@@ -449,7 +556,7 @@ export default function CommandDeckShell({
               placeholder={searchPlaceholder}
               aria-label={searchPlaceholder}
               className={[
-                'w-full h-10 pl-8 pr-8 rounded-xl bg-[#0E1016]/90 border border-white/[0.08] text-sm text-zinc-100 placeholder:text-zinc-400 focus:outline-none',
+                'w-full h-10 pl-9 pr-9 rounded-md bg-[#FAF8F3] border border-[#111317]/20 text-[15px] text-[#111317] placeholder:text-[#4B5260] focus:outline-none',
                 theme.inputFocusClass,
               ].join(' ')}
             />
@@ -458,23 +565,23 @@ export default function CommandDeckShell({
                 type="button"
                 onClick={() => onSearchChange('')}
                 aria-label="Clear filter"
-                className="absolute right-2.5 p-1 rounded text-zinc-400 hover:text-zinc-100"
+                className="absolute right-2.5 p-1 rounded text-[#4B5260] hover:text-[#111317]"
               >
-                <X className="w-3.5 h-3.5" weight="bold" />
+                <X className="w-4 h-4" weight="bold" />
               </button>
             )}
           </div>
         )}
-        {children}
+        <div className="flex-1 lg:min-h-0 flex flex-col">{children}</div>
       </main>
 
-      {/* Bottom Floating Tactical Dock */}
+      {/* Mobile Bottom Navigation Bar (<lg only) */}
       <nav
-        aria-label="Command deck navigation"
-        className="fixed bottom-3 sm:bottom-4 left-1/2 -translate-x-1/2 z-40 max-w-[calc(100vw-1rem)]"
+        aria-label="Mobile console navigation"
+        className="lg:hidden sticky bottom-0 z-30 bg-[#FAF8F3] border-t border-[#111317]/15 px-2 py-1.5"
       >
-        <div className="bg-[#0E1016]/90 backdrop-blur-xl border border-white/[0.1] rounded-2xl p-1 sm:p-1.5 shadow-2xl flex items-center gap-0.5 sm:gap-1 overflow-x-auto">
-          {navItems.map((item, idx) => {
+        <div className="flex items-center justify-start sm:justify-center gap-1 overflow-x-auto cf-no-scrollbar">
+          {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = item.id === activeTab;
             return (
@@ -484,12 +591,12 @@ export default function CommandDeckShell({
                 onClick={() => onTabChange?.(item.id)}
                 aria-current={isActive ? 'page' : undefined}
                 className={[
-                  'group relative flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-2 rounded-xl text-[11px] sm:text-xs font-medium whitespace-nowrap transition-all duration-150 hover:-translate-y-0.5 shrink-0',
-                  'focus-visible:outline-none focus-visible:ring-1',
+                  'flex items-center gap-1.5 px-3 py-2 rounded-md border text-[13px] font-semibold whitespace-nowrap transition-colors shrink-0',
+                  'focus-visible:outline-none focus-visible:ring-2',
                   theme.focusRingClass,
                   isActive
-                    ? theme.dockActiveClass
-                    : 'text-zinc-400 border border-transparent hover:text-zinc-100 hover:bg-white/[0.05]',
+                    ? theme.mobileActiveClass
+                    : 'border-transparent text-[#4B5260] hover:text-[#111317] hover:bg-[#EAE4D7]',
                 ].join(' ')}
               >
                 {Icon && (
@@ -500,20 +607,8 @@ export default function CommandDeckShell({
                 )}
                 <span>{item.label}</span>
                 {item.badge !== undefined && item.badge !== null && (
-                  <span
-                    className={[
-                      'hidden sm:inline-flex px-1.5 py-0.5 rounded-md text-[10px] font-mono tabular-nums border',
-                      isActive
-                        ? theme.dockBadgeClass
-                        : 'bg-white/[0.04] border-white/[0.08] text-zinc-400',
-                    ].join(' ')}
-                  >
+                  <span className="px-1.5 py-0.5 rounded bg-[#EAE4D7] border border-[#111317]/15 text-xs font-mono tabular-nums text-[#111317] leading-none">
                     {item.badge}
-                  </span>
-                )}
-                {idx < 9 && (
-                  <span className="hidden xl:inline text-[10px] font-mono tabular-nums text-zinc-500">
-                    {idx + 1}
                   </span>
                 )}
               </button>

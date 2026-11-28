@@ -1,21 +1,23 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ArrowRight,
   ArrowsClockwise,
   ArrowSquareOut,
   CheckCircle,
   ClockCounterClockwise,
+  Code,
+  Compass,
   Cube,
   Gear,
-  GitDiff,
-  Lock,
+  Globe,
+  Lightning,
   LockKey,
   ShieldCheck,
   ShieldWarning,
   SlidersHorizontal,
   Trophy,
   User,
-  XCircle,
+  Warning,
 } from '@phosphor-icons/react';
 import { apiFetch } from '../../utils/api';
 import {
@@ -23,18 +25,27 @@ import {
   Badge,
   Button,
   EmptyState,
+  Input,
   Select,
   SkeletonRows,
 } from '../ui/primitives';
 import {
   CopyChip,
+  PacketBeam,
+  PaginationBar,
   SlideOverInspector,
-  SpotlightSurface,
   TactileToast,
+  VerdictStamp,
 } from '../ui/spells';
 import CommandDeckShell from './CommandDeckShell';
 import { ProfileView, SettingsView } from './AccountViews';
-import { LiveSinkVisualizer, MissionRibbon, SinkCodeViewer } from './LabVisualizer';
+import {
+  HttpWireInspector,
+  LiveSinkVisualizer,
+  MissionRibbon,
+  SinkCodeViewer,
+} from './LabVisualizer';
+import LearningPathMap from './LearningPathMap';
 
 const SECURITY_LEVELS = [
   {
@@ -52,7 +63,7 @@ const SECURITY_LEVELS = [
   {
     value: 'high',
     label: 'High',
-    badge: 'teal',
+    badge: 'cobalt',
     description: 'Strict server-side validation, tighter type checks, and anti-CSRF controls.',
   },
   {
@@ -61,6 +72,13 @@ const SECURITY_LEVELS = [
     badge: 'green',
     description: 'Parameterized queries, explicit allowlists, and defense-in-depth hardening.',
   },
+];
+
+const SOURCE_TIERS = [
+  { id: 'low', label: 'Low' },
+  { id: 'medium', label: 'Med' },
+  { id: 'high', label: 'High' },
+  { id: 'impossible', label: 'Impossible' },
 ];
 
 const DIFFICULTY_VARIANT = {
@@ -72,7 +90,7 @@ const DIFFICULTY_VARIANT = {
 const LEVEL_BADGE_VARIANT = {
   low: 'red',
   medium: 'amber',
-  high: 'teal',
+  high: 'cobalt',
   impossible: 'green',
 };
 
@@ -88,6 +106,15 @@ const DEFENSE_VERIFIED_FILTERS = [
   { id: 'verified', label: 'Verified' },
   { id: 'unverified', label: 'Unverified' },
 ];
+
+const ALERT_TYPE_FILTERS = [
+  { id: 'all', label: 'All' },
+  { id: 'EXPLOIT', label: 'Exploits' },
+  { id: 'DEFENSE', label: 'Defenses' },
+  { id: 'RECON', label: 'Recon' },
+];
+
+const PAGE_SIZE = 8;
 
 const REMEDIATION_PLAYBOOKS = [
   {
@@ -175,6 +202,13 @@ function getLevelBadgeVariant(level) {
   return LEVEL_BADGE_VARIANT[(level || '').trim().toLowerCase()] || 'neutral';
 }
 
+function getAlertBadgeVariant(alertType) {
+  const upper = String(alertType || '').toUpperCase();
+  if (upper.includes('EXPLOIT') || upper.includes('RECON')) return 'red';
+  if (upper.includes('DEFENSE') || upper.includes('VERIFIED')) return 'green';
+  return 'amber';
+}
+
 function formatDvwaUrl(pageRef) {
   const cleanRef = String(pageRef || '').replace(/^\/+/, '');
   return `http://localhost:8081/${cleanRef}`;
@@ -202,47 +236,49 @@ function initialLevelForChallenge(challengeId, defenseList) {
   return latest?.security_level_applied || 'low';
 }
 
-export default function DefenderConsole({ user, onSignOut, onOpenOverview }) {
+export default function DefenderConsole({
+  user,
+  onSignOut,
+  onOpenOverview,
+  initialChallengeId = null,
+  onConsumeInitialChallenge,
+}) {
   const defenderId = user?.id;
 
-  const [activeTab, setActiveTab] = useState('challenges');
+  const [activeTab, setActiveTab] = useState('paths');
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [levelFilter, setLevelFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [defenseVerifiedFilter, setDefenseVerifiedFilter] = useState('all');
   const [defenseLevelFilter, setDefenseLevelFilter] = useState('all');
+  const [alertTypeFilter, setAlertTypeFilter] = useState('all');
+  const [defensesPage, setDefensesPage] = useState(1);
+  const [alertsPage, setAlertsPage] = useState(1);
 
+  const [tracks, setTracks] = useState([]);
   const [challenges, setChallenges] = useState([]);
   const [defenses, setDefenses] = useState([]);
+  const [alerts, setAlerts] = useState([]);
   const [loading, setLoading] = useState(() => Boolean(defenderId));
   const [refreshing, setRefreshing] = useState(false);
   const [loadError, setLoadError] = useState('');
 
   const [selectedChallengeId, setSelectedChallengeId] = useState(null);
-  const [workbenchTab, setWorkbenchTab] = useState('diagnose');
-  const [leftCodeTab, setLeftCodeTab] = useState('low');
+  const [leftSubTab, setLeftSubTab] = useState('remediate');
+  const [rightSubTab, setRightSubTab] = useState('source');
+  const [sourceTier, setSourceTier] = useState('low');
+  const [diagnosedLine, setDiagnosedLine] = useState(null);
   const [catalogOpen, setCatalogOpen] = useState(false);
   const [sourceState, setSourceState] = useState({ challengeId: null, data: null });
   const [selectedPatchOptionId, setSelectedPatchOptionId] = useState(null);
   const [selectedLevel, setSelectedLevel] = useState('low');
-  const [showCodeDiff, setShowCodeDiff] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const [lastResult, setLastResult] = useState(null);
   const [inspectedDefense, setInspectedDefense] = useState(null);
+  const [inspectedAlert, setInspectedAlert] = useState(null);
   const [toasts, setToasts] = useState([]);
-
-  const workbenchRef = useRef(null);
-  const [focusWorkbenchNonce, setFocusWorkbenchNonce] = useState(0);
-
-  useEffect(() => {
-    if (!focusWorkbenchNonce) return undefined;
-    const timer = window.setTimeout(() => {
-      workbenchRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }, 60);
-    return () => window.clearTimeout(timer);
-  }, [focusWorkbenchNonce]);
 
   useEffect(() => {
     if (!selectedChallengeId) return undefined;
@@ -289,13 +325,17 @@ export default function DefenderConsole({ user, onSignOut, onOpenOverview }) {
 
     async function fetchInitial() {
       try {
-        const [challengeList, defenseList] = await Promise.all([
+        const [challengeList, defenseList, trackList, alertList] = await Promise.all([
           apiFetch('/api/challenges'),
           apiFetch(`/api/defenses?defender_id=${encodeURIComponent(defenderId)}`),
+          apiFetch('/api/tracks').catch(() => []),
+          apiFetch('/api/alerts?limit=100').catch(() => []),
         ]);
         if (!cancelled) {
           const nextChallenges = Array.isArray(challengeList) ? challengeList : [];
           const nextDefenses = Array.isArray(defenseList) ? defenseList : [];
+          setTracks(Array.isArray(trackList) ? trackList : []);
+          setAlerts(Array.isArray(alertList) ? alertList : []);
           setChallenges(nextChallenges);
           setDefenses(nextDefenses);
           const initialTarget = findInitialTarget(nextChallenges, nextDefenses);
@@ -328,12 +368,16 @@ export default function DefenderConsole({ user, onSignOut, onOpenOverview }) {
       setRefreshing(true);
       setLoadError('');
       try {
-        const [challengeList, defenseList] = await Promise.all([
+        const [challengeList, defenseList, trackList, alertList] = await Promise.all([
           apiFetch('/api/challenges'),
           apiFetch(`/api/defenses?defender_id=${encodeURIComponent(defenderId)}`),
+          apiFetch('/api/tracks').catch(() => []),
+          apiFetch('/api/alerts?limit=100').catch(() => []),
         ]);
         const nextChallenges = Array.isArray(challengeList) ? challengeList : [];
         const nextDefenses = Array.isArray(defenseList) ? defenseList : [];
+        setTracks(Array.isArray(trackList) ? trackList : []);
+        setAlerts(Array.isArray(alertList) ? alertList : []);
         setChallenges(nextChallenges);
         setDefenses(nextDefenses);
         setSelectedChallengeId((prev) => {
@@ -341,7 +385,7 @@ export default function DefenderConsole({ user, onSignOut, onOpenOverview }) {
           return findInitialTarget(nextChallenges, nextDefenses)?.challenge_id ?? null;
         });
         if (!silent) {
-          pushToast('info', 'Posture synced', 'Loaded latest DVWA targets and defense ledger.');
+          pushToast('info', 'Posture synced', 'Loaded latest DVWA targets, defenses, and SOC alerts.');
         }
       } catch (err) {
         setLoadError(err.message || 'Unable to load assigned challenges and defenses.');
@@ -372,6 +416,44 @@ export default function DefenderConsole({ user, onSignOut, onOpenOverview }) {
     }
     return map;
   }, [defenses]);
+
+  const selectChallenge = useCallback(
+    (challenge) => {
+      if (!challenge) return;
+      const summary = defenseSummaryByChallenge.get(challenge.challenge_id);
+      const current = summary?.latest?.security_level_applied;
+      setActiveTab('remediate');
+      setLeftSubTab('remediate');
+      setRightSubTab('source');
+      setSourceTier('low');
+      setDiagnosedLine(null);
+      setSelectedChallengeId(challenge.challenge_id);
+      setSelectedLevel(current || 'low');
+      setSelectedPatchOptionId(null);
+      setSubmitError('');
+      setLastResult(null);
+    },
+    [defenseSummaryByChallenge]
+  );
+
+  useEffect(() => {
+    if (loading || initialChallengeId === null || initialChallengeId === undefined) return undefined;
+    if (challenges.length === 0) return undefined;
+    let cancelled = false;
+    Promise.resolve().then(() => {
+      if (cancelled) return;
+      const matched = challenges.find(
+        (ch) => String(ch.challenge_id) === String(initialChallengeId)
+      );
+      if (matched) {
+        selectChallenge(matched);
+      }
+      onConsumeInitialChallenge?.();
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [loading, initialChallengeId, challenges, selectChallenge, onConsumeInitialChallenge]);
 
   const stats = useMemo(() => {
     let verifiedCount = 0;
@@ -405,24 +487,13 @@ export default function DefenderConsole({ user, onSignOut, onOpenOverview }) {
     };
   }, [challenges, defenses, defenseSummaryByChallenge]);
 
-  const categoryBreakdown = useMemo(() => {
-    const counts = new Map();
+  const categories = useMemo(() => {
+    const set = new Set();
     for (const ch of challenges) {
-      const cat = (ch.vulnerability_type || 'Uncategorized').trim();
-      const entry = counts.get(cat) || { category: cat, total: 0, verified: 0 };
-      entry.total += 1;
-      if (defenseSummaryByChallenge.get(ch.challenge_id)?.verified) {
-        entry.verified += 1;
-      }
-      counts.set(cat, entry);
+      set.add((ch.vulnerability_type || 'Uncategorized').trim());
     }
-    return Array.from(counts.values()).sort((a, b) => a.category.localeCompare(b.category));
-  }, [challenges, defenseSummaryByChallenge]);
-
-  const categories = useMemo(
-    () => categoryBreakdown.map((item) => item.category),
-    [categoryBreakdown]
-  );
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [challenges]);
 
   const filteredChallenges = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -471,34 +542,41 @@ export default function DefenderConsole({ user, onSignOut, onOpenOverview }) {
     });
   }, [defenses, defenseVerifiedFilter, defenseLevelFilter, searchQuery]);
 
+  const filteredAlerts = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    return alerts.filter((al) => {
+      const typeUpper = String(al.alert_type || '').toUpperCase();
+      if (alertTypeFilter !== 'all' && !typeUpper.includes(alertTypeFilter)) {
+        return false;
+      }
+      if (!q) return true;
+      const targetCh = challenges.find((ch) => ch.challenge_id === al.challenge_id);
+      return (
+        (al.alert_type || '').toLowerCase().includes(q) ||
+        (al.message || '').toLowerCase().includes(q) ||
+        (targetCh?.title || '').toLowerCase().includes(q) ||
+        String(al.alert_id).includes(q)
+      );
+    });
+  }, [alerts, alertTypeFilter, searchQuery, challenges]);
+
+  const totalDefensePages = Math.max(1, Math.ceil(filteredDefenses.length / PAGE_SIZE));
+  const safeDefensePage = Math.min(Math.max(1, defensesPage), totalDefensePages);
+  const pagedDefenses = useMemo(() => {
+    const start = (safeDefensePage - 1) * PAGE_SIZE;
+    return filteredDefenses.slice(start, start + PAGE_SIZE);
+  }, [filteredDefenses, safeDefensePage]);
+
+  const totalAlertPages = Math.max(1, Math.ceil(filteredAlerts.length / PAGE_SIZE));
+  const safeAlertPage = Math.min(Math.max(1, alertsPage), totalAlertPages);
+  const pagedAlerts = useMemo(() => {
+    const start = (safeAlertPage - 1) * PAGE_SIZE;
+    return filteredAlerts.slice(start, start + PAGE_SIZE);
+  }, [filteredAlerts, safeAlertPage]);
+
   const selectedChallenge = useMemo(
     () => challenges.find((ch) => ch.challenge_id === selectedChallengeId) || null,
     [challenges, selectedChallengeId]
-  );
-
-  const selectedChallengeDefenses = useMemo(() => {
-    if (!selectedChallenge) return [];
-    return defenses.filter((item) => item.challenge_id === selectedChallenge.challenge_id);
-  }, [defenses, selectedChallenge]);
-
-  const selectChallenge = useCallback(
-    (challenge, { scrollToWorkbench = false } = {}) => {
-      if (!challenge) return;
-      const summary = defenseSummaryByChallenge.get(challenge.challenge_id);
-      const current = summary?.latest?.security_level_applied;
-      setActiveTab('challenges');
-      setWorkbenchTab('diagnose');
-      setLeftCodeTab('low');
-      setSelectedChallengeId(challenge.challenge_id);
-      setSelectedLevel(current || 'low');
-      setSelectedPatchOptionId(null);
-      setSubmitError('');
-      setLastResult(null);
-      if (scrollToWorkbench) {
-        setFocusWorkbenchNonce((n) => n + 1);
-      }
-    },
-    [defenseSummaryByChallenge]
   );
 
   const handleSelectNextPending = useCallback(() => {
@@ -506,7 +584,7 @@ export default function DefenderConsole({ user, onSignOut, onOpenOverview }) {
     const nextPending =
       challenges.find((ch) => !defenseSummaryByChallenge.get(ch.challenge_id)?.verified) ||
       challenges[0];
-    selectChallenge(nextPending, { scrollToWorkbench: true });
+    selectChallenge(nextPending);
   }, [challenges, defenseSummaryByChallenge, selectChallenge]);
 
   function resetTargetFilters() {
@@ -516,18 +594,9 @@ export default function DefenderConsole({ user, onSignOut, onOpenOverview }) {
     setSearchQuery('');
   }
 
-  async function handleSubmitDefense(event) {
-    if (event) event.preventDefault();
+  async function submitDefenseLevel(levelToApply) {
     if (!selectedChallenge || !defenderId || submitting) return;
-
-    const hasPatchQuiz =
-      Array.isArray(challengeSource?.patch_quiz?.options) &&
-      challengeSource.patch_quiz.options.length > 0;
-
-    if (hasPatchQuiz && !selectedPatchOptionId) {
-      setSubmitError('Select a secure code fix in Step 1 before running live replay.');
-      return;
-    }
+    const targetLevel = levelToApply || selectedLevel;
 
     setSubmitting(true);
     setSubmitError('');
@@ -537,24 +606,24 @@ export default function DefenderConsole({ user, onSignOut, onOpenOverview }) {
         body: {
           defender_id: defenderId,
           challenge_id: selectedChallenge.challenge_id,
-          security_level_applied: selectedLevel,
+          security_level_applied: targetLevel,
           patch_option_id: selectedPatchOptionId || null,
         },
       });
       setLastResult(response);
       setDefenses((prev) => [response, ...prev]);
-      setWorkbenchTab('replay');
+      setLeftSubTab('remediate');
       if (response.verified) {
         pushToast(
           'success',
-          `Remediation verified (+${response.score_earned} pts)`,
+          `Patch verified (+${response.score_earned} pts)`,
           `${selectedChallenge.title} hardened to ${response.security_level_applied}.`
         );
       } else {
         pushToast(
           'info',
-          `Level '${response.security_level_applied}' recorded (+${response.score_earned} pts)`,
-          'Exploit vector still succeeded on live replay. Adjust remediation and retry.'
+          `Tier '${response.security_level_applied}' active (+${response.score_earned} pts)`,
+          'Replay exploit still succeeded. Escalate to High or Impossible and verify.'
         );
       }
     } catch (err) {
@@ -565,11 +634,22 @@ export default function DefenderConsole({ user, onSignOut, onOpenOverview }) {
     }
   }
 
+  function handleSubmitDefense(event) {
+    if (event) event.preventDefault();
+    submitDefenseLevel(selectedLevel);
+  }
+
   const navItems = useMemo(
     () => [
       {
-        id: 'challenges',
-        label: 'Hardening',
+        id: 'paths',
+        label: 'Tracks',
+        icon: Compass,
+        badge: `${stats.verified}/${stats.assigned}`,
+      },
+      {
+        id: 'remediate',
+        label: 'Remediate',
         icon: ShieldCheck,
         badge: `${stats.verified}/${stats.assigned}`,
       },
@@ -579,27 +659,41 @@ export default function DefenderConsole({ user, onSignOut, onOpenOverview }) {
         icon: ClockCounterClockwise,
         badge: defenses.length,
       },
-      { id: 'profile', label: 'Profile', icon: User },
+      {
+        id: 'alerts',
+        label: 'Alerts',
+        icon: Warning,
+        badge: alerts.length,
+      },
       { id: 'settings', label: 'Settings', icon: Gear },
     ],
-    [stats.verified, stats.assigned, defenses.length]
+    [stats.verified, stats.assigned, defenses.length, alerts.length]
   );
 
   const commandGroups = useMemo(() => {
-    const viewItems = navItems.map((item, idx) => ({
-      id: `nav-${item.id}`,
-      label: item.label,
-      hint: `Switch to ${item.label}`,
-      shortcut: String(idx + 1),
-      icon: item.icon,
-      onSelect: () => setActiveTab(item.id),
-    }));
+    const viewItems = [
+      ...navItems.map((item, idx) => ({
+        id: `nav-${item.id}`,
+        label: item.label,
+        hint: `Switch to ${item.label}`,
+        shortcut: String(idx + 1),
+        icon: item.icon,
+        onSelect: () => setActiveTab(item.id),
+      })),
+      {
+        id: 'nav-profile',
+        label: 'Profile',
+        hint: 'Inspect operator identity and rotate password',
+        icon: User,
+        onSelect: () => setActiveTab('profile'),
+      },
+    ];
 
     const actionItems = [
       {
         id: 'action-next-pending',
         label: 'Harden Next Pending Target',
-        hint: 'Jump to next unverified module in the hardening queue',
+        hint: 'Jump to next unverified module in Remediate Studio',
         icon: ShieldWarning,
         onSelect: handleSelectNextPending,
       },
@@ -613,7 +707,7 @@ export default function DefenderConsole({ user, onSignOut, onOpenOverview }) {
       {
         id: 'action-refresh',
         label: 'Refresh Range Telemetry',
-        hint: 'Reload challenges and defense history from PostgreSQL',
+        hint: 'Reload challenges, defenses, and alerts from PostgreSQL',
         icon: ArrowsClockwise,
         onSelect: () => loadData(),
       },
@@ -621,8 +715,8 @@ export default function DefenderConsole({ user, onSignOut, onOpenOverview }) {
         ? [
             {
               id: 'action-overview',
-              label: 'Open 3D Overview',
-              hint: 'Launch particle perimeter overview',
+              label: 'Open 3D Range Hub',
+              hint: 'Launch visual 3D curriculum hub',
               icon: Cube,
               onSelect: onOpenOverview,
             },
@@ -637,7 +731,7 @@ export default function DefenderConsole({ user, onSignOut, onOpenOverview }) {
         label: ch.title,
         hint: `${ch.vulnerability_type} · Current: ${current || 'none'}`,
         icon: ShieldCheck,
-        onSelect: () => selectChallenge(ch, { scrollToWorkbench: true }),
+        onSelect: () => selectChallenge(ch),
       };
     });
 
@@ -682,7 +776,7 @@ export default function DefenderConsole({ user, onSignOut, onOpenOverview }) {
       value: stats.totalScore,
       detail: '150 pts per verified fix',
       icon: Trophy,
-      accent: 'teal',
+      accent: 'blue',
     },
   ];
 
@@ -695,9 +789,11 @@ export default function DefenderConsole({ user, onSignOut, onOpenOverview }) {
   const searchPlaceholder =
     activeTab === 'defenses'
       ? 'Filter defenses by challenge or security tier...'
-      : 'Search assigned targets by title, class, or tier...';
+      : activeTab === 'alerts'
+        ? 'Filter SOC alerts by message, type, or module...'
+        : 'Search assigned targets by title, class, or tier...';
 
-  function renderHardeningDeckTab() {
+  function renderRemediateStudioTab() {
     const activeSummary = selectedChallenge
       ? defenseSummaryByChallenge.get(selectedChallenge.challenge_id)
       : null;
@@ -717,34 +813,48 @@ export default function DefenderConsole({ user, onSignOut, onOpenOverview }) {
       patchOptions.find((opt) => opt.id === selectedPatchOptionId) || null;
     const activeLevelMeta =
       SECURITY_LEVELS.find((lvl) => lvl.value === selectedLevel) || SECURITY_LEVELS[0];
-    const diffUnlocked = Boolean(displayedResult) || Boolean(activeSummary?.verified);
-    const activeLeftCode =
-      diffUnlocked && leftCodeTab === 'impossible'
-        ? challengeSource?.hardened_code || ''
-        : challengeSource?.vulnerable_code || '';
-    const activeLeftTitle =
-      diffUnlocked && leftCodeTab === 'impossible'
-        ? `Hardened Reference (impossible.php${
-            challengeSource?.module_key ? ` · ${challengeSource.module_key}` : ''
-          })`
-        : `Vulnerable Source (low.php${
-            challengeSource?.module_key ? ` · ${challengeSource.module_key}` : ''
-          })`;
+    const vulnerableLines = Array.isArray(challengeSource?.vulnerable_lines)
+      ? challengeSource.vulnerable_lines
+      : [];
+    const afterLevel =
+      displayedResult?.dvwa_security_level ||
+      displayedResult?.security_level_applied ||
+      selectedLevel;
+    const beforeExploited = displayedResult?.baseline_before
+      ? Boolean(displayedResult.baseline_before.exploited)
+      : true;
+    const activePhpCode = challengeSource?.source_available
+      ? challengeSource?.sources_by_tier?.[sourceTier] ||
+        (sourceTier === 'low' ? challengeSource?.vulnerable_code : '') ||
+        (sourceTier === 'impossible' ? challengeSource?.hardened_code : '')
+      : '';
+    const socIncidents = alerts
+      .filter((al) => {
+        if (!selectedChallenge) return true;
+        return al.challenge_id === selectedChallenge.challenge_id || String(al.alert_type || '').toUpperCase().includes('EXPLOIT');
+      })
+      .slice(0, 6);
 
     return (
-      <div className="space-y-4">
+      <div className="lg:h-full lg:min-h-0 flex flex-col gap-3">
         {loadError && (
-          <AlertBanner variant="error" message={loadError} onDismiss={() => setLoadError('')} />
+          <AlertBanner
+            variant="error"
+            message={loadError}
+            onDismiss={() => setLoadError('')}
+            className="shrink-0"
+          />
         )}
 
         <MissionRibbon
           role="defender"
           challenges={challenges}
           selectedId={selectedChallengeId}
-          onSelect={(ch) => selectChallenge(ch, { scrollToWorkbench: false })}
+          onSelect={(ch) => selectChallenge(ch)}
           summaryMap={defenseSummaryByChallenge}
           stats={stats}
           onOpenCatalog={() => setCatalogOpen(true)}
+          onOpenTour={onOpenOverview}
           onNextTarget={handleSelectNextPending}
           onRefresh={() => loadData()}
           refreshing={refreshing}
@@ -753,277 +863,175 @@ export default function DefenderConsole({ user, onSignOut, onOpenOverview }) {
               href="http://localhost:8081/security.php"
               target="_blank"
               rel="noopener noreferrer"
-              className="h-8 px-2.5 rounded-md bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-xs font-medium text-zinc-200 inline-flex items-center gap-1.5 transition-colors"
+              className="hidden sm:inline-flex h-9 px-2.5 rounded-md bg-[#FAF8F3] hover:bg-[#EAE4D7] border border-[#111317]/25 text-[13px] font-semibold text-[#111317] items-center gap-1.5 transition-colors"
             >
-              <span className="hidden sm:inline">DVWA Security</span>
-              <ArrowSquareOut className="w-3.5 h-3.5 text-[#38BDF8]" weight="regular" />
+              <span>DVWA Sec</span>
+              <ArrowSquareOut className="w-3.5 h-3.5 text-[#1D4ED8]" weight="bold" />
             </a>
           }
         />
 
-        {/* Full-Viewport 50/50 Defensive Engineering Studio */}
         {loading ? (
           <SkeletonRows rows={6} columns={4} />
         ) : !selectedChallenge ? (
           <EmptyState
             icon={ShieldCheck}
             title="Select an assigned target"
-            description="Choose a challenge from the mission ribbon or All Labs drawer to inspect vulnerable code, pick a fix, and run live replay."
+            description="Choose a challenge from the target ribbon or All Labs drawer to audit PHP code and verify hardening."
           />
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
-            {/* Left Pane: Target Header + Sink Code Viewer + Live Remediation Pipeline */}
-            <SpotlightSurface accent="sky" padding="p-4 sm:p-5" className="lg:col-span-6 space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 pb-3.5 border-b border-white/[0.08]">
-                <div className="space-y-1.5 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h1 className="text-lg font-semibold text-zinc-100 tracking-tight">
-                      {selectedChallenge.title}
-                    </h1>
-                    <Badge variant={getDifficultyVariant(selectedChallenge.difficulty)}>
-                      {selectedChallenge.difficulty}
-                    </Badge>
-                    {challengeSource?.owasp_category && (
-                      <Badge variant="teal">{challengeSource.owasp_category}</Badge>
-                    )}
-                    {activeSummary?.verified ? (
-                      <Badge variant="green">
-                        <CheckCircle className="w-3 h-3" weight="bold" />
-                        Verified
+          <div className="flex-1 lg:min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-4">
+            {/* Left 50%: Warm Archival Drafting Deck */}
+            <section className="lg:col-span-6 bg-[#FAF8F3] border border-[#111317]/15 rounded-lg flex flex-col lg:min-h-0 overflow-hidden">
+              {/* Target Header + 4-Tier Switcher + Set Live */}
+              <div className="px-5 py-2.5 border-b border-[#111317]/15 shrink-0 space-y-2">
+                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2.5">
+                  <div className="min-w-0 space-y-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h1 className="text-[22px] sm:text-[24px] font-bold text-[#111317] leading-tight">
+                        {selectedChallenge.title}
+                      </h1>
+                      <Badge variant={getDifficultyVariant(selectedChallenge.difficulty)}>
+                        {selectedChallenge.difficulty}
                       </Badge>
-                    ) : currentApplied ? (
-                      <Badge variant={getLevelBadgeVariant(currentApplied)}>
-                        Tier: {currentApplied}
-                      </Badge>
-                    ) : (
-                      <Badge variant="neutral">Pending</Badge>
-                    )}
+                      {activeSummary?.verified ? (
+                        <Badge variant="green">
+                          <CheckCircle className="w-3.5 h-3.5" weight="bold" />
+                          VERIFIED
+                        </Badge>
+                      ) : currentApplied ? (
+                        <Badge variant={getLevelBadgeVariant(currentApplied)}>
+                          Tier: {currentApplied}
+                        </Badge>
+                      ) : (
+                        <Badge variant="neutral">Pending</Badge>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 flex-wrap text-[13.5px] text-[#4B5260]">
+                      <span>{selectedChallenge.vulnerability_type}</span>
+                      <span aria-hidden="true">·</span>
+                      <span className="font-mono font-semibold text-[#1D4ED8]">+150 XP verified</span>
+                      {challengeSource?.owasp_category && (
+                        <>
+                          <span aria-hidden="true">·</span>
+                          <span className="font-mono text-xs text-[#111317]">
+                            {challengeSource.owasp_category}
+                          </span>
+                        </>
+                      )}
+                    </div>
                   </div>
-                  <p className="text-xs text-zinc-400">
-                    {selectedChallenge.vulnerability_type} · Verified Reward:{' '}
-                    <span className="font-mono tabular-nums text-[#38BDF8] font-semibold">
-                      150 pts
-                    </span>{' '}
-                    · {activeSummary?.count || 0} submissions
-                  </p>
+
+                  <div className="flex items-center gap-2 flex-wrap shrink-0">
+                    <CopyChip value={activeUrl} label={selectedChallenge.dvwa_page_ref} />
+                    <a
+                      href={activeUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded bg-[#EAE4D7]/80 hover:bg-[#EAE4D7] border border-[#111317]/20 text-xs font-semibold text-[#111317] transition-colors"
+                    >
+                      <span>DVWA</span>
+                      <ArrowSquareOut className="w-3.5 h-3.5 text-[#1D4ED8]" weight="bold" />
+                    </a>
+                  </div>
                 </div>
 
-                <div className="flex items-center gap-2 flex-wrap shrink-0">
-                  <CopyChip value={activeUrl} label={selectedChallenge.dvwa_page_ref} />
-                  <a
-                    href={activeUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-xs font-medium text-zinc-200 transition-colors"
-                  >
-                    <span>Open DVWA</span>
-                    <ArrowSquareOut className="w-3.5 h-3.5 text-[#38BDF8]" weight="regular" />
-                  </a>
-                </div>
-              </div>
-
-              {sourceLoading ? (
-                <SkeletonRows rows={5} columns={2} className="border-white/[0.06] bg-[#07080B]/70" />
-              ) : (
-                <SinkCodeViewer
-                  code={challengeSource?.source_available ? activeLeftCode : ''}
-                  sinkPattern={
-                    diffUnlocked && leftCodeTab === 'impossible'
-                      ? null
-                      : challengeSource?.sink_pattern
-                  }
-                  title={activeLeftTitle}
-                  maxHeightClass="max-h-72"
-                  emptyMessage="No DVWA source code mapped for this target endpoint."
-                  highlightTone="amber"
-                  headerExtra={
-                    diffUnlocked && challengeSource?.hardened_code ? (
-                      <div className="inline-flex items-center p-0.5 rounded bg-white/[0.04] border border-white/[0.08]">
-                        {[
-                          { id: 'low', label: 'low.php' },
-                          { id: 'impossible', label: 'impossible.php' },
-                        ].map((tab) => {
-                          const active = leftCodeTab === tab.id;
-                          return (
-                            <button
-                              key={tab.id}
-                              type="button"
-                              onClick={() => setLeftCodeTab(tab.id)}
-                              className={[
-                                'px-2 py-0.5 rounded text-[11px] font-mono transition-colors',
-                                active
-                                  ? 'bg-[#38BDF8]/20 text-[#38BDF8]'
-                                  : 'text-zinc-400 hover:text-zinc-200',
-                              ].join(' ')}
-                            >
-                              {tab.label}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    ) : null
-                  }
-                />
-              )}
-
-              <LiveSinkVisualizer
-                mode="defend"
-                moduleKey={challengeSource?.module_key}
-                pageRef={selectedChallenge.dvwa_page_ref}
-                vulnerabilityType={selectedChallenge.vulnerability_type}
-                referencePayload={selectedChallenge.reference_payload}
-                selectedPatchLabel={selectedPatchOption?.label || ''}
-                selectedPatchSnippet={selectedPatchOption?.code_snippet || ''}
-                securityLevel={selectedLevel}
-              />
-            </SpotlightSurface>
-
-            {/* Right Pane: Sticky 3-Tab Patch & Harden / Live Replay / Audit History */}
-            <div ref={workbenchRef} className="lg:col-span-6 lg:sticky lg:top-20">
-              <SpotlightSurface accent="sky" className="divide-y divide-white/[0.08]">
-                <div className="px-4 py-3 flex flex-wrap items-center justify-between gap-2">
+                {/* Tier Switcher: Low | Medium | High | Impossible + Set Live */}
+                <div className="flex flex-wrap items-center justify-between gap-2 pt-0.5">
                   <div
-                    role="tablist"
-                    aria-label="Defense studio tabs"
-                    className="inline-flex flex-wrap items-center gap-1 p-1 rounded-lg bg-[#07080B] border border-white/[0.08]"
+                    role="radiogroup"
+                    aria-label="Target DVWA security level"
+                    className="inline-flex flex-wrap items-center p-0.5 rounded-md bg-[#EAE4D7] border border-[#111317]/15"
                   >
-                    {[
-                      { id: 'diagnose', label: 'Patch & Harden', icon: SlidersHorizontal },
-                      { id: 'replay', label: 'Live Replay', icon: GitDiff },
-                      {
-                        id: 'history',
-                        label: 'Audit History',
-                        icon: ClockCounterClockwise,
-                        count: selectedChallengeDefenses.length,
-                      },
-                    ].map((tab) => {
-                      const TabIcon = tab.icon;
-                      const active = workbenchTab === tab.id;
+                    {SECURITY_LEVELS.map((lvl) => {
+                      const active = selectedLevel === lvl.value;
                       return (
                         <button
-                          key={tab.id}
+                          key={lvl.value}
                           type="button"
-                          role="tab"
-                          aria-selected={active}
-                          onClick={() => setWorkbenchTab(tab.id)}
+                          role="radio"
+                          aria-checked={active}
+                          onClick={() => {
+                            setSelectedLevel(lvl.value);
+                            setSourceTier(lvl.value);
+                          }}
                           className={[
-                            'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors',
-                            'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#38BDF8]',
+                            'px-2.5 py-1 rounded text-[13px] font-semibold transition-colors',
+                            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#111317]',
                             active
-                              ? 'bg-[#38BDF8]/15 text-[#38BDF8]'
-                              : 'text-zinc-400 hover:text-zinc-200',
+                              ? 'bg-[#1D4ED8] text-[#FAF8F3]'
+                              : 'text-[#1C1F26] hover:bg-[#FAF8F3]/70',
                           ].join(' ')}
                         >
-                          <TabIcon className="w-3.5 h-3.5" weight={active ? 'fill' : 'regular'} />
-                          <span>{tab.label}</span>
-                          {tab.count !== undefined && (
-                            <span className="px-1.5 py-0.5 rounded bg-white/[0.06] font-mono tabular-nums text-[10px] text-zinc-300">
-                              {tab.count}
-                            </span>
-                          )}
+                          {lvl.label}
                         </button>
                       );
                     })}
                   </div>
 
-                  <span className="text-xs font-mono tabular-nums text-zinc-400">
-                    Current: <span className="text-zinc-200">{currentApplied || 'none'}</span>
-                  </span>
+                  <Button
+                    type="button"
+                    variant="defender"
+                    size="sm"
+                    loading={submitting}
+                    onClick={() => submitDefenseLevel(selectedLevel)}
+                  >
+                    <ShieldCheck className="w-4 h-4" weight="bold" />
+                    <span>{submitting ? 'Verifying...' : 'Set Live'}</span>
+                  </Button>
                 </div>
+              </div>
 
-                {workbenchTab === 'diagnose' && (
-                  <form onSubmit={handleSubmitDefense} className="divide-y divide-white/[0.08]">
-                    {/* Step 1: Select Secure Code Fix */}
-                    <div className="p-4 sm:p-5 space-y-3">
-                      <div className="flex items-center justify-between gap-2">
-                        <h2 className="text-sm font-semibold text-zinc-100">
-                          Step 1: Select Secure Code Fix
-                        </h2>
-                        <Badge variant={hasPatchQuiz ? 'teal' : 'neutral'}>
-                          {hasPatchQuiz ? 'Required' : 'Auto-Ready'}
-                        </Badge>
-                      </div>
-
-                      {hasPatchQuiz ? (
-                        <div className="space-y-2.5">
-                          {patchQuiz.prompt && (
-                            <p className="text-xs text-zinc-300 leading-relaxed">
-                              {patchQuiz.prompt}
-                            </p>
-                          )}
-                          <div
-                            role="radiogroup"
-                            aria-label="Select secure code fix"
-                            className="space-y-2"
-                          >
-                            {patchOptions.map((opt) => {
-                              const isSelected = selectedPatchOptionId === opt.id;
-                              return (
-                                <button
-                                  key={opt.id}
-                                  type="button"
-                                  role="radio"
-                                  aria-checked={isSelected}
-                                  onClick={() => {
-                                    setSelectedPatchOptionId(opt.id);
-                                    if (submitError) setSubmitError('');
-                                  }}
-                                  className={[
-                                    'w-full text-left p-3 rounded-lg border transition-colors',
-                                    'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#38BDF8]',
-                                    isSelected
-                                      ? 'bg-[#38BDF8]/10 border-[#38BDF8] ring-1 ring-inset ring-[#38BDF8]/40'
-                                      : 'bg-[#07080B]/70 border-white/[0.06] hover:border-white/[0.16]',
-                                  ].join(' ')}
-                                >
-                                  <div className="flex items-center justify-between gap-2">
-                                    <span className="text-xs font-medium text-zinc-100">
-                                      {opt.label}
-                                    </span>
-                                    <span
-                                      className={[
-                                        'w-3.5 h-3.5 rounded-full border shrink-0',
-                                        isSelected
-                                          ? 'border-[#38BDF8] bg-[#38BDF8]'
-                                          : 'border-white/25 bg-transparent',
-                                      ].join(' ')}
-                                    />
-                                  </div>
-                                  {opt.code_snippet && (
-                                    <pre className="mt-2 p-2 rounded bg-[#050608] border border-white/[0.06] font-mono text-[11px] text-zinc-200 whitespace-pre-wrap break-all">
-                                      {opt.code_snippet}
-                                    </pre>
-                                  )}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="p-3 rounded-lg bg-[#07080B]/70 border border-white/[0.06] space-y-2">
-                          <div className="text-xs font-medium text-zinc-200">
-                            Remediation Guidance
-                          </div>
-                          <ul className="space-y-1 text-xs text-zinc-300 leading-relaxed list-disc pl-4">
-                            {guidance.map((tip) => (
-                              <li key={tip}>{tip}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Step 2: Select DVWA Security Tier */}
-                    <div className="p-4 sm:p-5 space-y-3.5">
-                      <div className="flex items-center justify-between gap-2">
-                        <h2 className="text-sm font-semibold text-zinc-100">
-                          Step 2: Select DVWA Security Tier
-                        </h2>
-                        <span className="text-xs font-mono text-zinc-400">
-                          Target: <span className="text-[#38BDF8]">{selectedLevel}</span>
+              {/* 3 Clean Sub-Tabs: Remediate | Patch Audit Quiz | SOC Incidents */}
+              <div
+                role="tablist"
+                aria-label="Defensive studio sections"
+                className="px-5 border-b border-[#111317]/15 bg-[#EAE4D7]/35 flex items-center gap-2 shrink-0"
+              >
+                {[
+                  { id: 'remediate', label: 'Remediate', icon: SlidersHorizontal },
+                  { id: 'quiz', label: 'Patch Audit Quiz', icon: ShieldCheck },
+                  {
+                    id: 'incidents',
+                    label: 'SOC Incidents',
+                    icon: Warning,
+                    badge: socIncidents.length,
+                  },
+                ].map((tab) => {
+                  const TabIcon = tab.icon;
+                  const active = leftSubTab === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      role="tab"
+                      aria-selected={active}
+                      onClick={() => setLeftSubTab(tab.id)}
+                      className={[
+                        'py-2 px-2.5 inline-flex items-center gap-1.5 text-[14px] font-semibold border-b-2 transition-colors',
+                        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#111317]',
+                        active
+                          ? 'border-[#1D4ED8] text-[#111317]'
+                          : 'border-transparent text-[#4B5260] hover:text-[#111317]',
+                      ].join(' ')}
+                    >
+                      <TabIcon className="w-4 h-4" weight={active ? 'fill' : 'regular'} />
+                      <span>{tab.label}</span>
+                      {tab.badge !== undefined && tab.badge > 0 && (
+                        <span className="px-1.5 py-0.5 rounded bg-[#EAE4D7] border border-[#111317]/15 text-xs font-mono font-semibold text-[#111317] leading-none">
+                          {tab.badge}
                         </span>
-                      </div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
 
+              {/* Sub-Tab Content */}
+              <div className="flex-1 lg:min-h-0 overflow-y-auto p-4">
+                {leftSubTab === 'remediate' && (
+                  <div className="flex flex-col gap-2.5">
+                    <form onSubmit={handleSubmitDefense} className="space-y-2.5">
                       {submitError && (
                         <AlertBanner
                           variant="error"
@@ -1032,380 +1040,475 @@ export default function DefenderConsole({ user, onSignOut, onOpenOverview }) {
                         />
                       )}
 
-                      <div
-                        role="radiogroup"
-                        aria-label="DVWA security level"
-                        className="grid grid-cols-2 sm:grid-cols-4 gap-2"
-                      >
-                        {SECURITY_LEVELS.map((lvl) => {
-                          const isSelected = selectedLevel === lvl.value;
-                          return (
-                            <button
-                              key={lvl.value}
-                              type="button"
-                              role="radio"
-                              aria-checked={isSelected}
-                              onClick={() => setSelectedLevel(lvl.value)}
-                              className={[
-                                'px-3 py-2.5 rounded-lg border text-center transition-colors flex items-center justify-center gap-2',
-                                'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#38BDF8]',
-                                isSelected
-                                  ? 'bg-[#38BDF8]/10 border-[#38BDF8] ring-1 ring-inset ring-[#38BDF8]/40 text-zinc-100'
-                                  : 'bg-[#07080B]/70 border-white/[0.06] text-zinc-300 hover:border-white/[0.16]',
-                              ].join(' ')}
-                            >
-                              <Badge variant={lvl.badge}>{lvl.label}</Badge>
-                            </button>
-                          );
-                        })}
-                      </div>
-
-                      <div className="p-3 rounded-lg bg-[#07080B]/70 border border-white/[0.06] text-xs text-zinc-300 leading-relaxed">
-                        <span className="font-semibold text-zinc-100">
-                          {activeLevelMeta.label}:
-                        </span>{' '}
-                        {activeLevelMeta.description}
-                      </div>
-
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
-                        <span className="text-xs font-mono text-zinc-400">
-                          Transition:{' '}
-                          <span className="text-zinc-200">{currentApplied || 'none'}</span> &rarr;{' '}
-                          <span className="text-[#38BDF8] font-semibold">{selectedLevel}</span>
-                        </span>
-
-                        <button
-                          type="submit"
-                          disabled={submitting}
-                          className="h-9 px-4 rounded-lg bg-[#38BDF8] hover:bg-[#0EA5E9] disabled:opacity-50 disabled:cursor-not-allowed text-[#04101B] text-xs sm:text-sm font-semibold inline-flex items-center justify-center gap-2 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#38BDF8]"
-                        >
-                          <ShieldCheck className="w-4 h-4" weight="bold" />
-                          <span>
-                            {submitting ? 'Running Replay...' : 'Apply Patch & Run Live Replay'}
+                      <div className="p-3 rounded-lg bg-[#EAE4D7]/55 border border-[#111317]/15 space-y-1.5">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[15px] font-bold text-[#111317]">
+                            Selected Security Posture: {activeLevelMeta.label}
                           </span>
-                        </button>
-                      </div>
-                    </div>
-                  </form>
-                )}
-
-                {workbenchTab === 'replay' && (() => {
-                  const debrief = challengeSource?.debrief;
-                  const beforeExploited = displayedResult?.baseline_before
-                    ? Boolean(displayedResult.baseline_before.exploited)
-                    : true;
-                  const afterLevel =
-                    displayedResult?.dvwa_security_level ||
-                    displayedResult?.security_level_applied ||
-                    selectedLevel;
-
-                  return (
-                    <div className="divide-y divide-white/[0.08]">
-                      {/* Live Before-vs-After DVWA Replay */}
-                      <div className="p-4 sm:p-5 space-y-3">
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <h2 className="text-sm font-semibold text-zinc-100">
-                            Live Before-vs-After DVWA Replay
-                          </h2>
-                          <div className="flex items-center gap-2 flex-wrap">
-                            {displayedResult && (
-                              <Badge
-                                variant={
-                                  displayedResult.verification_mode === 'dvwa_live'
-                                    ? 'teal'
-                                    : 'amber'
-                                }
-                              >
-                                {displayedResult.verification_mode === 'dvwa_live'
-                                  ? `Live DVWA · HTTP ${displayedResult.dvwa_http_status ?? 200}`
-                                  : 'Heuristic Fallback'}
-                              </Badge>
-                            )}
-                            {displayedResult ? (
-                              <Badge variant={displayedResult.verified ? 'green' : 'red'}>
-                                {displayedResult.verified ? (
-                                  <CheckCircle className="w-3 h-3" weight="bold" />
-                                ) : (
-                                  <ShieldWarning className="w-3 h-3" weight="bold" />
-                                )}
-                                {displayedResult.verified
-                                  ? 'Remediation Verified'
-                                  : 'Exploit Not Blocked'}
-                              </Badge>
-                            ) : (
-                              <Badge variant="neutral">Awaiting Replay</Badge>
-                            )}
-                          </div>
+                          <Badge variant={activeLevelMeta.badge}>{activeLevelMeta.label}</Badge>
                         </div>
-
-                        {displayedResult ? (
-                          <div className="space-y-3">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                              <div className="p-3 rounded-lg bg-[#07080B]/70 border border-white/[0.06] space-y-2">
-                                <div className="flex items-center justify-between gap-2">
-                                  <span className="text-xs font-mono font-semibold text-zinc-200">
-                                    BEFORE · DVWA low
-                                  </span>
-                                  <div className="flex items-center gap-1.5">
-                                    {displayedResult.baseline_before?.http_status !== undefined &&
-                                      displayedResult.baseline_before?.http_status !== null && (
-                                        <span className="text-[11px] font-mono text-zinc-400">
-                                          HTTP {displayedResult.baseline_before.http_status}
-                                        </span>
-                                      )}
-                                    <Badge variant={beforeExploited ? 'red' : 'green'}>
-                                      {beforeExploited ? 'BREACHED' : 'NEUTRALIZED'}
-                                    </Badge>
-                                  </div>
-                                </div>
-                                <pre className="p-2.5 rounded bg-[#050608] border border-white/[0.06] font-mono text-xs text-zinc-300 whitespace-pre-wrap break-words max-h-32 overflow-y-auto">
-                                  {displayedResult.baseline_before?.evidence
-                                    ? String(displayedResult.baseline_before.evidence)
-                                    : `Baseline vector succeeded: ${selectedChallenge.reference_payload}`}
-                                </pre>
-                              </div>
-
-                              <div className="p-3 rounded-lg bg-[#07080B]/70 border border-white/[0.06] space-y-2">
-                                <div className="flex items-center justify-between gap-2">
-                                  <span className="text-xs font-mono font-semibold text-zinc-200">
-                                    AFTER · DVWA {afterLevel}
-                                  </span>
-                                  <div className="flex items-center gap-1.5">
-                                    {displayedResult.dvwa_http_status !== undefined &&
-                                      displayedResult.dvwa_http_status !== null && (
-                                        <span className="text-[11px] font-mono text-zinc-400">
-                                          HTTP {displayedResult.dvwa_http_status}
-                                        </span>
-                                      )}
-                                    <Badge variant={displayedResult.verified ? 'green' : 'red'}>
-                                      {displayedResult.verified
-                                        ? 'NEUTRALIZED'
-                                        : 'STILL VULNERABLE'}
-                                    </Badge>
-                                  </div>
-                                </div>
-                                <pre className="p-2.5 rounded bg-[#050608] border border-white/[0.06] font-mono text-xs text-zinc-200 whitespace-pre-wrap break-words max-h-32 overflow-y-auto">
-                                  {displayedResult.evidence
-                                    ? String(displayedResult.evidence)
-                                    : displayedResult.verified
-                                      ? `Reference attack vector neutralized under '${afterLevel}' security (+${displayedResult.score_earned} pts).`
-                                      : `Reference attack vector still succeeds under '${afterLevel}' security (+${displayedResult.score_earned} pts).`}
-                                </pre>
-                              </div>
-                            </div>
-
-                            {(displayedResult.patch_correct !== null &&
-                              displayedResult.patch_correct !== undefined) ||
-                            displayedResult.patch_feedback ? (
-                              <div className="p-3 rounded-lg bg-[#07080B]/70 border border-white/[0.06] space-y-1.5">
-                                <div className="flex items-center justify-between gap-2 flex-wrap">
-                                  <span className="text-xs font-semibold text-zinc-200">
-                                    Patch Diagnosis Verdict
-                                  </span>
-                                  {displayedResult.patch_correct !== null &&
-                                    displayedResult.patch_correct !== undefined && (
-                                      <Badge
-                                        variant={displayedResult.patch_correct ? 'green' : 'amber'}
-                                      >
-                                        {displayedResult.patch_correct ? (
-                                          <CheckCircle className="w-3 h-3" weight="bold" />
-                                        ) : (
-                                          <XCircle className="w-3 h-3" weight="bold" />
-                                        )}
-                                        {displayedResult.patch_correct
-                                          ? 'Accurate Remediation'
-                                          : 'Suboptimal Fix Choice'}
-                                      </Badge>
-                                    )}
-                                </div>
-                                {displayedResult.patch_feedback && (
-                                  <p className="text-xs text-zinc-300 leading-relaxed">
-                                    {displayedResult.patch_feedback}
-                                  </p>
-                                )}
-                              </div>
-                            ) : null}
-                          </div>
-                        ) : (
-                          <div className="p-5 rounded-lg bg-[#07080B]/70 border border-white/[0.06] text-center space-y-3">
-                            <p className="text-xs text-zinc-300">
-                              Select a secure fix and DVWA tier in Patch &amp; Harden to execute a
-                              live before-vs-after exploit replay.
-                            </p>
-                            <Button
-                              variant="secondary"
-                              size="sm"
-                              onClick={() => setWorkbenchTab('diagnose')}
+                        <p className="text-[14px] text-[#1C1F26] leading-relaxed">
+                          {activeLevelMeta.description}
+                        </p>
+                        <div className="pt-1 flex flex-wrap items-center justify-between gap-2 text-xs font-mono text-[#4B5260]">
+                          <span>
+                            Transition: <strong className="text-[#111317]">{currentApplied || 'none'}</strong>{' '}
+                            &rarr; <strong className="text-[#1D4ED8]">{selectedLevel}</strong>
+                          </span>
+                          {hasPatchQuiz && (
+                            <button
+                              type="button"
+                              onClick={() => setLeftSubTab('quiz')}
+                              className="font-sans text-[13px] font-semibold text-[#1D4ED8] hover:underline"
                             >
-                              Go to Patch &amp; Harden
-                            </Button>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Side-by-Side low.php vs impossible.php Code Diff */}
-                      <div className="p-4 sm:p-5 space-y-3">
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <div className="flex items-center gap-2">
-                            <GitDiff className="w-4 h-4 text-[#38BDF8]" weight="regular" />
-                            <h3 className="text-sm font-semibold text-zinc-100">
-                              low.php vs impossible.php Code Diff
-                            </h3>
-                          </div>
-                          {diffUnlocked && (
-                            <Button
-                              variant="secondary"
-                              size="sm"
-                              onClick={() => setShowCodeDiff((prev) => !prev)}
-                            >
-                              {showCodeDiff ? 'Hide Diff' : 'Show Diff'}
-                            </Button>
+                              {selectedPatchOption
+                                ? `Fix chosen: ${selectedPatchOption.label}`
+                                : 'Pick code fix in Patch Audit Quiz ->'}
+                            </button>
                           )}
                         </div>
-
-                        {!diffUnlocked ? (
-                          <div className="p-4 rounded-lg bg-[#07080B]/70 border border-white/[0.06] flex items-center gap-3 text-xs text-zinc-300">
-                            <Lock className="w-4 h-4 text-zinc-400 shrink-0" weight="regular" />
-                            <span>
-                              Submit a defense replay to unlock the hardened impossible.php
-                              comparison.
-                            </span>
-                          </div>
-                        ) : !showCodeDiff ? null : !challengeSource?.source_available ||
-                          (!challengeSource?.vulnerable_code && !challengeSource?.hardened_code) ? (
-                          <div className="p-4 rounded-lg bg-[#07080B]/70 border border-white/[0.06] text-xs text-zinc-400">
-                            Source diff is not mapped for this custom target endpoint.
-                          </div>
-                        ) : (
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            <SinkCodeViewer
-                              code={challengeSource.vulnerable_code || ''}
-                              sinkPattern={challengeSource.sink_pattern}
-                              title="low.php (vulnerable)"
-                              maxHeightClass="max-h-60"
-                              emptyMessage="Not available"
-                              highlightTone="rose"
-                            />
-                            <SinkCodeViewer
-                              code={challengeSource.hardened_code || ''}
-                              sinkPattern={null}
-                              title="impossible.php (hardened)"
-                              maxHeightClass="max-h-60"
-                              emptyMessage="Not available"
-                              highlightTone="amber"
-                            />
-                          </div>
-                        )}
                       </div>
 
-                      {/* OWASP Debrief & Next Mission CTA */}
-                      <div className="p-4 sm:p-5 space-y-3">
-                        <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center justify-between gap-3">
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => setLeftSubTab('quiz')}
+                        >
+                          <ShieldCheck className="w-4 h-4 text-[#1D4ED8]" weight="regular" />
+                          <span>{hasPatchQuiz ? 'Patch Audit Quiz' : 'Guidance'}</span>
+                        </Button>
+
+                        <Button
+                          type="submit"
+                          variant="defender"
+                          size="md"
+                          loading={submitting}
+                        >
+                          <ShieldCheck className="w-4 h-4" weight="bold" />
+                          <span>{submitting ? 'Replaying Exploit...' : 'Apply & Verify Replay'}</span>
+                        </Button>
+                      </div>
+                    </form>
+
+                    <PacketBeam
+                      active={submitting}
+                      accent="cobalt"
+                      fromLabel={`Replay (${selectedLevel})`}
+                      toLabel={selectedChallenge.dvwa_page_ref || 'DVWA :8081'}
+                      statusText={
+                        submitting
+                          ? 'REPLAYING...'
+                          : displayedResult
+                            ? `HTTP ${displayedResult.dvwa_http_status ?? 200} · ${afterLevel.toUpperCase()}`
+                            : 'READY'
+                      }
+                    />
+
+                    {displayedResult ? (
+                      <div className="p-3 rounded-lg bg-[#EAE4D7]/55 border border-[#111317]/15 space-y-2.5">
+                        <div className="flex flex-wrap items-center justify-between gap-2.5">
+                          <VerdictStamp
+                            status={displayedResult.verified ? 'patched' : 'blocked'}
+                            label={displayedResult.verified ? 'PATCH VERIFIED' : 'STILL VULNERABLE'}
+                            sublabel={`+${displayedResult.score_earned} PTS · ${afterLevel.toUpperCase()}`}
+                          />
+
                           <div className="flex items-center gap-2 flex-wrap">
-                            <h3 className="text-sm font-semibold text-zinc-100">
-                              OWASP Remediation Debrief
-                            </h3>
-                            {challengeSource?.owasp_category && (
-                              <Badge variant="teal">{challengeSource.owasp_category}</Badge>
-                            )}
-                          </div>
-                          <button
-                            type="button"
-                            onClick={handleSelectNextPending}
-                            className="h-8 px-3 rounded-lg bg-[#38BDF8] hover:bg-[#0EA5E9] text-[#04101B] text-xs font-semibold inline-flex items-center gap-1.5 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#38BDF8]"
-                          >
-                            <span>Next Mission</span>
-                            <ArrowRight className="w-3.5 h-3.5" weight="bold" />
-                          </button>
-                        </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
-                          <div className="p-2.5 rounded bg-[#07080B]/70 border border-white/[0.06] space-y-1">
-                            <div className="font-semibold text-zinc-200">Root Cause</div>
-                            <p className="text-zinc-300 leading-relaxed">
-                              {debrief?.root_cause ||
-                                `Unvalidated input reaches a ${selectedChallenge.vulnerability_type} execution sink.`}
-                            </p>
-                          </div>
-                          <div className="p-2.5 rounded bg-[#07080B]/70 border border-white/[0.06] space-y-1">
-                            <div className="font-semibold text-zinc-200">Impact</div>
-                            <p className="text-zinc-300 leading-relaxed">
-                              {debrief?.impact ||
-                                `Exploitation of ${selectedChallenge.title} threatens data confidentiality and application integrity.`}
-                            </p>
-                          </div>
-                          <div className="p-2.5 rounded bg-[#07080B]/70 border border-white/[0.06] space-y-1">
-                            <div className="font-semibold text-zinc-200">Prevention</div>
-                            <p className="text-zinc-300 leading-relaxed">
-                              {debrief?.prevention || guidance.join(' ')}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })()}
-
-                {workbenchTab === 'history' && (
-                  <div className="p-4 sm:p-5 space-y-3">
-                    <div className="flex items-center justify-between gap-2">
-                      <h2 className="text-sm font-semibold text-zinc-100">
-                        Audit History
-                      </h2>
-                      <span className="text-xs font-mono tabular-nums text-zinc-400">
-                        {selectedChallengeDefenses.length} total
-                      </span>
-                    </div>
-
-                    {selectedChallengeDefenses.length === 0 ? (
-                      <div className="p-6 rounded-lg bg-[#07080B]/70 border border-white/[0.06] text-center">
-                        <p className="text-xs text-zinc-400">
-                          No hardening submissions recorded for this module yet.
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="divide-y divide-white/[0.06] rounded-lg bg-[#07080B]/70 border border-white/[0.06] max-h-[520px] overflow-y-auto">
-                        {selectedChallengeDefenses.map((item) => (
-                          <div
-                            key={item.defense_id}
-                            className="px-3.5 py-3 flex items-center justify-between gap-3 text-xs"
-                          >
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className="font-mono tabular-nums text-zinc-400">
-                                #{item.defense_id}
-                              </span>
-                              <Badge variant={getLevelBadgeVariant(item.security_level_applied)}>
-                                {item.security_level_applied}
-                              </Badge>
-                              <Badge variant={item.verified ? 'green' : 'amber'}>
-                                {item.verified ? 'Verified' : 'Unverified'}
-                              </Badge>
-                              {item.verification_mode && (
-                                <Badge
-                                  variant={
-                                    item.verification_mode === 'dvwa_live' ? 'teal' : 'amber'
-                                  }
-                                >
-                                  {item.verification_mode === 'dvwa_live'
-                                    ? 'Live DVWA'
-                                    : 'Heuristic'}
+                            {displayedResult.patch_correct !== null &&
+                              displayedResult.patch_correct !== undefined && (
+                                <Badge variant={displayedResult.patch_correct ? 'green' : 'amber'}>
+                                  {displayedResult.patch_correct
+                                    ? 'Accurate Code Fix'
+                                    : 'Suboptimal Fix'}
                                 </Badge>
                               )}
-                            </div>
-                            <div className="flex items-center gap-3 font-mono tabular-nums shrink-0">
-                              <span className="text-[#38BDF8]">+{item.score_earned} pts</span>
-                              <span className="text-zinc-400 hidden sm:inline">
-                                {formatUtcTimestamp(item.timestamp)}
+                            {displayedResult.verified ? (
+                              <Button
+                                type="button"
+                                variant="defender"
+                                size="sm"
+                                onClick={handleSelectNextPending}
+                              >
+                                <span>Next Target</span>
+                                <ArrowRight className="w-4 h-4" weight="bold" />
+                              </Button>
+                            ) : (
+                              <Button
+                                type="button"
+                                variant="defender"
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedLevel('impossible');
+                                  setSourceTier('impossible');
+                                  submitDefenseLevel('impossible');
+                                }}
+                              >
+                                <span>Harden to Impossible</span>
+                                <ArrowRight className="w-4 h-4" weight="bold" />
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                          <div className="cf-darkroom rounded-md bg-[#0E1014] border border-[#111317] p-2.5 space-y-1">
+                            <div className="flex items-center justify-between text-xs font-mono">
+                              <span className="text-[#ECEFF4] font-bold">BEFORE · low</span>
+                              <span className={beforeExploited ? 'text-[#FCA5A5]' : 'text-[#A7F3D0]'}>
+                                {beforeExploited ? 'BREACHED' : 'NEUTRALIZED'}
                               </span>
                             </div>
+                            <pre className="font-mono text-xs text-[#D1D5DB] max-h-16 overflow-y-auto whitespace-pre-wrap break-words">
+                              {displayedResult.baseline_before?.evidence
+                                ? String(displayedResult.baseline_before.evidence)
+                                : `Baseline vector succeeded: ${selectedChallenge.reference_payload || 'N/A'}`}
+                            </pre>
                           </div>
-                        ))}
+
+                          <div className="cf-darkroom rounded-md bg-[#0E1014] border border-[#111317] p-2.5 space-y-1">
+                            <div className="flex items-center justify-between text-xs font-mono">
+                              <span className="text-[#ECEFF4] font-bold">AFTER · {afterLevel}</span>
+                              <span
+                                className={displayedResult.verified ? 'text-[#A7F3D0]' : 'text-[#FCA5A5]'}
+                              >
+                                {displayedResult.verified ? 'NEUTRALIZED' : 'VULNERABLE'}
+                              </span>
+                            </div>
+                            <pre className="font-mono text-xs text-[#ECEFF4] max-h-16 overflow-y-auto whitespace-pre-wrap break-words">
+                              {displayedResult.evidence
+                                ? String(displayedResult.evidence)
+                                : displayedResult.verified
+                                  ? `Exploit vector neutralized at '${afterLevel}'.`
+                                  : `Exploit vector still succeeds at '${afterLevel}'.`}
+                            </pre>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="p-3.5 rounded-lg bg-[#EAE4D7]/55 border border-[#111317]/15 space-y-1.5">
+                        <div className="text-[15px] font-bold text-[#111317]">
+                          Live Exploit Replay Ready
+                        </div>
+                        <p className="text-[14px] text-[#4B5260] leading-relaxed">
+                          Audit the vulnerable PHP lines on the right terminal, pick your target
+                          tier above, and click <strong>Set Live</strong> to replay the attack
+                          vector before and after hardening.
+                        </p>
                       </div>
                     )}
                   </div>
                 )}
-              </SpotlightSurface>
-            </div>
+
+                {leftSubTab === 'quiz' && (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between gap-2">
+                      <div>
+                        <h2 className="text-lg font-bold text-[#111317]">Patch Audit Quiz</h2>
+                        <p className="text-[14px] text-[#4B5260]">
+                          Identify the secure PHP remediation pattern for {selectedChallenge.title}.
+                        </p>
+                      </div>
+                      <Button
+                        variant="defender"
+                        size="sm"
+                        onClick={() => setLeftSubTab('remediate')}
+                      >
+                        <span>Back to Remediate</span>
+                      </Button>
+                    </div>
+
+                    {displayedResult?.patch_feedback && (
+                      <AlertBanner
+                        variant={displayedResult.patch_correct ? 'success' : 'warning'}
+                        title={
+                          displayedResult.patch_correct
+                            ? 'Accurate Remediation Choice'
+                            : 'Review Remediation Pattern'
+                        }
+                        message={displayedResult.patch_feedback}
+                      />
+                    )}
+
+                    {hasPatchQuiz ? (
+                      <div className="space-y-3">
+                        {patchQuiz.prompt && (
+                          <p className="text-[15px] font-medium text-[#111317] leading-relaxed">
+                            {patchQuiz.prompt}
+                          </p>
+                        )}
+                        <div
+                          role="radiogroup"
+                          aria-label="Select secure code fix"
+                          className="space-y-2.5"
+                        >
+                          {patchOptions.map((opt) => {
+                            const isSelected = selectedPatchOptionId === opt.id;
+                            return (
+                              <button
+                                key={opt.id}
+                                type="button"
+                                role="radio"
+                                aria-checked={isSelected}
+                                onClick={() => setSelectedPatchOptionId(opt.id)}
+                                className={[
+                                  'w-full text-left p-3.5 rounded-lg border transition-colors',
+                                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D4ED8]',
+                                  isSelected
+                                    ? 'bg-[#1D4ED8]/10 border-[#1D4ED8] ring-1 ring-inset ring-[#1D4ED8]/35'
+                                    : 'bg-[#FAF8F3] border-[#111317]/20 hover:bg-[#EAE4D7]/50',
+                                ].join(' ')}
+                              >
+                                <div className="flex items-center justify-between gap-2">
+                                  <span className="text-[14px] font-bold text-[#111317]">
+                                    {opt.label}
+                                  </span>
+                                  <span
+                                    className={[
+                                      'w-4 h-4 rounded-full border shrink-0',
+                                      isSelected
+                                        ? 'border-[#1D4ED8] bg-[#1D4ED8]'
+                                        : 'border-[#111317]/35 bg-transparent',
+                                    ].join(' ')}
+                                  />
+                                </div>
+                                {opt.code_snippet && (
+                                  <pre className="cf-darkroom mt-2 p-2.5 rounded bg-[#0E1014] border border-[#111317] font-mono text-[13px] text-[#ECEFF4] whitespace-pre-wrap break-all">
+                                    {opt.code_snippet}
+                                  </pre>
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="p-4 rounded-lg bg-[#EAE4D7]/55 border border-[#111317]/15 space-y-2">
+                        <div className="text-[15px] font-bold text-[#111317]">
+                          OWASP Remediation Playbook
+                        </div>
+                        <ul className="space-y-1.5 text-[14px] text-[#1C1F26] leading-relaxed list-disc pl-5">
+                          {guidance.map((tip) => (
+                            <li key={tip}>{tip}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {leftSubTab === 'incidents' && (
+                  <div className="space-y-3.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <div>
+                        <h2 className="text-lg font-bold text-[#111317]">Live SOC Incidents</h2>
+                        <p className="text-[14px] text-[#4B5260]">
+                          Recent offensive alerts and range events requiring Blue-Team triage.
+                        </p>
+                      </div>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => setActiveTab('alerts')}
+                      >
+                        <span>All Alerts</span>
+                        <ArrowRight className="w-3.5 h-3.5" weight="bold" />
+                      </Button>
+                    </div>
+
+                    {socIncidents.length === 0 ? (
+                      <div className="p-5 rounded-lg bg-[#EAE4D7]/45 border border-[#111317]/15 text-[14px] text-[#4B5260]">
+                        No exploit alerts recorded yet.
+                      </div>
+                    ) : (
+                      <div className="divide-y divide-[#111317]/12 rounded-lg border border-[#111317]/15 bg-[#FAF8F3]">
+                        {socIncidents.map((inc) => {
+                          const targetCh = challenges.find(
+                            (c) => c.challenge_id === inc.challenge_id
+                          );
+                          return (
+                            <div
+                              key={inc.alert_id}
+                              className="px-4 py-3 flex items-start justify-between gap-3"
+                            >
+                              <div className="min-w-0 space-y-1">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <Badge variant={getAlertBadgeVariant(inc.alert_type)}>
+                                    {inc.alert_type}
+                                  </Badge>
+                                  <span className="text-xs font-mono text-[#4B5260]">
+                                    {formatUtcTimestamp(inc.timestamp)}
+                                  </span>
+                                </div>
+                                <p className="text-[14px] text-[#111317] leading-snug">
+                                  {inc.message}
+                                </p>
+                              </div>
+                              {targetCh && (
+                                <Button
+                                  variant="secondary"
+                                  size="sm"
+                                  onClick={() => selectChallenge(targetCh)}
+                                  className="shrink-0"
+                                >
+                                  Triage
+                                </Button>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </section>
+
+            {/* Right 50%: Recessed Darkroom Terminal */}
+            <section className="lg:col-span-6 cf-darkroom rounded-lg bg-[#0E1014] text-[#ECEFF4] border border-[#111317] flex flex-col lg:min-h-0 overflow-hidden">
+              <div className="px-4 py-2 border-b border-white/[0.1] bg-[#14171D] flex flex-wrap items-center justify-between gap-2 shrink-0">
+                <div
+                  role="tablist"
+                  aria-label="Darkroom inspection tabs"
+                  className="inline-flex items-center gap-1"
+                >
+                  {[
+                    { id: 'source', label: 'PHP Source', icon: Code },
+                    { id: 'wire', label: 'Live HTTP Wire', icon: Globe },
+                    { id: 'sink', label: 'Sink Dataflow', icon: Lightning },
+                  ].map((tab) => {
+                    const TabIcon = tab.icon;
+                    const active = rightSubTab === tab.id;
+                    return (
+                      <button
+                        key={tab.id}
+                        type="button"
+                        role="tab"
+                        aria-selected={active}
+                        onClick={() => setRightSubTab(tab.id)}
+                        className={[
+                          'px-3 py-1.5 rounded text-[13.5px] font-semibold inline-flex items-center gap-1.5 transition-colors',
+                          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ECEFF4]',
+                          active
+                            ? 'bg-[#1D4ED8] text-[#FAF8F3]'
+                            : 'text-[#C8CFD8] hover:text-[#FAF8F3] hover:bg-white/[0.06]',
+                        ].join(' ')}
+                      >
+                        <TabIcon className="w-4 h-4" weight={active ? 'fill' : 'regular'} />
+                        <span>{tab.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {rightSubTab === 'source' && challengeSource?.source_available && (
+                  <div
+                    role="group"
+                    aria-label="PHP handler tier"
+                    className="inline-flex items-center p-0.5 rounded bg-[#0E1014] border border-white/[0.12]"
+                  >
+                    {SOURCE_TIERS.filter(
+                      (tier) =>
+                        tier.id === 'low' ||
+                        tier.id === 'impossible' ||
+                        Boolean(challengeSource?.sources_by_tier?.[tier.id])
+                    ).map((tier) => {
+                      const active = sourceTier === tier.id;
+                      return (
+                        <button
+                          key={tier.id}
+                          type="button"
+                          onClick={() => {
+                            setSourceTier(tier.id);
+                            setDiagnosedLine(null);
+                          }}
+                          className={[
+                            'px-2 py-1 rounded text-xs font-mono font-semibold transition-colors',
+                            active
+                              ? 'bg-white/[0.16] text-[#FAF8F3]'
+                              : 'text-[#9CA3AF] hover:text-[#ECEFF4]',
+                          ].join(' ')}
+                        >
+                          {tier.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex-1 lg:min-h-0 overflow-hidden flex flex-col">
+                {rightSubTab === 'source' && (
+                  sourceLoading ? (
+                    <div className="p-5 text-[14px] text-[#C8CFD8]">
+                      Loading live DVWA PHP handler source...
+                    </div>
+                  ) : (
+                    <div className="flex-1 min-h-0 flex flex-col">
+                      <SinkCodeViewer
+                        code={activePhpCode}
+                        sinkPattern={
+                          sourceTier === 'impossible' ? null : challengeSource?.sink_pattern
+                        }
+                        title={
+                          challengeSource?.module_key
+                            ? `Handler Audit (${sourceTier}.php · ${challengeSource.module_key})`
+                            : `Handler Audit (${sourceTier}.php)`
+                        }
+                        emptyMessage={`No DVWA ${sourceTier}.php source mapped for this target.`}
+                        highlightTone={sourceTier === 'impossible' ? 'amber' : 'crimson'}
+                        selectedLine={sourceTier === 'low' ? diagnosedLine : null}
+                        onSelectLine={sourceTier === 'low' ? setDiagnosedLine : null}
+                        vulnerableLines={sourceTier === 'low' ? vulnerableLines : []}
+                        className="flex-1 min-h-0 border-0 rounded-none"
+                      />
+                      {sourceTier === 'low' && diagnosedLine !== null && (
+                        <div className="px-4 py-2 border-t border-white/[0.1] bg-[#14171D] flex items-center justify-between gap-2 text-xs font-mono shrink-0">
+                          <span
+                            className={
+                              vulnerableLines.includes(diagnosedLine)
+                                ? 'text-[#34D399]'
+                                : 'text-[#FCD34D]'
+                            }
+                          >
+                            {vulnerableLines.includes(diagnosedLine)
+                              ? `Line ${diagnosedLine} confirmed as a vulnerable sink handling untrusted input.`
+                              : `Line ${diagnosedLine} is scaffolding/safe context — keep tracing untrusted input toward the sink.`}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setDiagnosedLine(null)}
+                            className="text-[#9CA3AF] hover:text-[#ECEFF4]"
+                          >
+                            Clear
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )
+                )}
+
+                {rightSubTab === 'wire' && (
+                  <HttpWireInspector wireTrace={displayedResult?.wire_trace} role="defender" />
+                )}
+
+                {rightSubTab === 'sink' && (
+                  <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4">
+                    <LiveSinkVisualizer
+                      mode="defend"
+                      moduleKey={challengeSource?.module_key}
+                      pageRef={selectedChallenge.dvwa_page_ref}
+                      vulnerabilityType={selectedChallenge.vulnerability_type}
+                      referencePayload={selectedChallenge.reference_payload}
+                      selectedPatchLabel={selectedPatchOption?.label || ''}
+                      selectedPatchSnippet={selectedPatchOption?.code_snippet || ''}
+                      securityLevel={selectedLevel}
+                    />
+                  </div>
+                )}
+              </div>
+            </section>
           </div>
         )}
 
@@ -1414,8 +1517,8 @@ export default function DefenderConsole({ user, onSignOut, onOpenOverview }) {
           open={catalogOpen}
           onClose={() => setCatalogOpen(false)}
           title="All Defensive Labs"
-          subtitle={`${stats.verified} of ${stats.assigned} verified · ${stats.totalScore} total pts`}
-          badge={<Badge variant="teal">{filteredChallenges.length} shown</Badge>}
+          subtitle={`${stats.verified} of ${stats.assigned} verified · ${stats.totalScore} XP`}
+          badge={<Badge variant="cobalt">{filteredChallenges.length} shown</Badge>}
           footer={
             <div className="flex items-center justify-between w-full gap-2">
               {hasActiveTargetFilters ? (
@@ -1423,7 +1526,7 @@ export default function DefenderConsole({ user, onSignOut, onOpenOverview }) {
                   Reset Filters
                 </Button>
               ) : (
-                <span className="text-xs text-zinc-400 font-mono">
+                <span className="text-xs text-[#4B5260] font-mono">
                   {categories.length} classes
                 </span>
               )}
@@ -1464,8 +1567,8 @@ export default function DefenderConsole({ user, onSignOut, onOpenOverview }) {
 
               <div
                 role="group"
-                aria-label="Filter by remediation status"
-                className="flex flex-wrap items-center gap-1 p-1 rounded-lg bg-[#07080B] border border-white/[0.08]"
+                aria-label="Filter by verification status"
+                className="flex flex-wrap items-center gap-1 p-1 rounded-md bg-[#EAE4D7] border border-[#111317]/15"
               >
                 {HARDENING_STATUS_FILTERS.map((opt) => {
                   const active = statusFilter === opt.id;
@@ -1475,8 +1578,10 @@ export default function DefenderConsole({ user, onSignOut, onOpenOverview }) {
                       type="button"
                       onClick={() => setStatusFilter(opt.id)}
                       className={[
-                        'flex-1 px-2.5 py-1 rounded-md text-xs font-medium transition-colors',
-                        active ? 'bg-[#38BDF8]/15 text-[#38BDF8]' : 'text-zinc-400 hover:text-zinc-200',
+                        'flex-1 px-2.5 py-1 rounded text-xs font-semibold transition-colors',
+                        active
+                          ? 'bg-[#1D4ED8] text-[#FAF8F3]'
+                          : 'text-[#4B5260] hover:text-[#111317]',
                       ].join(' ')}
                     >
                       {opt.label}
@@ -1487,9 +1592,9 @@ export default function DefenderConsole({ user, onSignOut, onOpenOverview }) {
             </div>
 
             {filteredChallenges.length === 0 ? (
-              <div className="p-6 rounded-lg bg-[#07080B]/70 border border-white/[0.06] text-center space-y-2">
-                <p className="text-xs text-zinc-400">
-                  No assigned challenges match your current filter selection.
+              <div className="p-6 rounded-lg bg-[#EAE4D7]/50 border border-[#111317]/15 text-center space-y-2">
+                <p className="text-[14px] text-[#4B5260]">
+                  No assigned targets match your current filters.
                 </p>
                 {hasActiveTargetFilters && (
                   <Button variant="secondary" size="sm" onClick={resetTargetFilters}>
@@ -1498,7 +1603,7 @@ export default function DefenderConsole({ user, onSignOut, onOpenOverview }) {
                 )}
               </div>
             ) : (
-              <div className="divide-y divide-white/[0.06] rounded-lg bg-[#07080B]/70 border border-white/[0.06]">
+              <div className="divide-y divide-[#111317]/12 rounded-lg border border-[#111317]/15 bg-[#FAF8F3]">
                 {filteredChallenges.map((ch) => {
                   const summary = defenseSummaryByChallenge.get(ch.challenge_id);
                   const currentLevel = summary?.latest?.security_level_applied || null;
@@ -1508,24 +1613,24 @@ export default function DefenderConsole({ user, onSignOut, onOpenOverview }) {
                       key={ch.challenge_id}
                       type="button"
                       onClick={() => {
-                        selectChallenge(ch, { scrollToWorkbench: false });
+                        selectChallenge(ch);
                         setCatalogOpen(false);
                       }}
                       className={[
                         'w-full text-left px-3.5 py-3 flex items-start justify-between gap-3 transition-colors',
-                        isSelected ? 'bg-[#38BDF8]/10' : 'hover:bg-white/[0.03]',
+                        isSelected ? 'bg-[#1D4ED8]/10' : 'hover:bg-[#EAE4D7]/50',
                       ].join(' ')}
                     >
                       <div className="min-w-0 space-y-1">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-xs font-semibold text-zinc-100">{ch.title}</span>
+                          <span className="text-[14px] font-bold text-[#111317]">{ch.title}</span>
                           <Badge variant={getDifficultyVariant(ch.difficulty)}>
                             {ch.difficulty}
                           </Badge>
                         </div>
-                        <div className="text-[11px] text-zinc-400 truncate">
+                        <div className="text-xs text-[#4B5260] truncate">
                           {ch.vulnerability_type} ·{' '}
-                          <span className="font-mono text-zinc-300">{ch.dvwa_page_ref}</span>
+                          <span className="font-mono text-[#111317]">{ch.dvwa_page_ref}</span>
                         </div>
                       </div>
                       <div className="flex flex-col items-end gap-1 shrink-0">
@@ -1557,21 +1662,34 @@ export default function DefenderConsole({ user, onSignOut, onOpenOverview }) {
       : null;
 
     return (
-      <div className="space-y-5">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+      <div className="lg:h-full lg:min-h-0 flex flex-col gap-3">
+        <div className="shrink-0 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
           <div>
-            <h1 className="text-xl font-semibold text-zinc-100 tracking-tight">My Defenses</h1>
-            <p className="text-sm text-zinc-400 mt-1">
+            <h1 className="text-2xl font-bold text-[#111317] tracking-tight">Defense Ledger</h1>
+            <p className="text-[14px] text-[#4B5260] mt-0.5">
               {defenses.length} submissions · {stats.verifiedSubmissions} verified ·{' '}
-              {stats.unverifiedSubmissions} unverified · {stats.totalScore} total pts
+              {stats.unverifiedSubmissions} unverified · {stats.totalScore} XP
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2.5">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="w-52">
+              <Input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setDefensesPage(1);
+                }}
+                placeholder="Filter challenge or tier..."
+                aria-label="Filter defense history"
+              />
+            </div>
+
             <div
               role="group"
               aria-label="Filter defenses by verification status"
-              className="inline-flex items-center p-1 rounded-lg bg-[#0D0F14] border border-white/[0.08]"
+              className="inline-flex items-center p-1 rounded-md bg-[#EAE4D7] border border-[#111317]/15"
             >
               {DEFENSE_VERIFIED_FILTERS.map((opt) => {
                 const active = defenseVerifiedFilter === opt.id;
@@ -1579,10 +1697,15 @@ export default function DefenderConsole({ user, onSignOut, onOpenOverview }) {
                   <button
                     key={opt.id}
                     type="button"
-                    onClick={() => setDefenseVerifiedFilter(opt.id)}
+                    onClick={() => {
+                      setDefenseVerifiedFilter(opt.id);
+                      setDefensesPage(1);
+                    }}
                     className={[
-                      'px-2.5 py-1 rounded-md text-xs font-medium transition-colors',
-                      active ? 'bg-[#38BDF8]/15 text-[#38BDF8]' : 'text-zinc-400 hover:text-zinc-200',
+                      'px-2.5 py-1 rounded text-xs font-semibold transition-colors',
+                      active
+                        ? 'bg-[#1D4ED8] text-[#FAF8F3]'
+                        : 'text-[#4B5260] hover:text-[#111317]',
                     ].join(' ')}
                   >
                     {opt.label}
@@ -1591,11 +1714,14 @@ export default function DefenderConsole({ user, onSignOut, onOpenOverview }) {
               })}
             </div>
 
-            <div className="w-40">
+            <div className="w-36">
               <Select
                 aria-label="Filter defenses by security level"
                 value={defenseLevelFilter}
-                onChange={(e) => setDefenseLevelFilter(e.target.value)}
+                onChange={(e) => {
+                  setDefenseLevelFilter(e.target.value);
+                  setDefensesPage(1);
+                }}
               >
                 <option value="all">All Levels</option>
                 <option value="low">Low</option>
@@ -1623,95 +1749,106 @@ export default function DefenderConsole({ user, onSignOut, onOpenOverview }) {
           <EmptyState
             icon={ClockCounterClockwise}
             title="No defenses submitted yet"
-            description="Raise a challenge's DVWA security level in Hardening Deck to verify remediation."
+            description="Raise a target's DVWA security level in Remediate Studio to verify remediation."
             action={
-              <Button variant="primary" size="sm" onClick={() => setActiveTab('challenges')}>
-                Open Hardening Deck
+              <Button variant="defender" size="sm" onClick={() => setActiveTab('remediate')}>
+                Open Remediate Studio
               </Button>
             }
           />
         ) : (
-          <SpotlightSurface accent="sky">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="border-b border-white/[0.08] text-xs font-medium text-zinc-400">
-                    <th className="py-3 px-3">ID</th>
-                    <th className="py-3 px-3">Challenge</th>
-                    <th className="py-3 px-3">Security Level</th>
-                    <th className="py-3 px-3">Verification</th>
-                    <th className="py-3 px-3 text-right">Score</th>
-                    <th className="py-3 px-3">Timestamp</th>
-                    <th className="py-3 px-3 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-white/[0.06] text-xs">
-                  {filteredDefenses.map((item) => {
-                    const targetChallenge = challenges.find(
-                      (ch) => ch.challenge_id === item.challenge_id
-                    );
-                    return (
-                      <tr
-                        key={item.defense_id}
-                        onClick={() => setInspectedDefense(item)}
-                        className="cursor-pointer hover:bg-white/[0.03] transition-colors"
-                      >
-                        <td className="py-3 px-3 font-mono tabular-nums text-zinc-400 whitespace-nowrap">
-                          #{item.defense_id}
-                        </td>
-                        <td className="py-3 px-3 font-medium text-zinc-100 whitespace-nowrap">
-                          {item.challenge_title || `Challenge #${item.challenge_id}`}
-                        </td>
-                        <td className="py-3 px-3 whitespace-nowrap">
-                          <Badge variant={getLevelBadgeVariant(item.security_level_applied)}>
-                            {item.security_level_applied}
-                          </Badge>
-                        </td>
-                        <td className="py-3 px-3 whitespace-nowrap">
-                          <Badge variant={item.verified ? 'green' : 'amber'}>
-                            {item.verified ? 'Verified' : 'Unverified'}
-                          </Badge>
-                        </td>
-                        <td className="py-3 px-3 font-mono tabular-nums text-right text-zinc-100 whitespace-nowrap">
-                          +{item.score_earned}
-                        </td>
-                        <td className="py-3 px-3 font-mono tabular-nums text-zinc-400 whitespace-nowrap">
-                          {formatUtcTimestamp(item.timestamp)}
-                        </td>
-                        <td className="py-3 px-3 text-right whitespace-nowrap">
-                          <div className="inline-flex items-center gap-1">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                setInspectedDefense(item);
-                              }}
-                            >
-                              Inspect
-                            </Button>
-                            {targetChallenge && (
+          <div className="flex-1 lg:min-h-0 flex flex-col gap-3">
+            <div className="flex-1 lg:min-h-0 bg-[#FAF8F3] border border-[#111317]/15 rounded-lg overflow-hidden flex flex-col">
+              <div className="flex-1 overflow-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead className="sticky top-0 bg-[#EAE4D7]/90 border-b border-[#111317]/15">
+                    <tr className="text-xs font-bold uppercase tracking-wider text-[#4B5260]">
+                      <th className="py-3 px-4">ID</th>
+                      <th className="py-3 px-4">Challenge</th>
+                      <th className="py-3 px-4">Security Tier</th>
+                      <th className="py-3 px-4">Verification</th>
+                      <th className="py-3 px-4 text-right">Score</th>
+                      <th className="py-3 px-4">Timestamp</th>
+                      <th className="py-3 px-4 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#111317]/10 text-[14px]">
+                    {pagedDefenses.map((item) => {
+                      const targetChallenge = challenges.find(
+                        (ch) => ch.challenge_id === item.challenge_id
+                      );
+                      return (
+                        <tr
+                          key={item.defense_id}
+                          onClick={() => setInspectedDefense(item)}
+                          className="cursor-pointer hover:bg-[#EAE4D7]/45 transition-colors"
+                        >
+                          <td className="py-3 px-4 font-mono tabular-nums text-[#4B5260] whitespace-nowrap">
+                            #{item.defense_id}
+                          </td>
+                          <td className="py-3 px-4 font-semibold text-[#111317] whitespace-nowrap">
+                            {item.challenge_title || `Challenge #${item.challenge_id}`}
+                          </td>
+                          <td className="py-3 px-4 whitespace-nowrap">
+                            <Badge variant={getLevelBadgeVariant(item.security_level_applied)}>
+                              {item.security_level_applied}
+                            </Badge>
+                          </td>
+                          <td className="py-3 px-4 whitespace-nowrap">
+                            <Badge variant={item.verified ? 'green' : 'amber'}>
+                              {item.verified ? 'Verified' : 'Unverified'}
+                            </Badge>
+                          </td>
+                          <td className="py-3 px-4 font-mono font-semibold tabular-nums text-right text-[#111317] whitespace-nowrap">
+                            +{item.score_earned}
+                          </td>
+                          <td className="py-3 px-4 font-mono text-[13px] tabular-nums text-[#4B5260] whitespace-nowrap">
+                            {formatUtcTimestamp(item.timestamp)}
+                          </td>
+                          <td className="py-3 px-4 text-right whitespace-nowrap">
+                            <div className="inline-flex items-center gap-1">
                               <Button
                                 variant="ghost"
                                 size="sm"
                                 onClick={(event) => {
                                   event.stopPropagation();
-                                  selectChallenge(targetChallenge, { scrollToWorkbench: true });
+                                  setInspectedDefense(item);
                                 }}
                               >
-                                <span>Configure</span>
-                                <ArrowRight className="w-3.5 h-3.5" weight="bold" />
+                                Inspect
                               </Button>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                              {targetChallenge && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    selectChallenge(targetChallenge);
+                                  }}
+                                >
+                                  <span>Configure</span>
+                                  <ArrowRight className="w-3.5 h-3.5" weight="bold" />
+                                </Button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </SpotlightSurface>
+
+            <PaginationBar
+              page={safeDefensePage}
+              totalPages={totalDefensePages}
+              totalItems={filteredDefenses.length}
+              pageSize={PAGE_SIZE}
+              onPageChange={setDefensesPage}
+              itemLabel="defenses"
+            />
+          </div>
         )}
 
         <SlideOverInspector
@@ -1739,58 +1876,59 @@ export default function DefenderConsole({ user, onSignOut, onOpenOverview }) {
                   Close
                 </Button>
                 {inspectedTarget && (
-                  <button
+                  <Button
                     type="button"
+                    variant="defender"
+                    size="sm"
                     onClick={() => {
                       setInspectedDefense(null);
-                      selectChallenge(inspectedTarget, { scrollToWorkbench: true });
+                      selectChallenge(inspectedTarget);
                     }}
-                    className="h-8 px-3 rounded-lg bg-[#38BDF8] hover:bg-[#0EA5E9] text-[#04101B] text-xs font-semibold inline-flex items-center gap-1.5 transition-colors"
                   >
-                    <span>Open in Hardening Deck</span>
+                    <span>Open in Remediate Studio</span>
                     <ArrowRight className="w-3.5 h-3.5" weight="bold" />
-                  </button>
+                  </Button>
                 )}
               </>
             )
           }
         >
           {inspectedDefense && (
-            <div className="space-y-4 text-xs">
+            <div className="space-y-4 text-[14px]">
               <div className="grid grid-cols-2 gap-3">
-                <div className="p-3 rounded-lg bg-[#07080B]/70 border border-white/[0.06]">
-                  <div className="text-zinc-400">Applied Security</div>
+                <div className="p-3.5 rounded-lg bg-[#EAE4D7]/55 border border-[#111317]/15">
+                  <div className="text-xs font-semibold text-[#4B5260]">Applied Security</div>
                   <div className="mt-1.5">
                     <Badge variant={getLevelBadgeVariant(inspectedDefense.security_level_applied)}>
                       {inspectedDefense.security_level_applied}
                     </Badge>
                   </div>
                 </div>
-                <div className="p-3 rounded-lg bg-[#07080B]/70 border border-white/[0.06]">
-                  <div className="text-zinc-400">Score Earned</div>
-                  <div className="text-base font-mono font-semibold text-[#38BDF8] mt-1">
+                <div className="p-3.5 rounded-lg bg-[#EAE4D7]/55 border border-[#111317]/15">
+                  <div className="text-xs font-semibold text-[#4B5260]">Score Earned</div>
+                  <div className="font-display text-2xl font-extrabold text-[#1D4ED8] mt-1">
                     +{inspectedDefense.score_earned} pts
                   </div>
                 </div>
               </div>
 
-              <div className="p-3 rounded-lg bg-[#07080B]/70 border border-white/[0.06] space-y-2">
+              <div className="p-3.5 rounded-lg bg-[#EAE4D7]/55 border border-[#111317]/15 space-y-2">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-zinc-400">Submitted</span>
-                  <span className="font-mono text-zinc-200">
+                  <span className="text-[#4B5260]">Submitted</span>
+                  <span className="font-mono text-xs text-[#111317]">
                     {formatUtcTimestamp(inspectedDefense.timestamp)}
                   </span>
                 </div>
                 {inspectedTarget && (
                   <>
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-zinc-400">Vulnerability Class</span>
-                      <span className="font-medium text-zinc-100">
+                      <span className="text-[#4B5260]">Vulnerability Class</span>
+                      <span className="font-semibold text-[#111317]">
                         {inspectedTarget.vulnerability_type}
                       </span>
                     </div>
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-zinc-400">DVWA Target</span>
+                      <span className="text-[#4B5260]">DVWA Target</span>
                       <CopyChip
                         value={formatDvwaUrl(inspectedTarget.dvwa_page_ref)}
                         label={inspectedTarget.dvwa_page_ref}
@@ -1800,17 +1938,251 @@ export default function DefenderConsole({ user, onSignOut, onOpenOverview }) {
                 )}
               </div>
 
-              {inspectedTarget && (
+              {inspectedTarget?.reference_payload && (
                 <div className="space-y-2">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="font-semibold text-zinc-200">Replayed Attack Vector</span>
+                    <span className="font-bold text-[#111317]">Replayed Attack Vector</span>
                     <CopyChip value={inspectedTarget.reference_payload} label="Copy vector" />
                   </div>
-                  <pre className="p-3 rounded-lg bg-[#07080B]/80 border border-white/[0.06] font-mono text-xs text-zinc-100 whitespace-pre-wrap break-all">
+                  <pre className="cf-darkroom p-3.5 rounded-lg bg-[#0E1014] border border-[#111317] font-mono text-[13.5px] text-[#ECEFF4] whitespace-pre-wrap break-all">
                     {inspectedTarget.reference_payload}
                   </pre>
                 </div>
               )}
+            </div>
+          )}
+        </SlideOverInspector>
+      </div>
+    );
+  }
+
+  function renderAlertsTab() {
+    const inspectedTarget = inspectedAlert
+      ? challenges.find((ch) => ch.challenge_id === inspectedAlert.challenge_id)
+      : null;
+
+    return (
+      <div className="lg:h-full lg:min-h-0 flex flex-col gap-3">
+        <div className="shrink-0 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-bold text-[#111317] tracking-tight">Security Alerts</h1>
+            <p className="text-[14px] text-[#4B5260] mt-0.5">
+              {alerts.length} total SOC alerts recorded across DVWA modules and Canary traps.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="w-52">
+              <Input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setAlertsPage(1);
+                }}
+                placeholder="Filter alert message or type..."
+                aria-label="Filter security alerts"
+              />
+            </div>
+
+            <div
+              role="group"
+              aria-label="Filter alerts by category"
+              className="inline-flex items-center p-1 rounded-md bg-[#EAE4D7] border border-[#111317]/15"
+            >
+              {ALERT_TYPE_FILTERS.map((opt) => {
+                const active = alertTypeFilter === opt.id;
+                return (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => {
+                      setAlertTypeFilter(opt.id);
+                      setAlertsPage(1);
+                    }}
+                    className={[
+                      'px-2.5 py-1 rounded text-xs font-semibold transition-colors',
+                      active
+                        ? 'bg-[#1D4ED8] text-[#FAF8F3]'
+                        : 'text-[#4B5260] hover:text-[#111317]',
+                    ].join(' ')}
+                  >
+                    {opt.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => loadData({ silent: true })}
+              loading={refreshing}
+            >
+              <ArrowsClockwise className="w-3.5 h-3.5" weight="regular" />
+              <span>Refresh</span>
+            </Button>
+          </div>
+        </div>
+
+        {loading ? (
+          <SkeletonRows rows={6} columns={4} />
+        ) : filteredAlerts.length === 0 ? (
+          <EmptyState
+            icon={Warning}
+            title="No matching security alerts"
+            description="Alerts appear here when offensive probes, verified defenses, or recon blocks fire."
+          />
+        ) : (
+          <div className="flex-1 lg:min-h-0 flex flex-col gap-3">
+            <div className="flex-1 lg:min-h-0 bg-[#FAF8F3] border border-[#111317]/15 rounded-lg overflow-hidden flex flex-col">
+              <div className="flex-1 overflow-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead className="sticky top-0 bg-[#EAE4D7]/90 border-b border-[#111317]/15">
+                    <tr className="text-xs font-bold uppercase tracking-wider text-[#4B5260]">
+                      <th className="py-3 px-4">ID</th>
+                      <th className="py-3 px-4">Type</th>
+                      <th className="py-3 px-4">Target Module</th>
+                      <th className="py-3 px-4">Alert Message</th>
+                      <th className="py-3 px-4">Timestamp</th>
+                      <th className="py-3 px-4 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#111317]/10 text-[14px]">
+                    {pagedAlerts.map((al) => {
+                      const targetCh = challenges.find((ch) => ch.challenge_id === al.challenge_id);
+                      return (
+                        <tr
+                          key={al.alert_id}
+                          onClick={() => setInspectedAlert(al)}
+                          className="cursor-pointer hover:bg-[#EAE4D7]/45 transition-colors"
+                        >
+                          <td className="py-3 px-4 font-mono tabular-nums text-[#4B5260] whitespace-nowrap">
+                            #{al.alert_id}
+                          </td>
+                          <td className="py-3 px-4 whitespace-nowrap">
+                            <Badge variant={getAlertBadgeVariant(al.alert_type)}>
+                              {al.alert_type}
+                            </Badge>
+                          </td>
+                          <td className="py-3 px-4 font-semibold text-[#111317] whitespace-nowrap">
+                            {targetCh ? targetCh.title : al.challenge_id ? `Challenge #${al.challenge_id}` : 'Platform'}
+                          </td>
+                          <td className="py-3 px-4 text-[#1C1F26] max-w-[340px] truncate">
+                            {al.message}
+                          </td>
+                          <td className="py-3 px-4 font-mono text-[13px] tabular-nums text-[#4B5260] whitespace-nowrap">
+                            {formatUtcTimestamp(al.timestamp)}
+                          </td>
+                          <td className="py-3 px-4 text-right whitespace-nowrap">
+                            <div className="inline-flex items-center gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  setInspectedAlert(al);
+                                }}
+                              >
+                                Inspect
+                              </Button>
+                              {targetCh && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    selectChallenge(targetCh);
+                                  }}
+                                >
+                                  <span>Remediate</span>
+                                  <ArrowRight className="w-3.5 h-3.5" weight="bold" />
+                                </Button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <PaginationBar
+              page={safeAlertPage}
+              totalPages={totalAlertPages}
+              totalItems={filteredAlerts.length}
+              pageSize={PAGE_SIZE}
+              onPageChange={setAlertsPage}
+              itemLabel="alerts"
+            />
+          </div>
+        )}
+
+        <SlideOverInspector
+          open={Boolean(inspectedAlert)}
+          onClose={() => setInspectedAlert(null)}
+          title={inspectedAlert ? `Alert #${inspectedAlert.alert_id} · ${inspectedAlert.alert_type}` : ''}
+          subtitle={
+            inspectedTarget
+              ? `${inspectedTarget.title} (${inspectedTarget.dvwa_page_ref})`
+              : 'System Security Telemetry'
+          }
+          badge={
+            inspectedAlert && (
+              <Badge variant={getAlertBadgeVariant(inspectedAlert.alert_type)}>
+                {inspectedAlert.alert_type}
+              </Badge>
+            )
+          }
+          footer={
+            inspectedAlert && (
+              <>
+                <Button variant="secondary" size="sm" onClick={() => setInspectedAlert(null)}>
+                  Close
+                </Button>
+                {inspectedTarget && (
+                  <Button
+                    type="button"
+                    variant="defender"
+                    size="sm"
+                    onClick={() => {
+                      setInspectedAlert(null);
+                      selectChallenge(inspectedTarget);
+                    }}
+                  >
+                    <span>Remediate Target</span>
+                    <ArrowRight className="w-3.5 h-3.5" weight="bold" />
+                  </Button>
+                )}
+              </>
+            )
+          }
+        >
+          {inspectedAlert && (
+            <div className="space-y-4 text-[14px]">
+              <div className="p-3.5 rounded-lg bg-[#EAE4D7]/55 border border-[#111317]/15 space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[#4B5260]">Recorded</span>
+                  <span className="font-mono text-xs text-[#111317]">
+                    {formatUtcTimestamp(inspectedAlert.timestamp)}
+                  </span>
+                </div>
+                {inspectedTarget && (
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[#4B5260]">Module</span>
+                    <span className="font-semibold text-[#111317]">{inspectedTarget.title}</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-1.5">
+                <div className="font-bold text-[#111317]">Incident Detail</div>
+                <div className="p-3.5 rounded-lg bg-[#EAE4D7]/45 border border-[#111317]/15 text-[#111317] leading-relaxed">
+                  {inspectedAlert.message}
+                </div>
+              </div>
             </div>
           )}
         </SlideOverInspector>
@@ -1827,25 +2199,42 @@ export default function DefenderConsole({ user, onSignOut, onOpenOverview }) {
       activeTab={activeTab}
       onTabChange={setActiveTab}
       searchQuery={searchQuery}
-      onSearchChange={setSearchQuery}
+      onSearchChange={
+        activeTab === 'defenses' || activeTab === 'alerts'
+          ? (val) => {
+              setSearchQuery(val);
+              setDefensesPage(1);
+              setAlertsPage(1);
+            }
+          : undefined
+      }
       searchPlaceholder={searchPlaceholder}
       commandGroups={commandGroups}
       headerActions={
         typeof onOpenOverview === 'function' ? (
-          <button
-            type="button"
-            onClick={onOpenOverview}
-            className="h-9 px-2.5 sm:px-3 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] flex items-center gap-1.5 text-xs font-medium text-zinc-300 hover:text-zinc-100 transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#38BDF8]"
-          >
-            <Cube className="w-3.5 h-3.5 text-[#38BDF8]" weight="regular" />
-            <span className="hidden lg:inline">3D Overview</span>
-          </button>
+          <Button variant="secondary" size="sm" onClick={onOpenOverview}>
+            <Cube className="w-4 h-4 text-[#1D4ED8]" weight="regular" />
+            <span className="hidden lg:inline">3D Hub</span>
+          </Button>
         ) : null
       }
       onSignOut={onSignOut}
     >
-      {activeTab === 'challenges' && renderHardeningDeckTab()}
+      {activeTab === 'paths' && (
+        <LearningPathMap
+          role="defender"
+          tracks={tracks}
+          challenges={challenges}
+          summaryMap={defenseSummaryByChallenge}
+          stats={stats}
+          onSelectChallenge={(ch) => selectChallenge(ch)}
+          onContinueMission={handleSelectNextPending}
+          onOpenTour={onOpenOverview}
+        />
+      )}
+      {activeTab === 'remediate' && renderRemediateStudioTab()}
       {activeTab === 'defenses' && renderDefensesTab()}
+      {activeTab === 'alerts' && renderAlertsTab()}
       {activeTab === 'profile' && <ProfileView user={user} stats={profileStats} />}
       {activeTab === 'settings' && <SettingsView user={user} onAccountDeleted={onSignOut} />}
       <TactileToast toasts={toasts} onDismiss={dismissToast} />

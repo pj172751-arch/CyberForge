@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  CaretLeft,
+  CaretRight,
   Check,
   CheckCircle,
   Copy,
@@ -10,10 +12,17 @@ import {
 } from '@phosphor-icons/react';
 
 const SPOTLIGHT_RGB = {
-  amber: '245, 158, 11',
-  teal: '0, 229, 204',
-  rose: '244, 63, 94',
-  sky: '56, 189, 248',
+  amber: '180, 83, 9',
+  brass: '180, 83, 9',
+  teal: '4, 120, 87',
+  emerald: '4, 120, 87',
+  rose: '200, 30, 30',
+  red: '200, 30, 30',
+  crimson: '200, 30, 30',
+  sky: '29, 78, 216',
+  blue: '29, 78, 216',
+  cobalt: '29, 78, 216',
+  ink: '17, 19, 23',
 };
 
 export function SpotlightSurface({
@@ -38,7 +47,7 @@ export function SpotlightSurface({
       ref={surfaceRef}
       onPointerMove={handlePointerMove}
       className={[
-        'isolate group/spot relative overflow-hidden rounded-xl bg-[#0D0F14]/90 border border-white/[0.08] transition-colors duration-150',
+        'isolate group/spot relative overflow-hidden rounded-lg bg-[#FAF8F3] border border-[#111317]/15 transition-colors duration-150',
         padding,
         className,
       ]
@@ -47,17 +56,10 @@ export function SpotlightSurface({
     >
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-0 rounded-[inherit] -z-10 opacity-0 group-hover/spot:opacity-100 transition-opacity duration-200"
-        style={{
-          background: `radial-gradient(320px circle at var(--mx, -999px) var(--my, -999px), rgba(${rgb}, 0.08), transparent 70%)`,
-        }}
-      />
-      <div
-        aria-hidden="true"
         className="pointer-events-none absolute inset-0 rounded-[inherit] z-20 opacity-0 group-hover/spot:opacity-100 transition-opacity duration-200"
         style={{
           padding: '1px',
-          background: `radial-gradient(240px circle at var(--mx, -999px) var(--my, -999px), rgba(${rgb}, 0.55), transparent 70%)`,
+          background: `radial-gradient(220px circle at var(--mx, -999px) var(--my, -999px), rgba(${rgb}, 0.55), transparent 70%)`,
           WebkitMask: 'linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)',
           WebkitMaskComposite: 'xor',
           maskComposite: 'exclude',
@@ -134,29 +136,16 @@ export function AnimatedTicker({
 }
 
 export function BorderSweep({
-  color = '#F59E0B',
-  secondary = '#00E5CC',
-  duration = 8,
+  color = '#B45309',
 }) {
   return (
     <div
       aria-hidden="true"
-      className="pointer-events-none absolute inset-0 rounded-[inherit] z-20 overflow-hidden"
+      className="pointer-events-none absolute inset-0 rounded-[inherit] z-20"
       style={{
-        padding: '1px',
-        WebkitMask: 'linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)',
-        WebkitMaskComposite: 'xor',
-        maskComposite: 'exclude',
+        borderTop: `2px solid ${color}`,
       }}
-    >
-      <div
-        className="cf-beam-rotator absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[200%] aspect-square"
-        style={{
-          '--cf-beam-duration': `${duration}s`,
-          background: `conic-gradient(from 0deg, transparent 0deg 285deg, ${color} 325deg, ${secondary} 348deg, transparent 360deg)`,
-        }}
-      />
-    </div>
+    />
   );
 }
 
@@ -185,7 +174,7 @@ export function SlideOverInspector({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex justify-end bg-black/65 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex justify-end bg-[#111317]/50"
       role="dialog"
       aria-modal="true"
       aria-labelledby="cf-inspector-title"
@@ -195,20 +184,20 @@ export function SlideOverInspector({
         }
       }}
     >
-      <div className="cf-slide-in-right w-full max-w-md h-full bg-[#0E1016]/95 backdrop-blur-xl border-l border-white/[0.08] shadow-[inset_1px_0_0_rgba(255,255,255,0.08)] flex flex-col">
-        <div className="px-5 py-4 border-b border-white/[0.08] flex items-start justify-between gap-3 shrink-0">
+      <div className="cf-slide-in-right w-full max-w-lg h-full bg-[#FAF8F3] text-[#111317] border-l border-[#111317]/20 flex flex-col">
+        <div className="px-5 py-4 border-b border-[#111317]/15 flex items-start justify-between gap-3 shrink-0">
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <h2
                 id="cf-inspector-title"
-                className="text-base font-semibold text-zinc-100 leading-6 truncate"
+                className="text-lg font-bold text-[#111317] leading-6 truncate text-balance"
               >
                 {title}
               </h2>
               {badge}
             </div>
             {subtitle && (
-              <p className="text-xs text-zinc-400 mt-1 leading-relaxed break-words">
+              <p className="text-[13px] text-[#4B5260] mt-1 leading-relaxed break-words">
                 {subtitle}
               </p>
             )}
@@ -217,7 +206,7 @@ export function SlideOverInspector({
             type="button"
             onClick={() => onClose?.()}
             aria-label="Close inspector"
-            className="p-2 rounded-lg text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.06] transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#00E5CC]"
+            className="p-2 rounded-md text-[#4B5260] hover:text-[#111317] hover:bg-[#EAE4D7] transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#111317]"
           >
             <X className="w-4 h-4" weight="bold" />
           </button>
@@ -226,7 +215,7 @@ export function SlideOverInspector({
         <div className="flex-1 overflow-y-auto p-5">{children}</div>
 
         {footer && (
-          <div className="px-5 py-3.5 border-t border-white/[0.08] bg-[#090B10]/90 flex items-center justify-end gap-2 shrink-0">
+          <div className="px-5 py-3.5 border-t border-[#111317]/15 bg-[#EAE4D7]/55 flex items-center justify-end gap-2 shrink-0">
             {footer}
           </div>
         )}
@@ -310,7 +299,7 @@ function CommandPaletteInner({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center pt-[12vh] px-4 bg-black/70 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-start justify-center pt-[12vh] px-4 bg-[#111317]/50"
       role="dialog"
       aria-modal="true"
       aria-label="Command palette"
@@ -321,9 +310,9 @@ function CommandPaletteInner({
       }}
       onKeyDown={handleKeyDown}
     >
-      <div className="w-full max-w-xl bg-[#0E1016]/95 backdrop-blur-xl border border-white/[0.1] rounded-2xl shadow-2xl overflow-hidden">
-        <div className="flex items-center gap-2.5 px-4 h-12 border-b border-white/[0.08]">
-          <MagnifyingGlass className="w-4 h-4 text-zinc-400 shrink-0" weight="regular" />
+      <div className="w-full max-w-xl bg-[#FAF8F3] text-[#111317] border border-[#111317]/30 rounded-lg overflow-hidden">
+        <div className="flex items-center gap-2.5 px-4 h-12 border-b border-[#111317]/15">
+          <MagnifyingGlass className="w-4 h-4 text-[#4B5260] shrink-0" weight="bold" />
           <input
             ref={inputRef}
             type="text"
@@ -334,7 +323,7 @@ function CommandPaletteInner({
             }}
             placeholder={placeholder}
             aria-label={placeholder}
-            className="flex-1 min-w-0 bg-transparent text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none"
+            className="flex-1 min-w-0 bg-transparent text-[15px] text-[#111317] placeholder:text-[#4B5260] focus:outline-none"
           />
           {query && (
             <button
@@ -345,25 +334,25 @@ function CommandPaletteInner({
                 inputRef.current?.focus();
               }}
               aria-label="Clear command search"
-              className="p-1 rounded-md text-zinc-400 hover:text-zinc-100"
+              className="p-1 rounded text-[#4B5260] hover:text-[#111317] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#111317]"
             >
               <X className="w-3.5 h-3.5" weight="bold" />
             </button>
           )}
-          <kbd className="px-1.5 py-0.5 rounded bg-white/[0.05] border border-white/[0.08] text-[10px] font-mono text-zinc-400">
+          <kbd className="px-2 py-0.5 rounded bg-[#EAE4D7] border border-[#111317]/15 text-xs font-mono text-[#1C1F26]">
             ESC
           </kbd>
         </div>
 
-        <div className="max-h-[55vh] overflow-y-auto p-2 space-y-3">
+        <div className="max-h-[55vh] overflow-y-auto p-2.5 space-y-3">
           {filteredGroups.length === 0 ? (
-            <div className="py-10 text-center text-xs text-zinc-400">
+            <div className="py-10 text-center text-[14px] text-[#4B5260]">
               No matching commands found.
             </div>
           ) : (
             filteredGroups.map((group) => (
               <div key={group.heading} className="space-y-1">
-                <div className="px-2.5 py-1 text-[11px] font-medium text-zinc-500">
+                <div className="px-2.5 py-1 text-xs font-bold uppercase text-[#4B5260]">
                   {group.heading}
                 </div>
                 {group.items.map((item) => {
@@ -376,10 +365,10 @@ function CommandPaletteInner({
                       onMouseEnter={() => setActiveIndex(item._flatIdx)}
                       onClick={() => runItem(item)}
                       className={[
-                        'w-full flex items-center justify-between gap-3 px-3 py-2 rounded-lg text-left transition-colors duration-100',
+                        'w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-md text-left transition-colors duration-100',
                         isActive
-                          ? 'bg-white/[0.08] text-zinc-100'
-                          : 'text-zinc-300 hover:bg-white/[0.04]',
+                          ? 'bg-[#111317] text-[#FAF8F3]'
+                          : 'text-[#1C1F26] hover:bg-[#EAE4D7]',
                       ].join(' ')}
                     >
                       <div className="flex items-center gap-2.5 min-w-0">
@@ -387,20 +376,34 @@ function CommandPaletteInner({
                           <Icon
                             className={[
                               'w-4 h-4 shrink-0',
-                              isActive ? 'text-[#00E5CC]' : 'text-zinc-400',
+                              isActive ? 'text-[#FAF8F3]' : 'text-[#4B5260]',
                             ].join(' ')}
                             weight="regular"
                           />
                         )}
                         <div className="min-w-0">
-                          <div className="text-sm font-medium truncate">{item.label}</div>
+                          <div className="text-[14px] font-semibold truncate">{item.label}</div>
                           {item.hint && (
-                            <div className="text-xs text-zinc-500 truncate">{item.hint}</div>
+                            <div
+                              className={[
+                                'text-xs truncate',
+                                isActive ? 'text-[#EAE4D7]' : 'text-[#4B5260]',
+                              ].join(' ')}
+                            >
+                              {item.hint}
+                            </div>
                           )}
                         </div>
                       </div>
                       {item.shortcut && (
-                        <kbd className="px-1.5 py-0.5 rounded bg-white/[0.04] border border-white/[0.08] text-[10px] font-mono tabular-nums text-zinc-400 shrink-0">
+                        <kbd
+                          className={[
+                            'px-1.5 py-0.5 rounded border text-xs font-mono tabular-nums shrink-0',
+                            isActive
+                              ? 'bg-[#FAF8F3]/15 border-[#FAF8F3]/25 text-[#FAF8F3]'
+                              : 'bg-[#EAE4D7] border-[#111317]/15 text-[#4B5260]',
+                          ].join(' ')}
+                        >
                           {item.shortcut}
                         </kbd>
                       )}
@@ -412,22 +415,24 @@ function CommandPaletteInner({
           )}
         </div>
 
-        <div className="px-4 py-2 border-t border-white/[0.08] bg-[#090B10]/80 flex items-center justify-between text-[11px] text-zinc-500">
+        <div className="px-4 py-2.5 border-t border-[#111317]/15 bg-[#EAE4D7]/55 flex items-center justify-between text-xs text-[#4B5260]">
           <div className="flex items-center gap-3">
-            <span className="inline-flex items-center gap-1">
-              <kbd className="px-1 py-0.5 rounded bg-white/[0.04] border border-white/[0.08] font-mono text-[10px] text-zinc-400">
+            <span className="inline-flex items-center gap-1.5">
+              <kbd className="px-1.5 py-0.5 rounded bg-[#FAF8F3] border border-[#111317]/20 font-mono text-xs text-[#111317]">
                 ↑↓
               </kbd>
               Navigate
             </span>
-            <span className="inline-flex items-center gap-1">
-              <kbd className="px-1 py-0.5 rounded bg-white/[0.04] border border-white/[0.08] font-mono text-[10px] text-zinc-400">
+            <span className="inline-flex items-center gap-1.5">
+              <kbd className="px-1.5 py-0.5 rounded bg-[#FAF8F3] border border-[#111317]/20 font-mono text-xs text-[#111317]">
                 Enter
               </kbd>
               Execute
             </span>
           </div>
-          <span className="font-mono tabular-nums">{flatItems.length} actions</span>
+          <span className="font-mono font-semibold tabular-nums text-[#111317]">
+            {flatItems.length} actions
+          </span>
         </div>
       </div>
     </div>
@@ -484,19 +489,19 @@ export function CopyChip({ value, label, className = '' }) {
       onClick={handleCopy}
       title={`Copy ${label || value}`}
       className={[
-        'inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-xs font-mono tabular-nums text-zinc-300 transition-colors duration-150 max-w-full',
-        'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#00E5CC]',
+        'inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#EAE4D7]/80 hover:bg-[#EAE4D7] border border-[#111317]/20 text-xs font-mono tabular-nums text-[#111317] transition-colors duration-150 max-w-full active:scale-[0.98]',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#111317]',
         className,
       ]
         .filter(Boolean)
         .join(' ')}
     >
       {copied ? (
-        <Check className="w-3.5 h-3.5 text-[#10B981] shrink-0" weight="bold" />
+        <Check className="w-3.5 h-3.5 text-[#047857] shrink-0" weight="bold" />
       ) : (
-        <Copy className="w-3.5 h-3.5 text-zinc-400 shrink-0" weight="regular" />
+        <Copy className="w-3.5 h-3.5 text-[#4B5260] shrink-0" weight="regular" />
       )}
-      <span className={['truncate', copied ? 'text-[#10B981]' : ''].join(' ')}>
+      <span className={['truncate', copied ? 'text-[#047857] font-semibold' : ''].join(' ')}>
         {copied ? 'Copied' : label || value}
       </span>
     </button>
@@ -505,18 +510,18 @@ export function CopyChip({ value, label, className = '' }) {
 
 const TOAST_STYLE = {
   success: {
-    border: 'border-[#10B981]/35',
-    iconClass: 'text-[#10B981]',
+    border: 'border-[#047857]/45',
+    iconClass: 'text-[#047857]',
     Icon: CheckCircle,
   },
   error: {
-    border: 'border-[#EF4444]/35',
-    iconClass: 'text-[#EF4444]',
+    border: 'border-[#C81E1E]/45',
+    iconClass: 'text-[#C81E1E]',
     Icon: WarningCircle,
   },
   info: {
-    border: 'border-[#00E5CC]/35',
-    iconClass: 'text-[#00E5CC]',
+    border: 'border-[#1D4ED8]/40',
+    iconClass: 'text-[#1D4ED8]',
     Icon: Info,
   },
 };
@@ -527,7 +532,7 @@ export function TactileToast({ toasts = [], onDismiss }) {
   return (
     <div
       aria-live="polite"
-      className="fixed bottom-24 right-4 sm:right-6 z-50 flex flex-col gap-2 max-w-sm w-[calc(100vw-2rem)] pointer-events-none"
+      className="fixed bottom-20 lg:bottom-6 right-4 sm:right-6 z-50 flex flex-col gap-2 max-w-sm w-[calc(100vw-2rem)] pointer-events-none"
     >
       {toasts.map((toast) => {
         const cfg = TOAST_STYLE[toast.variant] || TOAST_STYLE.info;
@@ -537,7 +542,7 @@ export function TactileToast({ toasts = [], onDismiss }) {
             key={toast.id}
             role="status"
             className={[
-              'pointer-events-auto cf-toast-in bg-[#0E1016]/95 backdrop-blur-xl border rounded-xl px-3.5 py-2.5 flex items-start gap-2.5 shadow-2xl',
+              'pointer-events-auto cf-toast-in bg-[#FAF8F3] border rounded-lg px-4 py-3 flex items-start gap-2.5 text-[#111317]',
               cfg.border,
             ].join(' ')}
           >
@@ -547,10 +552,10 @@ export function TactileToast({ toasts = [], onDismiss }) {
             />
             <div className="flex-1 min-w-0">
               {toast.title && (
-                <div className="text-xs font-semibold text-zinc-100">{toast.title}</div>
+                <div className="text-[14px] font-bold text-[#111317]">{toast.title}</div>
               )}
               {toast.message && (
-                <div className="text-xs text-zinc-300 leading-relaxed break-words">
+                <div className="text-[13px] text-[#1C1F26] leading-relaxed break-words">
                   {toast.message}
                 </div>
               )}
@@ -560,7 +565,7 @@ export function TactileToast({ toasts = [], onDismiss }) {
                 type="button"
                 onClick={() => onDismiss(toast.id)}
                 aria-label="Dismiss toast"
-                className="p-0.5 rounded text-zinc-400 hover:text-zinc-100 shrink-0"
+                className="p-0.5 rounded text-[#4B5260] hover:text-[#111317] shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#111317]"
               >
                 <X className="w-3.5 h-3.5" weight="bold" />
               </button>
@@ -568,6 +573,250 @@ export function TactileToast({ toasts = [], onDismiss }) {
           </div>
         );
       })}
+    </div>
+  );
+}
+
+const VERDICT_STAMP_META = {
+  verified: {
+    defaultLabel: 'EXPLOIT VERIFIED',
+    ink: '#C81E1E',
+    container: 'border-[#C81E1E] text-[#C81E1E] bg-[#FAF8F3]',
+  },
+  exploit: {
+    defaultLabel: 'EXPLOIT VERIFIED',
+    ink: '#C81E1E',
+    container: 'border-[#C81E1E] text-[#C81E1E] bg-[#FAF8F3]',
+  },
+  breach: {
+    defaultLabel: 'EXPLOIT VERIFIED',
+    ink: '#C81E1E',
+    container: 'border-[#C81E1E] text-[#C81E1E] bg-[#FAF8F3]',
+  },
+  patched: {
+    defaultLabel: 'PATCH VERIFIED',
+    ink: '#047857',
+    container: 'border-[#047857] text-[#047857] bg-[#FAF8F3]',
+  },
+  patch: {
+    defaultLabel: 'PATCH VERIFIED',
+    ink: '#047857',
+    container: 'border-[#047857] text-[#047857] bg-[#FAF8F3]',
+  },
+  defended: {
+    defaultLabel: 'PATCH VERIFIED',
+    ink: '#047857',
+    container: 'border-[#047857] text-[#047857] bg-[#FAF8F3]',
+  },
+  blocked: {
+    defaultLabel: 'BLOCKED',
+    ink: '#B45309',
+    container: 'border-[#B45309] text-[#92400E] bg-[#FAF8F3]',
+  },
+  failed: {
+    defaultLabel: 'FAILED',
+    ink: '#111317',
+    container: 'border-[#111317] text-[#111317] bg-[#FAF8F3]',
+  },
+};
+
+export function VerdictStamp({
+  status = 'verified',
+  label,
+  sublabel,
+  active = true,
+  className = '',
+}) {
+  if (!active) return null;
+  const meta = VERDICT_STAMP_META[status] || VERDICT_STAMP_META.verified;
+  const resolvedLabel = label || meta.defaultLabel;
+
+  return (
+    <div
+      role="status"
+      aria-label={`${resolvedLabel}${sublabel ? ` — ${sublabel}` : ''}`}
+      className={[
+        'cf-stamp-snap inline-flex items-center gap-2.5 px-3.5 py-1.5 rounded border-2 select-none -rotate-3',
+        meta.container,
+        className,
+      ].join(' ')}
+    >
+      <svg
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+        aria-hidden="true"
+        className="shrink-0"
+      >
+        <polygon
+          points="12,2 19,5 22,12 19,19 12,22 5,19 2,12 5,5"
+          stroke={meta.ink}
+          strokeWidth="1.75"
+        />
+        <circle cx="12" cy="12" r="5.5" stroke={meta.ink} strokeWidth="1.25" />
+        <path
+          d={
+            status === 'blocked' || status === 'failed'
+              ? 'M9.5 9.5L14.5 14.5M14.5 9.5L9.5 14.5'
+              : 'M9 12.2L11.2 14.4L15.2 10.2'
+          }
+          stroke={meta.ink}
+          strokeWidth="1.75"
+          strokeLinecap="square"
+        />
+      </svg>
+      <div className="leading-tight">
+        <div className="font-display text-lg font-extrabold tracking-wider uppercase leading-none">
+          {resolvedLabel}
+        </div>
+        {sublabel && (
+          <div className="text-xs font-mono font-semibold mt-0.5 leading-none">
+            {sublabel}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+const PACKET_BEAM_ACCENT = {
+  crimson: {
+    bar: 'bg-[#C81E1E]',
+    dot: 'bg-[#C81E1E]',
+    text: 'text-[#C81E1E]',
+  },
+  cobalt: {
+    bar: 'bg-[#1D4ED8]',
+    dot: 'bg-[#1D4ED8]',
+    text: 'text-[#1D4ED8]',
+  },
+  emerald: {
+    bar: 'bg-[#047857]',
+    dot: 'bg-[#047857]',
+    text: 'text-[#047857]',
+  },
+  brass: {
+    bar: 'bg-[#B45309]',
+    dot: 'bg-[#B45309]',
+    text: 'text-[#B45309]',
+  },
+};
+
+export function PacketBeam({
+  active = false,
+  accent = 'crimson',
+  fromLabel = 'Payload',
+  toLabel = 'DVWA :8081',
+  statusText,
+  className = '',
+}) {
+  const theme = PACKET_BEAM_ACCENT[accent] || PACKET_BEAM_ACCENT.crimson;
+
+  return (
+    <div
+      aria-live="polite"
+      className={[
+        'flex items-center gap-3 px-3 py-2 rounded-md bg-[#EAE4D7]/70 border border-[#111317]/15',
+        className,
+      ].join(' ')}
+    >
+      <div className="flex items-center gap-1.5 shrink-0">
+        <span
+          className={[
+            'w-2 h-2 rounded-full transition-opacity duration-150',
+            active ? theme.dot : 'bg-[#111317]/35',
+          ].join(' ')}
+        />
+        <span className="text-xs font-mono font-semibold text-[#111317]">{fromLabel}</span>
+      </div>
+
+      <div className="relative flex-1 h-1.5 rounded-full bg-[#111317]/12 overflow-hidden">
+        {active ? (
+          <span
+            className={[
+              'cf-packet-sweep absolute inset-y-0 left-0 w-1/3 rounded-full',
+              theme.bar,
+            ].join(' ')}
+          />
+        ) : (
+          <span className="absolute inset-y-0 left-0 w-full bg-[#111317]/10" />
+        )}
+      </div>
+
+      <div className="flex items-center gap-2 shrink-0">
+        {statusText && (
+          <span className={['text-xs font-mono font-semibold', active ? theme.text : 'text-[#4B5260]'].join(' ')}>
+            {statusText}
+          </span>
+        )}
+        <span className="text-xs font-mono font-semibold text-[#111317]">{toLabel}</span>
+      </div>
+    </div>
+  );
+}
+
+export function PaginationBar({
+  page = 1,
+  totalPages = 1,
+  totalItems = 0,
+  pageSize = 8,
+  onPageChange,
+  itemLabel = 'items',
+  className = '',
+}) {
+  const safeTotalPages = Math.max(1, Number(totalPages) || 1);
+  const safePage = Math.min(Math.max(1, Number(page) || 1), safeTotalPages);
+  const safeTotalItems = Math.max(0, Number(totalItems) || 0);
+  const startIdx = safeTotalItems === 0 ? 0 : (safePage - 1) * pageSize + 1;
+  const endIdx = Math.min(safePage * pageSize, safeTotalItems);
+
+  return (
+    <div
+      className={[
+        'flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 bg-[#FAF8F3] border border-[#111317]/15 rounded-lg shrink-0',
+        className,
+      ].join(' ')}
+    >
+      <div className="text-[13px] font-mono tabular-nums text-[#4B5260]">
+        {safeTotalItems === 0 ? (
+          <span>0 {itemLabel}</span>
+        ) : (
+          <span>
+            Showing <strong className="text-[#111317]">{startIdx}–{endIdx}</strong> of{' '}
+            <strong className="text-[#111317]">{safeTotalItems}</strong> {itemLabel}
+          </span>
+        )}
+      </div>
+
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => onPageChange?.(safePage - 1)}
+          disabled={safePage <= 1}
+          aria-label="Previous page"
+          className="inline-flex items-center gap-1 h-8 px-2.5 rounded border border-[#111317]/20 bg-[#FAF8F3] hover:bg-[#EAE4D7] text-xs font-semibold text-[#111317] disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.98] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#111317]"
+        >
+          <CaretLeft className="w-3.5 h-3.5" weight="bold" />
+          <span>Prev</span>
+        </button>
+
+        <span className="px-2.5 text-[13px] font-mono font-semibold tabular-nums text-[#111317]">
+          Page {safePage} / {safeTotalPages}
+        </span>
+
+        <button
+          type="button"
+          onClick={() => onPageChange?.(safePage + 1)}
+          disabled={safePage >= safeTotalPages}
+          aria-label="Next page"
+          className="inline-flex items-center gap-1 h-8 px-2.5 rounded border border-[#111317]/20 bg-[#FAF8F3] hover:bg-[#EAE4D7] text-xs font-semibold text-[#111317] disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.98] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#111317]"
+        >
+          <span>Next</span>
+          <CaretRight className="w-3.5 h-3.5" weight="bold" />
+        </button>
+      </div>
     </div>
   );
 }

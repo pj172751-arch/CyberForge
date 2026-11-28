@@ -47,19 +47,19 @@ export default function RolePosterBackdrop({ role = 'attacker' }) {
             </div>
           </div>
 
-          <div className="font-mono text-[9px] sm:text-[10px] tracking-widest text-zinc-400/90 uppercase space-y-0.5">
+          <div className="font-mono text-xs tracking-widest text-zinc-300 uppercase space-y-0.5">
             <div className="flex items-center gap-2">
-              <span className="text-zinc-500">SYS_EDITION //</span>
+              <span className="text-zinc-400">SYS_EDITION //</span>
               <span className="text-white font-semibold">2026.04</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-zinc-500">DESIGNATION //</span>
+              <span className="text-zinc-400">DESIGNATION //</span>
               <span className={isAttacker ? 'text-red-300' : 'text-sky-300'}>
                 {isAttacker ? 'RED_TEAM_RECON_01' : 'BLUE_TEAM_SHIELD_02'}
               </span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-zinc-500">SECURITY TIER //</span>
+              <span className="text-zinc-400">SECURITY TIER //</span>
               <span className="text-emerald-400">AUTHORITATIVE</span>
             </div>
           </div>
@@ -73,16 +73,16 @@ export default function RolePosterBackdrop({ role = 'attacker' }) {
             </span>
             <span className={`w-2 h-2 rounded-full ${isAttacker ? 'bg-red-500 shadow-[0_0_8px_#ff2a3d]' : 'bg-[#2ab7ff] shadow-[0_0_8px_#2ab7ff]'}`} />
           </div>
-          <div className="font-mono text-[9px] sm:text-[10px] text-zinc-400/80 uppercase tracking-widest">
+          <div className="font-mono text-xs text-zinc-300 uppercase tracking-widest">
             <div>LABS // OPERATIONAL MATRIX</div>
-            <div className="text-zinc-500">HOST: 127.0.0.1:8081 (DVWA)</div>
+            <div className="text-zinc-400">HOST: 127.0.0.1:8081 (DVWA)</div>
           </div>
         </div>
       </div>
 
       {/* 3. Left & Right Measurement Scales (Graduated SVG Rulers) */}
       <div className="absolute left-4 sm:left-8 top-1/2 -translate-y-1/2 z-10 hidden md:flex items-center gap-3">
-        <svg width="24" height="280" viewBox="0 0 24 280" className="opacity-40">
+        <svg width="28" height="280" viewBox="0 0 28 280" className="opacity-50">
           {/* Main vertical line */}
           <line x1="8" y1="10" x2="8" y2="270" stroke={primaryColor} strokeWidth="1" />
           {/* Graduated tick lines */}
@@ -101,10 +101,10 @@ export default function RolePosterBackdrop({ role = 'attacker' }) {
                 />
                 {isMajor && (
                   <text
-                    x="23"
+                    x="22"
                     y={y + 3}
-                    fill="#94a3b8"
-                    fontSize="7"
+                    fill="#cbd5e1"
+                    fontSize="9"
                     fontFamily="monospace"
                   >
                     {idx * 4}
@@ -115,13 +115,13 @@ export default function RolePosterBackdrop({ role = 'attacker' }) {
           })}
         </svg>
 
-        <div className="font-mono text-[8px] uppercase tracking-widest text-zinc-500 [writing-mode:vertical-lr] rotate-180">
+        <div className="font-mono text-xs uppercase tracking-widest text-zinc-400 [writing-mode:vertical-lr] rotate-180">
           {isAttacker ? 'PENETRATION DEPTH // AXIS_Y' : 'PERIMETER INTEGRITY // AXIS_Y'}
         </div>
       </div>
 
       <div className="absolute right-4 sm:right-8 top-1/2 -translate-y-1/2 z-10 hidden md:flex items-center gap-3">
-        <div className="font-mono text-[8px] uppercase tracking-widest text-zinc-500 [writing-mode:vertical-lr]">
+        <div className="font-mono text-xs uppercase tracking-widest text-zinc-400 [writing-mode:vertical-lr]">
           {isAttacker ? 'EXPLOIT DISPATCH FREQ // 142.8 MHZ' : 'TELEMETRY SAMPLING // REALTIME'}
         </div>
 
@@ -187,7 +187,7 @@ export default function RolePosterBackdrop({ role = 'attacker' }) {
 
             {/* Editorial Number Badge (matching "#3" on letter 'S' in reference image) */}
             <div
-              className={`absolute top-1/2 -translate-y-1/2 right-[12%] sm:right-[15%] md:right-[17%] px-2 sm:px-3 py-1 rounded-md font-mono text-[10px] sm:text-xs md:text-sm font-black tracking-widest uppercase border z-0 shadow-lg ${
+              className={`absolute top-1/2 -translate-y-1/2 right-[12%] sm:right-[15%] md:right-[17%] px-2 sm:px-3 py-1 rounded-md font-mono text-xs md:text-sm font-black tracking-widest uppercase border z-0 shadow-lg ${
                 isAttacker
                   ? 'bg-red-950/90 text-red-200 border-red-500/60 shadow-[0_0_20px_rgba(239,68,68,0.5)]'
                   : 'bg-sky-950/90 text-sky-200 border-sky-400/60 shadow-[0_0_20px_rgba(56,189,248,0.5)]'
@@ -204,7 +204,7 @@ export default function RolePosterBackdrop({ role = 'attacker' }) {
         {/* Left Specification Column */}
         <div className="max-w-xs sm:max-w-sm flex flex-col gap-1.5">
           <div className="flex items-center gap-2">
-            <span className={`text-[10px] font-mono px-2 py-0.5 rounded font-bold uppercase tracking-wider ${
+            <span className={`text-xs font-mono px-2 py-0.5 rounded font-bold uppercase tracking-wider ${
               isAttacker
                 ? 'bg-red-950/80 text-red-300 border border-red-500/40'
                 : 'bg-sky-950/80 text-sky-300 border border-[#2ab7ff]/40'
@@ -213,13 +213,13 @@ export default function RolePosterBackdrop({ role = 'attacker' }) {
             </span>
           </div>
 
-          <p className="text-xs sm:text-sm text-zinc-300/90 leading-relaxed font-sans font-medium">
+          <p className="text-xs sm:text-sm text-zinc-200 leading-relaxed font-sans font-medium">
             {isAttacker
               ? 'Execute precision adversarial workflows: automate reconnaissance, inject structured CVE payloads (SQLi, XSS, RCE), and evaluate target compromise.'
               : 'Enforce real-time telemetry inspection: synthesize dynamic L4/L7 iptables rules, escalate hardening tiers, and verify vulnerability neutralization.'}
           </p>
 
-          <div className="font-mono text-[10px] text-zinc-500 uppercase tracking-widest pt-1 flex items-center gap-2">
+          <div className="font-mono text-xs text-zinc-400 uppercase tracking-widest pt-1 flex items-center gap-2">
             <span>TARGET_STATUS:</span>
             <span className="text-emerald-400 font-semibold">[READY // 8081]</span>
           </div>
@@ -231,10 +231,10 @@ export default function RolePosterBackdrop({ role = 'attacker' }) {
             <span>TIER STATUS</span>
             <span className="text-white font-bold">{isAttacker ? 'OFFENSIVE V3' : 'DEFENSIVE HIGH'}</span>
           </div>
-          <div className="font-mono text-[10px] text-zinc-500 uppercase tracking-widest max-w-[200px] leading-snug">
+          <div className="font-mono text-xs text-zinc-400 uppercase tracking-widest max-w-[220px] leading-snug">
             {isAttacker
-              ? '21 ATTACK PROTOCOLS READY FOR AUDIT & INJECTION'
-              : '21 DEFENSE RULES READY FOR HARDENING & REPLAY'}
+              ? '14 LIVE DVWA TARGETS READY FOR AUDIT & INJECTION'
+              : '14 LIVE DEFENSE LABS READY FOR HARDENING & REPLAY'}
           </div>
         </div>
       </div>

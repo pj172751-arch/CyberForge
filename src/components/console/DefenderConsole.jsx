@@ -37,6 +37,7 @@ import {
   TactileToast,
   VerdictStamp,
 } from '../ui/spells';
+import { KineticTitleRoll } from '../ui/kinetic';
 import CommandDeckShell from './CommandDeckShell';
 import { ProfileView, SettingsView } from './AccountViews';
 import {
@@ -240,6 +241,7 @@ export default function DefenderConsole({
   user,
   onSignOut,
   onOpenOverview,
+  onTriggerTransition,
   initialChallengeId = null,
   onConsumeInitialChallenge,
 }) {
@@ -889,7 +891,11 @@ export default function DefenderConsole({
                   <div className="min-w-0 space-y-1">
                     <div className="flex items-center gap-2 flex-wrap">
                       <h1 className="text-[22px] sm:text-[24px] font-bold text-[#111317] leading-tight">
-                        {selectedChallenge.title}
+                        <KineticTitleRoll
+                          text={selectedChallenge.title}
+                          triggerKey={`${selectedChallenge.challenge_id}-${selectedLevel}`}
+                          role="defender"
+                        />
                       </h1>
                       <Badge variant={getDifficultyVariant(selectedChallenge.difficulty)}>
                         {selectedChallenge.difficulty}
@@ -908,9 +914,11 @@ export default function DefenderConsole({
                       )}
                     </div>
                     <div className="flex items-center gap-2 flex-wrap text-[13.5px] text-[#4B5260]">
-                      <span>{selectedChallenge.vulnerability_type}</span>
+                      <span className="font-editorial italic text-[16px] text-[#111317] leading-none">
+                        {selectedChallenge.vulnerability_type}
+                      </span>
                       <span aria-hidden="true">·</span>
-                      <span className="font-mono font-semibold text-[#1D4ED8]">+150 XP verified</span>
+                      <span className="font-mono font-semibold text-[#1E40AF]">+150 XP verified</span>
                       {challengeSource?.owasp_category && (
                         <>
                           <span aria-hidden="true">·</span>
@@ -2227,7 +2235,19 @@ export default function DefenderConsole({
           challenges={challenges}
           summaryMap={defenseSummaryByChallenge}
           stats={stats}
-          onSelectChallenge={(ch) => selectChallenge(ch)}
+          onSelectChallenge={(ch) => {
+            if (typeof onTriggerTransition === 'function') {
+              onTriggerTransition({
+                role: 'defender',
+                title: ch?.title || 'Defense Studio',
+                subtitle: ch?.vulnerability_type || 'Live Hardening Audit',
+                trackLabel: ch?.dvwa_page_ref || 'DVWA :8081',
+                onMidpoint: () => selectChallenge(ch),
+              });
+            } else {
+              selectChallenge(ch);
+            }
+          }}
           onContinueMission={handleSelectNextPending}
           onOpenTour={onOpenOverview}
         />

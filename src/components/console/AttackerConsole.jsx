@@ -39,6 +39,7 @@ import {
   TactileToast,
   VerdictStamp,
 } from '../ui/spells';
+import { KineticTitleRoll } from '../ui/kinetic';
 import CommandDeckShell from './CommandDeckShell';
 import { ProfileView, SettingsView } from './AccountViews';
 import {
@@ -166,6 +167,7 @@ export default function AttackerConsole({
   user,
   onSignOut,
   onOpenOverview,
+  onTriggerTransition,
   initialChallengeId = null,
   onConsumeInitialChallenge,
 }) {
@@ -768,7 +770,11 @@ export default function AttackerConsole({
                   <div className="min-w-0 space-y-1">
                     <div className="flex items-center gap-2 flex-wrap">
                       <h1 className="text-[22px] sm:text-[24px] font-bold text-[#111317] leading-tight">
-                        {selectedChallenge.title}
+                        <KineticTitleRoll
+                          text={selectedChallenge.title}
+                          triggerKey={`${selectedChallenge.challenge_id}-${targetStage}`}
+                          role="attacker"
+                        />
                       </h1>
                       <Badge variant={getDifficultyVariant(selectedChallenge.difficulty)}>
                         {selectedChallenge.difficulty}
@@ -781,9 +787,11 @@ export default function AttackerConsole({
                       )}
                     </div>
                     <div className="flex items-center gap-2 flex-wrap text-[13.5px] text-[#4B5260]">
-                      <span>{selectedChallenge.vulnerability_type}</span>
+                      <span className="font-editorial italic text-[16px] text-[#111317] leading-none">
+                        {selectedChallenge.vulnerability_type}
+                      </span>
                       <span aria-hidden="true">·</span>
-                      <span className="font-mono font-semibold text-[#C81E1E]">
+                      <span className="font-mono font-semibold text-[#D92D20]">
                         +{activePoints} XP
                       </span>
                       {challengeSource?.owasp_category && (
@@ -1940,7 +1948,19 @@ export default function AttackerConsole({
           challenges={challenges}
           summaryMap={attemptSummaryByChallenge}
           stats={stats}
-          onSelectChallenge={(ch) => selectChallenge(ch, { focusEditor: true })}
+          onSelectChallenge={(ch) => {
+            if (typeof onTriggerTransition === 'function') {
+              onTriggerTransition({
+                role: 'attacker',
+                title: ch?.title || 'Lab Studio',
+                subtitle: ch?.vulnerability_type || 'Live Exploitation Target',
+                trackLabel: ch?.dvwa_page_ref || 'DVWA :8081',
+                onMidpoint: () => selectChallenge(ch, { focusEditor: true }),
+              });
+            } else {
+              selectChallenge(ch, { focusEditor: true });
+            }
+          }}
           onContinueMission={handleSelectNextUnsolved}
           onOpenTour={onOpenOverview}
         />

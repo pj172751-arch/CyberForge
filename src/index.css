@@ -1,8 +1,17 @@
-@import url('https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800&family=Bricolage+Grotesque:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root {
+  --cf-paper: #F3EFE6;
+  --cf-folio: #FAF8F3;
+  --cf-buff: #EAE4D7;
+  --cf-ink: #111317;
+  --cf-vermilion: #D92D20;
+  --cf-vermilion-deep: #B42318;
+  --cf-cobalt: #1E40AF;
+  --cf-cobalt-deep: #1E3A8A;
+}
 
 html, body {
   margin: 0;
@@ -12,8 +21,8 @@ html, body {
   font-family: 'Bricolage Grotesque', system-ui, -apple-system, sans-serif;
   font-size: 16px;
   line-height: 1.5;
-  background-color: #F3EFE6;
-  color: #111317;
+  background-color: var(--cf-paper);
+  color: var(--cf-ink);
   text-rendering: optimizeLegibility;
 }
 
@@ -28,6 +37,17 @@ code, pre, kbd, .font-mono {
 .font-display {
   font-family: 'Big Shoulders Display', 'Bricolage Grotesque', sans-serif;
   letter-spacing: -0.01em;
+}
+
+.font-editorial {
+  font-family: 'Newsreader', Georgia, serif;
+  font-optical-sizing: auto;
+  letter-spacing: -0.015em;
+}
+
+.cf-kinetic-char {
+  display: inline-block;
+  will-change: transform, opacity;
 }
 
 #root {

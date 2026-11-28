@@ -26,8 +26,9 @@ The post-login 3D Mission Hub intentionally stays on a deep obsidian WebGL stage
 
 ## 2. Typography Scale (Zero Squint-Text)
 
-Loaded in `src/index.css`:
-- **Display & KPI Metrics (`.font-display`):** `Big Shoulders Display` (`700`, `800`) — used for brand wordmark (`24px`) and high-impact KPI metric figures (`34px–44px`, `leading-none`, `tabular-nums`).
+Loaded in `index.html` and `src/index.css`:
+- **Editorial Kinetic Serif (`.font-editorial`):** `Newsreader` (`400`, `600`, italic `400`/`500`, optical sizing) — Swiss editorial contrast pairing against condensed display headers in `KineticTypeCurtain`, Track Atlas titles (*"Curriculum Atlas"*), `ArchivalShutterCard` action shutters, and Lab Studio vulnerability tags.
+- **Display & KPI Metrics (`.font-display`):** `Big Shoulders Display` (`700`, `800`) — used for brand wordmark (`24px`), kinetic curtain headlines, module indices (`01`–`14`), and high-impact KPI metric figures (`34px–44px`, `leading-none`, `tabular-nums`).
 - **UI & Body (`.font-sans`):** `Bricolage Grotesque` (`500`, `600`, `700`, `800`) — `16px` base body, `14px–15px` table rows and controls, `22px–30px` (`text-2xl` / `text-[26px]`–`text-[28px]`) page titles.
 - **Code, Payloads, Timestamps & Counters (`.font-mono`):** `JetBrains Mono` (`400`, `500`, `600`, `700`) with `tabular-nums`.
 - **Minimum Size Floor:** **`12px` (`text-xs`) minimum** across every badge, table header, metadata chip, and timestamp. Sub-`12px` classes (`text-[9px]`, `text-[10px]`, `text-[11px]`) are prohibited.
@@ -38,8 +39,8 @@ Loaded in `src/index.css`:
 
 | Meaning | Ink Hex | Surface Tint |
 | :--- | :--- | :--- |
-| **Attacker / Red Team / Exploit** | Crimson `#C81E1E` (`#B91C1C` text) | `bg-[#C81E1E]/10 border-[#C81E1E]/30` |
-| **Defender / Blue Team / Harden** | Cobalt `#1D4ED8` | `bg-[#1D4ED8]/10 border-[#1D4ED8]/30` |
+| **Attacker / Red Team / Exploit** | Risograph Vermilion `#D92D20` (`#B42318` deep / `#C81E1E` solid) | `bg-[#D92D20]/10 border-[#D92D20]/30` |
+| **Defender / Blue Team / Harden** | Klein Cobalt `#1E40AF` (`#1E3A8A` deep / `#1D4ED8` solid) | `bg-[#1E40AF]/10 border-[#1E40AF]/30` |
 | **Verified / Healthy / Remediated** | Emerald `#047857` | `bg-[#047857]/10 border-[#047857]/30` |
 | **Moderator / Admin / Governance / Alert** | Ochre Brass `#B45309` (`#92400E` text) | `bg-[#B45309]/10 border-[#B45309]/35` |
 
@@ -53,8 +54,11 @@ Loaded in `src/index.css`:
 
 ---
 
-## 5. Signature Design Spells (`src/components/ui/spells.jsx`)
+## 5. Signature Design Spells & Kinetic System (`src/components/ui/spells.jsx`, `src/components/ui/kinetic.jsx`)
 
+- **`KineticTypeCurtain`:** Cancellable `~550ms` Warm Archival Vellum (`#F3EFE6`) rotated `-90°` upward letter curtain (`Big Shoulders Display` + italic `Newsreader` in Risograph Vermilion / Klein Cobalt) bridging 3D Hub ↔ Console and Track Atlas → Lab Studio.
+- **`KineticTitleRoll`:** Non-blocking `~260ms` GSAP character-slot roll on Lab Studio `h1` titles when switching challenges or escalating tiers.
+- **`ArchivalShutterCard`:** Light `#FAF8F3` module cards in Track Atlas with 4 GSAP mechanical corner shutters gliding inward on hover/focus (`#01..#14`, live status, `dvwa_page_ref`, `Launch Lab ->`).
 - **`VerdictStamp`:** Spring-snapping (`.cf-stamp-snap`) tilted (`-rotate-3`) octagonal SVG seal (`EXPLOIT VERIFIED`, `PATCH VERIFIED`, `BLOCKED`, `FAILED`).
 - **`PacketBeam`:** Hardware pulse trace (`.cf-packet-sweep`) animated across a track from `Payload` to `DVWA :8081` during live execution.
 - **`SpotlightSurface`:** Crisp `#FAF8F3` paper folio with subtle pointer-tracked hairline edge illumination.

@@ -135,20 +135,6 @@ export function AnimatedTicker({
   );
 }
 
-export function BorderSweep({
-  color = '#B45309',
-}) {
-  return (
-    <div
-      aria-hidden="true"
-      className="pointer-events-none absolute inset-0 rounded-[inherit] z-20"
-      style={{
-        borderTop: `2px solid ${color}`,
-      }}
-    />
-  );
-}
-
 export function SlideOverInspector({
   open,
   onClose,

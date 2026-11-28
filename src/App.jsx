@@ -1,11 +1,13 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import FallingPhysics from './components/FallingPhysics';
-import RoleLandingPage from './components/RoleLandingPage';
-import AdminConsole from './components/console/AdminConsole';
-import ModeratorConsole from './components/console/ModeratorConsole';
-import AttackerConsole from './components/console/AttackerConsole';
-import DefenderConsole from './components/console/DefenderConsole';
+import React, { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react';
 import { Button, Modal } from './components/ui/primitives';
+import { KineticTypeCurtain } from './components/ui/kinetic';
+
+const FallingPhysics = lazy(() => import('./components/FallingPhysics'));
+const RoleLandingPage = lazy(() => import('./components/RoleLandingPage'));
+const AdminConsole = lazy(() => import('./components/console/AdminConsole'));
+const ModeratorConsole = lazy(() => import('./components/console/ModeratorConsole'));
+const AttackerConsole = lazy(() => import('./components/console/AttackerConsole'));
+const DefenderConsole = lazy(() => import('./components/console/DefenderConsole'));
 import {
   Crosshair,
   Eye,
@@ -90,6 +92,7 @@ function CyberForgeAuthMark() {
 }
 
 export default function App() {
+  const curtainRef = useRef(null);
   const [currentUser, setCurrentUser] = useState(null);
   const [isCheckingSession, setIsCheckingSession] = useState(true);
   const [currentView, setCurrentView] = useState('auth'); // 'auth' | 'landing' | 'console' | 'admin' | 'moderator'
@@ -195,24 +198,56 @@ export default function App() {
     setRole('attacker');
   };
 
-  const handleEnterConsole = useCallback((challenge = null) => {
-    setEnteredConsoleFlag();
-    setInitialChallengeId(challenge?.challenge_id ?? null);
-    setCurrentView('console');
+  const triggerKineticTransition = useCallback((options) => {
+    if (curtainRef.current?.trigger) {
+      curtainRef.current.trigger(options);
+    } else {
+      options?.onMidpoint?.();
+    }
   }, []);
 
+  const handleEnterConsole = useCallback(
+    (challenge = null) => {
+      const activeRole = currentUser?.role || role;
+      triggerKineticTransition({
+        role: activeRole,
+        title: challenge?.title || 'Cyber Range Studio',
+        subtitle: challenge?.vulnerability_type || 'Live DVWA Workbench',
+        trackLabel: challenge ? challenge.dvwa_page_ref || 'DIRECT LAB LAUNCH' : 'OWASP CURRICULUM ATLAS',
+        onMidpoint: () => {
+          setEnteredConsoleFlag();
+          setInitialChallengeId(challenge?.challenge_id ?? null);
+          setCurrentView('console');
+        },
+      });
+    },
+    [currentUser?.role, role, triggerKineticTransition]
+  );
+
   const handleOpenOverview = useCallback(() => {
-    clearEnteredConsoleFlag();
-    setInitialChallengeId(null);
-    setCurrentView('landing');
-  }, []);
+    const activeRole = currentUser?.role || role;
+    triggerKineticTransition({
+      role: activeRole,
+      title: '3D Mission Hub',
+      subtitle: 'Interactive Range Matrix',
+      trackLabel: 'RETURN TO HUB',
+      onMidpoint: () => {
+        clearEnteredConsoleFlag();
+        setInitialChallengeId(null);
+        setCurrentView('landing');
+      },
+    });
+  }, [currentUser?.role, role, triggerKineticTransition]);
 
   const handleConsumeInitialChallenge = useCallback(() => {
     setInitialChallengeId(null);
   }, []);
 
+  const isAttackerRole = role === 'attacker';
+  let content = null;
+
   if (isCheckingSession) {
-    return (
+    content = (
       <div className="min-h-[100dvh] w-full bg-[#F3EFE6] text-[#111317] flex items-center justify-center p-6 font-sans">
         <div className="flex flex-col items-center gap-3 px-6 py-5 rounded-lg bg-[#FAF8F3] border border-[#111317]/15">
           <div className="inline-flex items-center gap-2.5 text-sm font-bold tracking-[0.12em] uppercase text-[#111317]">
@@ -226,28 +261,22 @@ export default function App() {
         </div>
       </div>
     );
-  }
-
-  if (currentView === 'admin' && currentUser) {
-    return (
+  } else if (currentView === 'admin' && currentUser) {
+    content = (
       <AdminConsole
         user={currentUser}
         onSignOut={handleLogout}
       />
     );
-  }
-
-  if (currentView === 'moderator' && currentUser) {
-    return (
+  } else if (currentView === 'moderator' && currentUser) {
+    content = (
       <ModeratorConsole
         user={currentUser}
         onSignOut={handleLogout}
       />
     );
-  }
-
-  if (currentView === 'landing' && currentUser) {
-    return (
+  } else if (currentView === 'landing' && currentUser) {
+    content = (
       <RoleLandingPage
         user={currentUser}
         role={currentUser.role || role}
@@ -257,34 +286,29 @@ export default function App() {
         onSelectChallenge={(challenge) => handleEnterConsole(challenge)}
       />
     );
-  }
-
-  if ((currentView === 'console' || currentView === 'tasks') && currentUser) {
-    if (currentUser.role === 'defender') {
-      return (
+  } else if ((currentView === 'console' || currentView === 'tasks') && currentUser) {
+    content =
+      currentUser.role === 'defender' ? (
         <DefenderConsole
           user={currentUser}
           onSignOut={handleLogout}
           onOpenOverview={handleOpenOverview}
+          onTriggerTransition={triggerKineticTransition}
+          initialChallengeId={initialChallengeId}
+          onConsumeInitialChallenge={handleConsumeInitialChallenge}
+        />
+      ) : (
+        <AttackerConsole
+          user={currentUser}
+          onSignOut={handleLogout}
+          onOpenOverview={handleOpenOverview}
+          onTriggerTransition={triggerKineticTransition}
           initialChallengeId={initialChallengeId}
           onConsumeInitialChallenge={handleConsumeInitialChallenge}
         />
       );
-    }
-    return (
-      <AttackerConsole
-        user={currentUser}
-        onSignOut={handleLogout}
-        onOpenOverview={handleOpenOverview}
-        initialChallengeId={initialChallengeId}
-        onConsumeInitialChallenge={handleConsumeInitialChallenge}
-      />
-    );
-  }
-
-  const isAttackerRole = role === 'attacker';
-
-  return (
+  } else {
+    content = (
     <div className="min-h-[100dvh] lg:h-[100dvh] lg:overflow-hidden w-full bg-[#F3EFE6] text-[#111317] flex flex-col lg:flex-row font-sans selection:bg-[#1D4ED8]/15 selection:text-[#111317]">
       {/* LEFT 45% COLUMN: Warm Archival Vellum Operator Dossier */}
       <section className="w-full lg:w-[45%] lg:h-full bg-[#F3EFE6] flex flex-col justify-between px-6 sm:px-10 lg:px-12 py-5 lg:py-6 lg:overflow-y-auto">
@@ -607,7 +631,9 @@ export default function App() {
         aria-label="Interactive security primitives playground"
         className="w-full lg:w-[55%] h-[340px] sm:h-[400px] lg:h-full relative overflow-hidden bg-black border-t lg:border-t-0 lg:border-l border-[#111317] flex flex-col justify-end"
       >
-        <FallingPhysics mode="both" />
+        <Suspense fallback={<div className="w-full h-full bg-[#07080B]" />}>
+          <FallingPhysics mode="both" />
+        </Suspense>
         <div className="pointer-events-none absolute top-4 right-4 z-20 px-3 py-1.5 rounded bg-black/75 border border-white/15 text-xs font-mono text-zinc-200">
           Interactive Physics Stage · Drag cards
         </div>
@@ -658,5 +684,30 @@ export default function App() {
         </div>
       </Modal>
     </div>
+    );
+  }
+
+  return (
+    <>
+      <Suspense
+        fallback={
+          <div className="min-h-[100dvh] w-full bg-[#F3EFE6] text-[#111317] flex items-center justify-center p-6 font-sans">
+            <div className="flex flex-col items-center gap-3 px-6 py-5 rounded-lg bg-[#FAF8F3] border border-[#111317]/15">
+              <div className="inline-flex items-center gap-2.5 text-sm font-bold tracking-[0.12em] uppercase text-[#111317]">
+                <CyberForgeAuthMark />
+                <span>CyberForge</span>
+              </div>
+              <div className="inline-flex items-center gap-2 text-sm font-mono text-[#4B5260]">
+                <span className="w-2 h-2 rounded-full bg-[#1E40AF] animate-pulse" />
+                <span>Loading operational module...</span>
+              </div>
+            </div>
+          </div>
+        }
+      >
+        {content}
+      </Suspense>
+      <KineticTypeCurtain ref={curtainRef} />
+    </>
   );
 }

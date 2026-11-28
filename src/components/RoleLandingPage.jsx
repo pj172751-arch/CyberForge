@@ -1,19 +1,16 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Lenis from 'lenis';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import AttackerParticles from './AttackerParticles';
-import DefenderParticles from './DefenderParticles';
 import RolePosterBackdrop from './RolePosterBackdrop';
+
+const AttackerParticles = lazy(() => import('./AttackerParticles'));
+const DefenderParticles = lazy(() => import('./DefenderParticles'));
 import {
   ArrowRight,
   CaretDown,
   CheckCircle,
-  Crosshair,
-  ShieldCheck,
   SignOut,
-  TerminalWindow,
-  X,
 } from '@phosphor-icons/react';
 import { apiFetch } from '../utils/api';
 import './StickyGridScroll.css';
@@ -220,7 +217,6 @@ export default function RoleLandingPage({
   const [progressRows, setProgressRows] = useState([]);
   const [loadingData, setLoadingData] = useState(true);
   const [dataError, setDataError] = useState('');
-  const [showOverviewModal, setShowOverviewModal] = useState(false);
 
   const blockRef = useRef(null);
   const titleRef = useRef(null);
@@ -368,8 +364,6 @@ export default function RoleLandingPage({
         onSelectChallenge(challenge);
       } else if (typeof onNavigateToTasks === 'function') {
         onNavigateToTasks();
-      } else {
-        setShowOverviewModal(true);
       }
     },
     [onSelectChallenge, onNavigateToTasks]
@@ -380,8 +374,6 @@ export default function RoleLandingPage({
       onSelectChallenge(nextMissionChallenge);
     } else if (typeof onNavigateToTasks === 'function') {
       onNavigateToTasks();
-    } else {
-      setShowOverviewModal(true);
     }
   }, [nextMissionChallenge, onSelectChallenge, onNavigateToTasks]);
 
@@ -650,7 +642,9 @@ export default function RoleLandingPage({
       {/* BLOCK INTRO: 3D Particle Simulation & Editorial Poster Backdrop */}
       <section className="block block--intro">
         <RolePosterBackdrop role={effectiveRole} />
-        {isAttacker ? <AttackerParticles /> : <DefenderParticles />}
+        <Suspense fallback={null}>
+          {isAttacker ? <AttackerParticles /> : <DefenderParticles />}
+        </Suspense>
 
         <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-1.5 pointer-events-none">
           <span
@@ -838,85 +832,6 @@ export default function RoleLandingPage({
           </div>
         </div>
       </section>
-
-      {/* Fallback Catalog Modal (only if direct navigation callbacks are omitted) */}
-      {showOverviewModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85">
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-label={isAttacker ? 'Offensive Operations Matrix' : 'Defense Architecture Catalog'}
-            className={`w-full max-w-3xl bg-[#0E1014] border rounded-xl p-6 relative max-h-[85vh] overflow-y-auto ${
-              isAttacker ? 'border-red-500/40' : 'border-[#38bdf8]/40'
-            }`}
-          >
-            <div className="flex items-start justify-between mb-5 pb-4 border-b border-white/10">
-              <div className="flex items-center gap-3">
-                <div
-                  className={`p-2.5 rounded-lg ${
-                    isAttacker
-                      ? 'bg-red-950/60 border border-red-500/40 text-red-400'
-                      : 'bg-sky-950/60 border border-[#38bdf8]/40 text-[#38bdf8]'
-                  }`}
-                >
-                  {isAttacker ? (
-                    <TerminalWindow className="w-6 h-6" weight="bold" />
-                  ) : (
-                    <ShieldCheck className="w-6 h-6" weight="bold" />
-                  )}
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold text-white tracking-tight">
-                    {isAttacker ? 'Offensive Operations Matrix' : 'Defense Architecture Catalog'}
-                  </h3>
-                  <span
-                    className={`inline-block text-xs font-mono uppercase tracking-wider ${
-                      isAttacker ? 'text-red-300' : 'text-sky-300'
-                    }`}
-                  >
-                    {enrichedChallenges.length} Live DVWA Modules
-                  </span>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowOverviewModal(false)}
-                aria-label="Close catalog"
-                className="p-1.5 rounded-lg bg-zinc-800/80 hover:bg-zinc-700 text-zinc-300 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm leading-relaxed">
-              {enrichedChallenges.map((ch) => (
-                <div
-                  key={ch.challenge_id}
-                  className="bg-[#161920] p-4 rounded-lg border border-white/10 flex flex-col justify-between gap-2"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <div className="p-1.5 rounded bg-black/40 shrink-0">
-                        {renderModuleSvg(ch.moduleKey, isAttacker)}
-                      </div>
-                      <div className="min-w-0">
-                        <h4 className="font-bold text-white truncate">{ch.title}</h4>
-                        <span className="text-xs font-mono text-zinc-300">
-                          {ch.trackTag} · {ch.difficulty}
-                        </span>
-                      </div>
-                    </div>
-                    {ch.cleared && (
-                      <Crosshair className="w-4 h-4 text-emerald-400 shrink-0" weight="bold" />
-                    )}
-                  </div>
-                  <p className="text-zinc-300 text-sm">{ch.description}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

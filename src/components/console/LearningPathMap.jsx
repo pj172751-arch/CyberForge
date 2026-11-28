@@ -1,12 +1,12 @@
 import React, { useMemo, useState } from 'react';
 import {
   ArrowRight,
-  CheckCircle,
   Compass,
   Crosshair,
   ShieldCheck,
 } from '@phosphor-icons/react';
 import { Badge, Button } from '../ui/primitives';
+import { ArchivalShutterCard } from '../ui/kinetic';
 
 const DEFAULT_TRACKS = [
   {
@@ -47,12 +47,9 @@ function inferModuleKey(pageRef) {
   return match ? match[1] : 'custom';
 }
 
-function getDifficultyVariant(difficulty) {
-  const key = String(difficulty || '').trim().toLowerCase();
-  if (key === 'easy') return 'green';
-  if (key === 'medium') return 'amber';
-  if (key === 'hard') return 'red';
-  return 'neutral';
+function getTrackTag(track) {
+  const match = String(track?.title || '').match(/Track\s+[IVX]+/i);
+  return match ? match[0].toUpperCase() : `TRACK ${track?.track_order || 1}`;
 }
 
 function getModuleContext(ch) {
@@ -155,6 +152,20 @@ export default function LearningPathMap({
   const completedModules = isAttacker ? stats?.solved || 0 : stats?.verified || 0;
   const progressPct = totalModules > 0 ? Math.round((completedModules / totalModules) * 100) : 0;
 
+  const challengeIndexMap = useMemo(() => {
+    const map = new Map();
+    let idx = 1;
+    for (const tr of enrichedTracks) {
+      for (const ch of tr.items) {
+        if (!map.has(ch.challenge_id)) {
+          map.set(ch.challenge_id, String(idx).padStart(2, '0'));
+          idx += 1;
+        }
+      }
+    }
+    return map;
+  }, [enrichedTracks]);
+
   const activeTrackSolved = activeTrack
     ? activeTrack.items.filter((ch) => {
         const sum = summaryMap?.get(ch.challenge_id);
@@ -162,14 +173,19 @@ export default function LearningPathMap({
       }).length
     : 0;
 
+  const activeAccentText = isAttacker ? 'text-[#D92D20]' : 'text-[#1E40AF]';
+
   return (
     <div className="lg:h-full lg:min-h-0 flex flex-col gap-3.5">
-      {/* Compact Archival Header Strip */}
+      {/* Compact Swiss Editorial Header Strip */}
       <section className="shrink-0 rounded-lg bg-[#FAF8F3] border border-[#111317]/15 px-5 py-3.5 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
         <div className="space-y-1 min-w-0">
           <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="text-2xl font-bold tracking-tight text-[#111317] leading-tight">
-              OWASP Curriculum Atlas
+            <h1 className="text-2xl sm:text-[26px] font-bold tracking-tight text-[#111317] leading-tight">
+              OWASP{' '}
+              <span className={`font-editorial italic font-normal text-[28px] sm:text-[31px] leading-none ${activeAccentText}`}>
+                Curriculum Atlas
+              </span>
             </h1>
             <Badge variant="ink" className="font-mono tabular-nums">
               {completedModules}/{totalModules} Modules ({progressPct}%)
@@ -177,8 +193,8 @@ export default function LearningPathMap({
           </div>
           <p className="text-[14px] text-[#4B5260] text-pretty">
             {isAttacker
-              ? 'Select an OWASP track to inspect vulnerable PHP handlers and escalate exploits across Low, Medium, and High defenses.'
-              : 'Audit vulnerable PHP handlers by OWASP track, identify weak sinks, and verify Impossible hardening against live exploit replay.'}
+              ? 'Select an OWASP track and hover any module card to inspect sink telemetry or trigger a lab jump.'
+              : 'Select an OWASP track and hover any module card to inspect PHP sink readiness and verify hardening.'}
           </p>
         </div>
 
@@ -241,8 +257,8 @@ export default function LearningPathMap({
                     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#111317]',
                     isSelected
                       ? isAttacker
-                        ? 'bg-[#EAE4D7]/70 border-b-[#C81E1E]'
-                        : 'bg-[#EAE4D7]/70 border-b-[#1D4ED8]'
+                        ? 'bg-[#EAE4D7]/70 border-b-[#D92D20]'
+                        : 'bg-[#EAE4D7]/70 border-b-[#1E40AF]'
                       : 'bg-[#FAF8F3] border-b-transparent hover:bg-[#EAE4D7]/40',
                   ].join(' ')}
                 >
@@ -260,9 +276,7 @@ export default function LearningPathMap({
                         className={[
                           'font-display text-[32px] font-extrabold leading-none tabular-nums',
                           isSelected
-                            ? isAttacker
-                              ? 'text-[#C81E1E]'
-                              : 'text-[#1D4ED8]'
+                            ? activeAccentText
                             : 'text-[#111317]',
                         ].join(' ')}
                       >
@@ -275,7 +289,7 @@ export default function LearningPathMap({
                     <div
                       className={[
                         'h-full transition-all duration-300',
-                        isAttacker ? 'bg-[#C81E1E]' : 'bg-[#1D4ED8]',
+                        isAttacker ? 'bg-[#D92D20]' : 'bg-[#1E40AF]',
                       ].join(' ')}
                       style={{ width: `${trackPct}%` }}
                     />
@@ -286,10 +300,10 @@ export default function LearningPathMap({
           </div>
         </aside>
 
-        {/* Right: Active Track's 2-5 Spacious Modules */}
+        {/* Right: Active Track 2-Column Archival Shutter Grid */}
         <section
           aria-label={activeTrack ? activeTrack.title : 'Track modules'}
-          className="lg:col-span-8 bg-[#FAF8F3] border border-[#111317]/15 rounded-lg flex flex-col lg:min-h-0 overflow-hidden"
+          className="lg:col-span-8 bg-[#FAF8F3] border border-[#111317]/15 rounded-lg flex flex-col lg:min-h-0 overflow-hidden relative"
         >
           {!activeTrack ? (
             <div className="flex-1 flex items-center justify-center p-8 text-[15px] text-[#4B5260]">
@@ -297,7 +311,20 @@ export default function LearningPathMap({
             </div>
           ) : (
             <>
-              <div className="px-5 py-3.5 border-b border-[#111317]/15 bg-[#EAE4D7]/45 flex flex-col sm:flex-row sm:items-center justify-between gap-2 shrink-0">
+              {/* Subtle Swiss Editorial background watermark */}
+              <div
+                aria-hidden="true"
+                className="pointer-events-none select-none absolute inset-x-0 bottom-2 px-6 flex items-end justify-between opacity-[0.045] overflow-hidden"
+              >
+                <span className="font-display font-extrabold uppercase text-[76px] leading-none tracking-[-0.02em] text-[#111317] whitespace-nowrap">
+                  {getTrackTag(activeTrack)}
+                </span>
+                <span className={`font-editorial italic text-[64px] leading-none whitespace-nowrap ${activeAccentText}`}>
+                  {isAttacker ? 'Offensive Matrix' : 'Perimeter Shield'}
+                </span>
+              </div>
+
+              <div className="relative z-10 px-5 py-3.5 border-b border-[#111317]/15 bg-[#EAE4D7]/45 flex flex-col sm:flex-row sm:items-center justify-between gap-2 shrink-0">
                 <div className="min-w-0">
                   <h2 className="text-xl font-bold text-[#111317] leading-tight truncate">
                     {activeTrack.title}
@@ -314,7 +341,7 @@ export default function LearningPathMap({
                 </div>
               </div>
 
-              <div className="flex-1 lg:min-h-0 overflow-y-auto divide-y divide-[#111317]/12">
+              <div className="relative z-10 flex-1 lg:min-h-0 overflow-y-auto p-4 grid grid-cols-1 md:grid-cols-2 gap-3 content-start">
                 {activeTrack.items.map((ch) => {
                   const summary = summaryMap?.get(ch.challenge_id);
                   const isDone = isAttacker ? Boolean(summary?.solved) : Boolean(summary?.verified);
@@ -322,109 +349,19 @@ export default function LearningPathMap({
                   const latestLevel = summary?.latest?.security_level_applied;
 
                   return (
-                    <div
+                    <ArchivalShutterCard
                       key={ch.challenge_id}
-                      className="px-5 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-[#EAE4D7]/40 transition-colors"
-                    >
-                      <div className="min-w-0 flex items-start gap-3">
-                        <div className="mt-1 shrink-0">
-                          {isDone ? (
-                            <CheckCircle
-                              className="w-5 h-5 text-[#047857]"
-                              weight="fill"
-                              aria-hidden="true"
-                            />
-                          ) : (
-                            <span
-                              aria-hidden="true"
-                              className={[
-                                'inline-block w-3 h-3 rounded-full mt-1 border',
-                                summary?.count > 0
-                                  ? 'bg-[#B45309] border-[#B45309]'
-                                  : 'bg-[#FAF8F3] border-[#111317]/35',
-                              ].join(' ')}
-                            />
-                          )}
-                        </div>
-
-                        <div className="min-w-0 space-y-1">
-                          <div className="flex items-center gap-2.5 flex-wrap">
-                            <span className="text-[16px] sm:text-[17px] font-bold text-[#111317] leading-snug">
-                              {ch.title}
-                            </span>
-                            <Badge variant={getDifficultyVariant(ch.difficulty)}>
-                              {ch.difficulty}
-                            </Badge>
-                            {isDone ? (
-                              <Badge variant="green">{isAttacker ? 'SOLVED' : 'VERIFIED'}</Badge>
-                            ) : summary?.count > 0 ? (
-                              <Badge variant="amber">IN PROGRESS</Badge>
-                            ) : null}
-                          </div>
-
-                          <p className="text-[14px] text-[#4B5260] leading-snug truncate">
-                            {getModuleContext(ch)}
-                          </p>
-
-                          <div className="flex items-center gap-2 flex-wrap text-xs font-mono text-[#4B5260]">
-                            <span>{ch.vulnerability_type}</span>
-                            <span aria-hidden="true">·</span>
-                            <span className="text-[#111317] font-medium">{ch.dvwa_page_ref}</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-2.5 shrink-0 self-start sm:self-center">
-                        {isAttacker ? (
-                          <div className="flex items-center gap-1 font-mono text-xs">
-                            {['low', 'medium', 'high'].map((tier) => {
-                              const ok = solvedTiers.has(tier) || (tier === 'low' && isDone);
-                              return (
-                                <span
-                                  key={tier}
-                                  title={`${tier} security tier ${ok ? 'cleared' : 'pending'}`}
-                                  className={[
-                                    'px-2 py-0.5 rounded border uppercase font-semibold',
-                                    ok
-                                      ? 'bg-[#047857]/12 border-[#047857]/40 text-[#047857]'
-                                      : 'bg-[#EAE4D7] border-[#111317]/20 text-[#4B5260]',
-                                  ].join(' ')}
-                                >
-                                  {tier[0]}
-                                </span>
-                              );
-                            })}
-                          </div>
-                        ) : (
-                          latestLevel && (
-                            <Badge
-                              variant={
-                                latestLevel === 'impossible'
-                                  ? 'green'
-                                  : latestLevel === 'high'
-                                    ? 'cobalt'
-                                    : latestLevel === 'medium'
-                                      ? 'amber'
-                                      : 'red'
-                              }
-                              className="uppercase font-mono"
-                            >
-                              {latestLevel}
-                            </Badge>
-                          )
-                        )}
-
-                        <Button
-                          type="button"
-                          variant={isAttacker ? 'attacker' : 'defender'}
-                          size="sm"
-                          onClick={() => onSelectChallenge?.(ch)}
-                        >
-                          <span>Launch Lab</span>
-                          <ArrowRight className="w-3.5 h-3.5" weight="bold" />
-                        </Button>
-                      </div>
-                    </div>
+                      indexNum={challengeIndexMap.get(ch.challenge_id) || '01'}
+                      challenge={ch}
+                      role={role}
+                      trackTag={getTrackTag(activeTrack)}
+                      contextText={getModuleContext(ch)}
+                      isDone={isDone}
+                      isInProgress={!isDone && (summary?.count || 0) > 0}
+                      solvedTiers={solvedTiers}
+                      latestLevel={latestLevel}
+                      onLaunch={(item) => onSelectChallenge?.(item)}
+                    />
                   );
                 })}
               </div>

@@ -1,6 +1,34 @@
 import React, { useEffect, useRef } from 'react';
-import * as THREE from 'three';
+import {
+  AdditiveBlending,
+  BufferAttribute,
+  BufferGeometry,
+  Float32BufferAttribute,
+  Group,
+  NormalBlending,
+  PerspectiveCamera,
+  Points,
+  Scene,
+  ShaderMaterial,
+  UniformsUtils,
+  WebGLRenderer,
+} from 'three';
 import { DEFENDER_SHIELD_SRC } from '../assets/defenderShield';
+
+const THREE = {
+  AdditiveBlending,
+  BufferAttribute,
+  BufferGeometry,
+  Float32BufferAttribute,
+  Group,
+  NormalBlending,
+  PerspectiveCamera,
+  Points,
+  Scene,
+  ShaderMaterial,
+  UniformsUtils,
+  WebGLRenderer,
+};
 
 export default function DefenderParticles() {
   const containerRef = useRef(null);
